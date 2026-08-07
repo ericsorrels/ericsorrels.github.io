@@ -127,7 +127,7 @@ window.SITE_CONTENT = {
      ----------------------------------------------------------------------- */
   weather: {
     label: "Pawleys Island",
-    heading: "Conditions on the Island",
+    heading: "Track the Storm",
 
     // Shown while the reading is being fetched, and if it can't be reached.
     loading_text: "Reading the sky…",
@@ -158,6 +158,21 @@ window.SITE_CONTENT = {
 
     // How long a reading is kept before fetching a fresh one, in minutes.
     refresh_minutes: 12,
+  },
+
+  /* ---- Subscribe (sits under the weather, same section) ------------------
+     Typing an email here carries it over to Substack, where the reader
+     finishes signing up. Nothing is stored on this website.
+     ----------------------------------------------------------------------- */
+  subscribe: {
+    intro:
+      "They say he walks the beach before the weather turns. Word of the show as it comes — the album, the productions, and the world the story rises out of.",
+    placeholder: "Your email",
+    button: "Subscribe",
+    note: "Delivered by Substack. Leave whenever you like.",
+
+    // Your Substack. If you ever move it, change this one address.
+    substack_url: "https://graymanmusical.substack.com/subscribe",
   },
 
   /* ---- Contact & Press --------------------------------------------------- */

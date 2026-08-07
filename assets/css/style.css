@@ -650,6 +650,101 @@ img {
   margin: 2.4em 0 0;
 }
 
+/* Subscribe — sits beneath the readings, separated by a rule so the
+   invitation reads as the point the weather was leading to. */
+
+.subscribe {
+  margin-top: 5em;
+  padding-top: 4.2em;
+  border-top: 1px solid rgba(237, 232, 221, 0.14);
+}
+
+.subscribe__intro {
+  color: var(--paper-dim);
+}
+
+.subscribe__form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9em;
+  margin-top: 2.4em;
+}
+
+.subscribe__input {
+  flex: 1 1 260px;
+  max-width: 340px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(237, 232, 221, 0.4);
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--paper);
+  padding: 0.9em 0.4em;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.subscribe__input::placeholder {
+  color: var(--gray-mid);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+.subscribe__input:focus {
+  border-bottom-color: var(--paper);
+}
+
+.subscribe__button {
+  flex: 0 0 auto;
+  padding: 1.1em 2.6em;
+  /* Keeps the button a comfortable size for a thumb on a phone. */
+  min-height: 48px;
+  background: var(--paper);
+  border: 1px solid var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.subscribe__button:hover,
+.subscribe__button:focus-visible {
+  background: transparent;
+  color: var(--paper);
+}
+
+.subscribe__note {
+  margin: 2em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+}
+
+/* Visible to screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Contact + footer */
 
 .section--contact {

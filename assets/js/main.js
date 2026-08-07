@@ -131,6 +131,19 @@
       figure.hidden = false;
     }
 
+    // Subscribe form — the placeholder, button and destination come from
+    // content.js. The form works without any of this (the address is in
+    // the HTML too), so a reader is never left with a dead field.
+    var sub = C.subscribe;
+    var subForm = document.getElementById('subscribeForm');
+    if (subForm && sub) {
+      if (sub.substack_url) subForm.setAttribute('action', sub.substack_url);
+      var subInput = subForm.querySelector('.subscribe__input');
+      var subButton = subForm.querySelector('.subscribe__button');
+      if (subInput && sub.placeholder) subInput.setAttribute('placeholder', sub.placeholder);
+      if (subButton && sub.button) subButton.textContent = sub.button;
+    }
+
     // Buy-early-access button — appears only once a shop address exists,
     // so the page never shows a link that leads nowhere.
     var cta = document.getElementById('earlyAccess');

@@ -179,6 +179,26 @@
 
         <p class="weather__stamp" id="wxStamp"></p>
       </div>
+
+      <!-- Subscribe. A plain form that hands the address to Substack,
+           which is where signing up actually finishes. Nothing is
+           collected or stored by this website. -->
+      <div class="subscribe">
+        <div class="section__prose">
+          <p class="subscribe__intro" data-content="subscribe.intro"></p>
+        </div>
+
+        <form class="subscribe__form" id="subscribeForm"
+              action="https://graymanmusical.substack.com/subscribe"
+              method="get" target="_blank" rel="noopener noreferrer">
+          <label class="sr-only" for="subscribeEmail">Email address</label>
+          <input class="subscribe__input" id="subscribeEmail" type="email" name="email"
+                 required autocomplete="email" spellcheck="false" placeholder="Your email" />
+          <button class="subscribe__button" type="submit">Subscribe</button>
+        </form>
+
+        <p class="subscribe__note" data-content="subscribe.note"></p>
+      </div>
     </div>
   </section>
 
