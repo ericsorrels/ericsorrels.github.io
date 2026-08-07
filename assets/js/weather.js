@@ -156,11 +156,18 @@
     return;
   }
 
+  // An address written without https:// in front would be read as a page
+  // on this site rather than an outside one, so put it back if missing.
+  function absolute(address) {
+    var a = String(address).trim();
+    return /^https?:\/\//i.test(a) ? a : 'https://' + a.replace(/^\/+/, '');
+  }
+
   // Prefer the relay at Cloudflare, which holds one reading for everyone.
   // Only if none is configured does the browser ask the weather service
   // itself, which exposes the key and costs a call per visitor.
   var url = W.proxy_url
-    ? W.proxy_url
+    ? absolute(W.proxy_url)
     : 'https://api.openweathermap.org/data/2.5/weather'
       + '?lat=' + encodeURIComponent(W.latitude)
       + '&lon=' + encodeURIComponent(W.longitude)

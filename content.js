@@ -161,7 +161,7 @@ window.SITE_CONTENT = {
     //
     // Paste the relay's address here once it's deployed. It looks like:
     //     https://gray-man-weather.YOURNAME.workers.dev
-    proxy_url: "gray-man-weather.withered-credit-543f.workers.dev",
+    proxy_url: "https://gray-man-weather.withered-credit-543f.workers.dev",
 
     // FALLBACK: used only while proxy_url above is empty. This asks the
     // weather service directly from each visitor's browser, which means

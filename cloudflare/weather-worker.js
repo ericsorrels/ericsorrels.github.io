@@ -26,6 +26,9 @@ const ALLOWED = [
   'https://graymanmusical.com',
   'https://www.graymanmusical.com',
   'https://ericsorrels.github.io',
+  // Local previews. Harmless to leave in — it only lets a browser on
+  // this same machine read a public weather reading.
+  'http://localhost:8420',
 ];
 
 export default {
