@@ -164,6 +164,64 @@
       cta.hidden = false;
     }
 
+    // Contact — one column per block. Blank lines are left off entirely,
+    // so a block with only an address doesn't leave gaps behind.
+    var contactBox = document.querySelector('[data-content-list="contact.blocks"]');
+    var blocks = C.contact && C.contact.blocks;
+    if (contactBox && Array.isArray(blocks)) {
+      contactBox.innerHTML = '';
+      blocks.forEach(function (block) {
+        var col = document.createElement('div');
+        col.className = 'contact-block';
+
+        if (block.heading) {
+          var h = document.createElement('p');
+          h.className = 'contact-block__heading';
+          h.textContent = block.heading;
+          col.appendChild(h);
+        }
+
+        if (block.name) {
+          var n = document.createElement('p');
+          n.className = 'contact-block__name';
+          n.textContent = block.name;
+          col.appendChild(n);
+        }
+
+        if (block.company) {
+          var co = document.createElement('p');
+          co.className = 'contact-block__line';
+          co.textContent = block.company;
+          col.appendChild(co);
+        }
+
+        if (block.email) {
+          var e = document.createElement('p');
+          e.className = 'contact-block__line';
+          var mail = document.createElement('a');
+          mail.className = 'contact-link';
+          mail.href = 'mailto:' + block.email;
+          mail.textContent = block.email;
+          e.appendChild(mail);
+          col.appendChild(e);
+        }
+
+        if (block.phone) {
+          var p = document.createElement('p');
+          p.className = 'contact-block__line';
+          var tel = document.createElement('a');
+          tel.className = 'contact-link';
+          // Strip spaces and brackets so a phone can dial it directly.
+          tel.href = 'tel:' + block.phone.replace(/[^\d+]/g, '');
+          tel.textContent = block.phone;
+          p.appendChild(tel);
+          col.appendChild(p);
+        }
+
+        contactBox.appendChild(col);
+      });
+    }
+
     // Footer — one small line per entry.
     var footer = document.querySelector('[data-content-list="footer.lines"]');
     var lines = C.footer && C.footer.lines;

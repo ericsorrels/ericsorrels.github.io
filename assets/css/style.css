@@ -764,18 +764,54 @@ img {
   padding-bottom: 0;
 }
 
-.contact-link {
-  display: inline-block;
-  margin-top: 0.5em;
+/* Contact — one column per party, side by side where there's room. */
+
+.contact-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 3.5em 2em;
+  margin-top: 1em;
+}
+
+.contact-block__heading {
   font-family: var(--font-body);
-  font-size: clamp(0.8rem, 1.4vw, 1rem);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  margin: 0 0 1.8em;
+}
+
+.contact-block__name {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--paper);
+  margin: 0 0 0.7em;
+}
+
+.contact-block__line {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
+  color: var(--paper-dim);
+  margin: 0 0 0.7em;
+}
+
+.contact-link {
+  font-family: var(--font-body);
+  font-size: inherit;
+  font-weight: 500;
+  letter-spacing: inherit;
   color: var(--paper);
   text-decoration: underline;
-  text-underline-offset: 6px;
+  text-underline-offset: 5px;
   text-decoration-thickness: 1px;
-  text-decoration-color: rgba(237, 232, 221, 0.4);
+  text-decoration-color: rgba(237, 232, 221, 0.35);
   transition: text-decoration-color 0.3s ease;
 }
 

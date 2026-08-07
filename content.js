@@ -191,11 +191,29 @@ window.SITE_CONTENT = {
     substack_url: "https://graymanmusical.substack.com/subscribe",
   },
 
-  /* ---- Contact & Press --------------------------------------------------- */
+  /* ---- Contact & Press ---------------------------------------------------
+     Each { ... } block below becomes one column. To add another — a press
+     agent, a licensing contact — copy a whole block, commas and all.
+     Any line you leave empty ("") is simply left off the page.
+     ----------------------------------------------------------------------- */
   contact: {
     label: "Contact & Press",
-    intro: "For press, rights, and general inquiries:",
-    email: "hello@ericsorrels.com",
+    blocks: [
+      {
+        heading: "Agent",
+        name: "Jonathan Lomma",
+        company: "WME",
+        email: "JLomma@WMEAgency.com",
+        phone: "(212) 903 1552",
+      },
+      {
+        heading: "General Inquiries",
+        name: "",
+        company: "",
+        email: "hello@ericsorrels.com",
+        phone: "",
+      },
+    ],
   },
 
   /* ---- Small print at the very bottom of the page ------------------------ */
