@@ -127,7 +127,7 @@ window.SITE_CONTENT = {
      ----------------------------------------------------------------------- */
   weather: {
     label: "Pawleys Island",
-    heading: "Track the Storm",
+    heading: "Conditions on the Island",
 
     // Shown while the reading is being fetched, and if it can't be reached.
     loading_text: "Reading the sky…",
@@ -165,8 +165,12 @@ window.SITE_CONTENT = {
      finishes signing up. Nothing is stored on this website.
      ----------------------------------------------------------------------- */
   subscribe: {
-    intro:
-      "They say he walks the beach before the weather turns. Word of the show as it comes — the album, the productions, and the world the story rises out of.",
+    // The call to action, set large above the email field.
+    heading: "Track the Storm",
+
+    // The line underneath it.
+    intro: "Subscribe below for advisories, updates, and exclusive content",
+
     placeholder: "Your email",
     button: "Subscribe",
     note: "Delivered by Substack. Leave whenever you like.",

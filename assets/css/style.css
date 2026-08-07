@@ -659,6 +659,19 @@ img {
   border-top: 1px solid rgba(237, 232, 221, 0.14);
 }
 
+/* The call to action — set larger than the weather heading above it, so
+   the eye lands here rather than on the readings. */
+.subscribe__heading {
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 2.2vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--paper);
+  margin: 0 0 1.1em;
+}
+
 .subscribe__intro {
   color: var(--paper-dim);
 }
