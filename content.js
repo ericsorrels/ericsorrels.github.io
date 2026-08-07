@@ -126,8 +126,8 @@ window.SITE_CONTENT = {
      Live conditions from the stretch of coast the show is set on.
      ----------------------------------------------------------------------- */
   weather: {
-    label: "Pawleys Island",
-    heading: "Conditions on the Island",
+    label: "Pawleys Island, South Carolina",
+    heading: "Current Weather Conditions",
 
     // Shown while the reading is being fetched, and if it can't be reached.
     loading_text: "Reading the sky…",
@@ -169,11 +169,11 @@ window.SITE_CONTENT = {
     heading: "Track the Storm",
 
     // The line underneath it.
-    intro: "Subscribe below for advisories, updates, and exclusive content",
+    intro: "Subscribe below to for advisories, updates, and warnings from The Gray Man",
 
     placeholder: "Your email",
     button: "Subscribe",
-    note: "Delivered by Substack. Leave whenever you like.",
+    note: "Delivered by Substack. Ignore at your own risk.",
 
     // Your Substack. If you ever move it, change this one address.
     substack_url: "https://graymanmusical.substack.com/subscribe",
