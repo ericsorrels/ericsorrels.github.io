@@ -169,7 +169,7 @@ window.SITE_CONTENT = {
     heading: "Track the Storm",
 
     // The line underneath it.
-    intro: "Subscribe below to for advisories, updates, and warnings from The Gray Man",
+    intro: "Subscribe below for advisories, updates, and warnings from The Gray Man",
 
     placeholder: "Your email",
     button: "Subscribe",
