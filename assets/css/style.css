@@ -571,13 +571,22 @@ img {
   background: var(--paper);
 }
 
-/* Same artwork as the hero — see the note on .hero__title for why the
-   margins are negative. */
+/* Same artwork as the hero, and the same trick for cropping the empty
+   space baked into the PNG. The negative margins MUST sit on the image
+   inside a fixed-width wrapper: percentage margins resolve against the
+   container's width, so applied directly to a full-width parent they
+   scale with the browser window and drag the title over the form. */
 .gate__title {
+  width: min(300px, 62vw);
+  margin: 0 0 2.2em;
+}
+
+.gate__title img {
   display: block;
-  width: min(340px, 62vw);
+  width: 100%;
   height: auto;
-  margin: -19.5% 0 -18%;
+  margin-top: -38.7%;
+  margin-bottom: -39.2%;
 }
 
 .gate__hint {

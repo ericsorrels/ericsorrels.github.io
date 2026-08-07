@@ -1,6 +1,46 @@
 THE GRAY MAN — YOUR WEBSITE
 ===========================
 
+YOUR SITE IS LIVE AT:   https://graymanmusical.com
+
+  Early Access page:    https://graymanmusical.com/access.html
+  Password:             Hugo1989!
+
+  Backup address (always works, even if the domain has trouble):
+                        https://ericsorrels.github.io
+
+
+HOW TO PUBLISH A CHANGE
+-----------------------
+
+Your website lives in two places: this folder on your Mac, and
+GitHub, which serves it to the world. Editing a file here does NOT
+change the live site until you publish it.
+
+  1. Change whatever you want (usually content.js), and save.
+  2. Open GitHub Desktop. Your change is listed on the left.
+  3. Type a short note in the "Summary" box — anything, like
+     "new track titles."
+  4. Click "Commit to main", then click "Push origin" at the top.
+  5. Wait about a minute, then refresh graymanmusical.com.
+
+If you ever don't see your change on the live site, it's almost
+always because step 4 was missed. Open GitHub Desktop and look for
+an un-pushed change.
+
+
+WHERE THINGS ARE SET UP (for reference — you rarely need this)
+--------------------------------------------------------------
+
+  Domain:    graymanmusical.com, registered at Cloudflare
+  Hosting:   GitHub Pages, free
+  Repo:      github.com/ericsorrels/ericsorrels.github.io
+
+  One Cloudflare setting must never change: under SSL/TLS, the mode
+  has to stay on "Full". If it gets switched to "Flexible" the site
+  stops loading entirely and the error gives no hint why.
+
+
 WHAT'S IN THIS FOLDER
 ---------------------
 
@@ -86,9 +126,11 @@ than replacing the files by hand — the compressed copy needs to be
 remade, and the title's on-page size is tuned to the current file.
 
 
-PUTTING THE SITE ONLINE
------------------------
+STILL TO COME
+-------------
 
-When you're ready, ask Claude to walk you through it. The site is
-plain files, so it can go on almost any host — several good ones
-are free.
+  - The 21 album tracks       (see assets/audio/)
+  - The four download files   (see assets/downloads/)
+
+Both can be added any time. Until then the site looks finished —
+tracks without files simply read "Soon".
