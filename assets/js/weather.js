@@ -12,7 +12,7 @@
   var W = C.weather;
 
   var panel = document.getElementById('weatherPanel');
-  if (!panel || !W || !W.api_key) return;
+  if (!panel || !W || !(W.proxy_url || W.api_key)) return;
 
   var CACHE_KEY = 'tgm_weather';
   var maxAgeMs = (W.refresh_minutes || 12) * 60 * 1000;
@@ -156,11 +156,16 @@
     return;
   }
 
-  var url = 'https://api.openweathermap.org/data/2.5/weather'
-    + '?lat=' + encodeURIComponent(W.latitude)
-    + '&lon=' + encodeURIComponent(W.longitude)
-    + '&units=imperial'
-    + '&appid=' + encodeURIComponent(W.api_key);
+  // Prefer the relay at Cloudflare, which holds one reading for everyone.
+  // Only if none is configured does the browser ask the weather service
+  // itself, which exposes the key and costs a call per visitor.
+  var url = W.proxy_url
+    ? W.proxy_url
+    : 'https://api.openweathermap.org/data/2.5/weather'
+      + '?lat=' + encodeURIComponent(W.latitude)
+      + '&lon=' + encodeURIComponent(W.longitude)
+      + '&units=imperial'
+      + '&appid=' + encodeURIComponent(W.api_key);
 
   fetch(url)
     .then(function (res) {

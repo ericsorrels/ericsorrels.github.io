@@ -151,12 +151,24 @@ window.SITE_CONTENT = {
     latitude: 33.42,
     longitude: -79.12,
 
-    // Weather service key. This is visible to anyone who views the page —
-    // that is unavoidable on a site like this. If it is ever misused,
-    // generate a new one at openweathermap.org and paste it here.
+    // ---- Where the reading comes from ----
+    //
+    // PREFERRED: the relay at Cloudflare (see the "cloudflare" folder).
+    // It fetches the weather once, holds it for ten minutes, and hands
+    // that same copy to every visitor — so the weather service is called
+    // a few times an hour no matter how busy the site is. It also keeps
+    // the key below out of the website entirely.
+    //
+    // Paste the relay's address here once it's deployed. It looks like:
+    //     https://gray-man-weather.YOURNAME.workers.dev
+    proxy_url: "",
+
+    // FALLBACK: used only while proxy_url above is empty. This asks the
+    // weather service directly from each visitor's browser, which means
+    // the key below is visible to anyone who views the page.
     api_key: "25d669ff5870ef3620d05f24b9350106",
 
-    // How long a reading is kept before fetching a fresh one, in minutes.
+    // How long each visitor's browser keeps a reading, in minutes.
     refresh_minutes: 12,
   },
 
