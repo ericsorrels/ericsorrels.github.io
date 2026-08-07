@@ -544,6 +544,112 @@ img {
   margin: 0 0 1.6em;
 }
 
+/* Pawleys Island weather — read as an instrument panel: a large
+   temperature, the sky in words, then the finer readings ruled beneath. */
+
+.weather__heading {
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--paper);
+  margin: 0 0 2.4em;
+}
+
+.weather__status {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  margin: 0;
+}
+
+/* The status line shows only while loading or on failure; the readings
+   appear only once there is something to read. */
+.weather[data-state='ready'] .weather__status { display: none; }
+.weather[data-state='loading'] .weather__now,
+.weather[data-state='loading'] .weather__grid,
+.weather[data-state='loading'] .weather__stamp,
+.weather[data-state='error'] .weather__now,
+.weather[data-state='error'] .weather__grid,
+.weather[data-state='error'] .weather__stamp { display: none; }
+
+.weather__temp {
+  font-family: var(--font-body);
+  font-size: clamp(3.4rem, 9vw, 5.2rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+  margin: 0;
+}
+
+.weather__deg {
+  font-size: 0.45em;
+  vertical-align: top;
+  position: relative;
+  top: 0.35em;
+  margin-left: 0.08em;
+  color: var(--gray-mid);
+}
+
+.weather__desc {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  margin: 1.2em 0 0;
+}
+
+.weather__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0;
+  margin: 3.4em 0 0;
+  text-align: left;
+}
+
+/* One reading per cell: label above value, ruled underneath. */
+.weather__cell {
+  padding: 1.4em 1.2em 1.5em;
+  border-top: 1px solid rgba(237, 232, 221, 0.12);
+}
+
+.weather__cell dt {
+  font-family: var(--font-body);
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  margin: 0 0 0.9em;
+}
+
+.weather__cell dd {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
+  margin: 0;
+}
+
+.weather__stamp {
+  font-family: var(--font-body);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  margin: 2.4em 0 0;
+}
+
 /* Contact + footer */
 
 .section--contact {

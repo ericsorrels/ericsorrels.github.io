@@ -122,6 +122,44 @@ window.SITE_CONTENT = {
     ],
   },
 
+  /* ---- Pawleys Island weather -------------------------------------------
+     Live conditions from the stretch of coast the show is set on.
+     ----------------------------------------------------------------------- */
+  weather: {
+    label: "Pawleys Island",
+    heading: "Conditions on the Island",
+
+    // Shown while the reading is being fetched, and if it can't be reached.
+    loading_text: "Reading the sky…",
+    error_text: "The island's weather is out of reach just now.",
+
+    // The labels beside each reading.
+    labels: {
+      feels_like: "Feels Like",
+      wind: "Wind",
+      gust: "Gust",
+      clouds: "Cloud Cover",
+      pressure: "Pressure",
+      visibility: "Visibility",
+      rain: "Rain",
+      humidity: "Humidity",
+    },
+    rain_none: "None",
+
+    /* --- Settings (not words — change only if something breaks) --- */
+    // Pawleys Island, South Carolina
+    latitude: 33.42,
+    longitude: -79.12,
+
+    // Weather service key. This is visible to anyone who views the page —
+    // that is unavoidable on a site like this. If it is ever misused,
+    // generate a new one at openweathermap.org and paste it here.
+    api_key: "25d669ff5870ef3620d05f24b9350106",
+
+    // How long a reading is kept before fetching a fresh one, in minutes.
+    refresh_minutes: 12,
+  },
+
   /* ---- Contact & Press --------------------------------------------------- */
   contact: {
     label: "Contact & Press",

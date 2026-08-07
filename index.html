@@ -157,10 +157,36 @@
   </section>
 
   <!-- ============================================================
+       PAWLEYS ISLAND WEATHER
+       ✏️  Labels and settings live in content.js → "weather".
+       The reading is fetched live and kept for a few minutes so the
+       weather service isn't called on every single page view.
+       ============================================================ -->
+  <section id="weather" class="section section--ink section--from-paper texture-grain">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="weather.label">Pawleys Island</p>
+      <h2 class="weather__heading" data-content="weather.heading">Conditions on the Island</h2>
+
+      <div id="weatherPanel" class="weather" data-state="loading">
+        <p class="weather__status" data-content="weather.loading_text">Reading the sky&hellip;</p>
+
+        <div class="weather__now">
+          <p class="weather__temp"><span id="wxTemp">&mdash;</span><span class="weather__deg">&deg;</span></p>
+          <p class="weather__desc" id="wxDesc">&mdash;</p>
+        </div>
+
+        <dl class="weather__grid" id="wxGrid"></dl>
+
+        <p class="weather__stamp" id="wxStamp"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
        CONTACT / PRESS
        ✏️  The email address and text live in content.js → "contact".
        ============================================================ -->
-  <section id="contact" class="section section--ink section--from-paper section--contact texture-grain">
+  <section id="contact" class="section section--ink section--contact texture-grain">
     <div class="section__inner reveal">
       <p class="section-label" data-content="contact.label">Contact &amp; Press</p>
       <div class="section__prose">
@@ -177,5 +203,6 @@
 
   <script src="content.js"></script>
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/weather.js"></script>
 </body>
 </html>
