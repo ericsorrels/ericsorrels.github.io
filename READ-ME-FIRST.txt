@@ -29,6 +29,25 @@ always because step 4 was missed. Open GitHub Desktop and look for
 an un-pushed change.
 
 
+ONE EXTRA STEP WHEN YOU EDIT content.js YOURSELF
+------------------------------------------------
+
+Browsers hold on to copies of the site's files, so a change to
+content.js can keep showing the old words for hours.
+
+To stop that, index.html and access.html both refer to the file with
+a version number on the end, like this:
+
+      <script src="content.js?v=2"></script>
+
+When you change content.js, raise that number by one in BOTH files
+(v=2 becomes v=3, and so on). Browsers treat the new number as a new
+file and fetch it straight away.
+
+If you'd rather not think about it, just ask Claude to make the
+change for you — it gets handled automatically that way.
+
+
 WHERE THINGS ARE SET UP (for reference — you rarely need this)
 --------------------------------------------------------------
 
