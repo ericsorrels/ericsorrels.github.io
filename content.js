@@ -53,7 +53,7 @@ window.SITE_CONTENT = {
     paragraphs: [
       "They say that when a great storm is coming, a figure in gray appears on the beach — walking alone, warning anyone who will listen to leave the island. Those who see him are spared.",
 
-      "Inspired by the folklore of the South Carolina coast, *The Gray Man* is a new musical — told across three hurricanes — about the people we keep reaching for, and the cost of letting them go.",
+      "Inspired by the folklore of coastal Carolina, *The Gray Man* is a new musical — told across three hurricanes — about the people we keep reaching for, and the cost of letting them go.",
     ],
   },
 
