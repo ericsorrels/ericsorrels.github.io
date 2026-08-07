@@ -89,6 +89,21 @@ window.SITE_CONTENT = {
     // Claude to swap this box for a streaming player.
     album_box_title: "Concept Album",
     album_box_note: "Coming Soon",
+
+    // ---- The "buy early access" button ----
+    // Sits underneath the concept album box.
+    //
+    // Paste the web address of your Gumroad product between the quotes
+    // below. It looks something like:
+    //     https://ericsorrels.gumroad.com/l/graymanearly
+    //
+    // While "url" is left empty ("") the button does not appear at all,
+    // so the page never shows a link that goes nowhere.
+    early_access: {
+      url: "",
+      label: "Purchase Early Digital Access",
+      note: "Hear the concept album before release.",
+    },
   },
 
   /* ---- News & Productions ----------------------------------------------- */

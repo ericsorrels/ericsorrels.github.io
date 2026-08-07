@@ -478,6 +478,46 @@ img {
   opacity: 0.5;
 }
 
+/* The one place on the site asking for an action, so it is filled
+   rather than outlined — enough weight to read as a button without
+   breaking the hush of the page. */
+
+.cta {
+  margin-top: 2.6em;
+  text-align: center;
+}
+
+.cta__button {
+  display: inline-block;
+  padding: 1.4em 2.8em;
+  background: var(--paper);
+  border: 1px solid var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.cta__button:hover,
+.cta__button:focus-visible {
+  background: transparent;
+  color: var(--paper);
+}
+
+.cta__note {
+  margin: 1.6em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+}
+
 /* News */
 
 .news-item + .news-item {

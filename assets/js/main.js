@@ -131,6 +131,26 @@
       figure.hidden = false;
     }
 
+    // Buy-early-access button — appears only once a shop address exists,
+    // so the page never shows a link that leads nowhere.
+    var cta = document.getElementById('earlyAccess');
+    var early = C.music && C.music.early_access;
+    if (cta && early && early.url) {
+      var button = cta.querySelector('.cta__button');
+      var note = cta.querySelector('.cta__note');
+
+      button.href = early.url;
+      button.textContent = early.label || 'Purchase Early Digital Access';
+
+      if (early.note) {
+        note.innerHTML = format(early.note);
+      } else {
+        note.remove();
+      }
+
+      cta.hidden = false;
+    }
+
     // Footer — one small line per entry.
     var footer = document.querySelector('[data-content-list="footer.lines"]');
     var lines = C.footer && C.footer.lines;
