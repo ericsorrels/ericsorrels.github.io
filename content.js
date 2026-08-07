@@ -197,14 +197,14 @@ window.SITE_CONTENT = {
      Any line you leave empty ("") is simply left off the page.
      ----------------------------------------------------------------------- */
   contact: {
-    label: "Contact & Press",
+    label: "Representation",
     blocks: [
       {
         heading: "Agent",
         name: "Jonathan Lomma",
-        company: "WME",
+        company: "",
         email: "JLomma@WMEAgency.com",
-        phone: "(212) 903 1552",
+        phone: "+1 (212) 903 1552",
       },
       {
         heading: "General Inquiries",
