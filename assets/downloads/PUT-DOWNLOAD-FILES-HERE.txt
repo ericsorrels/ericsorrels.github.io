@@ -1,0 +1,16 @@
+HOW TO ADD YOUR DOWNLOAD FILES
+==============================
+
+Put these four files in this folder (assets/downloads), named
+exactly as shown:
+
+      listening-guide.pdf              → the Listening Guide
+      digital-lyric-book.pdf           → the Digital Lyric Book
+      about-pawleys-island.pdf         → About Pawleys Island and The Gray Man
+      the-gray-man-full-album.zip      → the full album download
+                                         (put all the audio files into one
+                                         zip file — on a Mac: select them,
+                                         right-click, "Compress")
+
+The download buttons on the Early Access page are already wired to
+these names. A button won't work until its file is here.

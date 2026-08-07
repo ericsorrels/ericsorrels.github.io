@@ -1,0 +1,40 @@
+HOW TO ADD YOUR TEASER VIDEO
+============================
+
+1. Put your video file in this folder (assets/video) and name it:
+
+      teaser.mp4
+
+   Use the version you exported BEFORE posting to Instagram, not a
+   copy downloaded back from Instagram — Instagram squeezes the
+   quality down when you upload, and that damage can't be undone.
+
+   The file must be .mp4 to play everywhere. If yours is .mov or
+   something else, tell Claude and it can be converted.
+
+2. Open content.js and find the "video" section under "music".
+   Set "shape" to match your video:
+
+      "wide"    a normal landscape video
+      "square"  as tall as it is wide
+      "tall"    a vertical phone video
+
+   Instagram posts are often square or tall, so check this — it's the
+   one setting that matters for how the video sits on the page.
+
+3. Refresh the site.
+
+WHILE YOU DON'T HAVE A FILE HERE
+--------------------------------
+
+The video simply doesn't appear. The Music section looks complete
+without it, so nothing looks broken or half-finished.
+
+OPTIONAL: A COVER IMAGE
+-----------------------
+
+By default the video shows its own first frame before someone presses
+play. If that frame isn't flattering, save a still image in
+assets/img/ and write its name in content.js under "poster", like:
+
+      poster: "assets/img/teaser-cover.jpg",

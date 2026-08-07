@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Early Digital Access — The Gray Man</title>
+  <meta name="robots" content="noindex" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ✏️  All text on this page lives in content.js → "access".
+       The password is not written anywhere in these files — the page
+       stores only a scrambled fingerprint of it. To change the
+       password, ask Claude to generate a new fingerprint. -->
+
+  <!-- ============================================================
+       THE LOCKED DOOR
+       ============================================================ -->
+  <div id="gate" class="gate texture-grain texture-halftone">
+    <p class="section-label" data-content="access.gate_label">Early Digital Access</p>
+    <img class="gate__title" src="assets/img/gray-man-title.png" alt="The Gray Man" data-content-alt="hero.title" />
+    <p class="gate__hint" data-content="access.gate_hint">Enter the password from your invitation.</p>
+
+    <form id="gateForm" class="gate__form">
+      <input
+        id="gateInput"
+        class="gate__input"
+        type="password"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        aria-label="Password"
+      />
+      <button type="submit" class="gate__button" data-content="access.gate_button">Enter</button>
+    </form>
+
+    <p id="gateError" class="gate__error" hidden data-content="access.gate_error">
+      That password isn't right &mdash; please check your invitation and try again.
+    </p>
+
+    <a class="gate__back" href="index.html" data-content="access.back_link">Back to the main site</a>
+  </div>
+
+  <!-- ============================================================
+       THE VAULT (revealed after the password is accepted)
+       ============================================================ -->
+  <main id="vault" hidden>
+
+    <section class="section section--paper texture-grain texture-halftone">
+      <div class="section__inner">
+        <p class="section-label" data-content="access.label">Early Digital Access</p>
+        <h1 class="vault__heading" data-content="access.heading">The Concept Album</h1>
+        <div class="section__prose">
+          <p data-content="access.intro"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--ink section--from-paper texture-grain">
+      <div class="section__inner section__inner--wide">
+        <p class="section-label" data-content="access.tracks_label">The Album</p>
+        <div id="trackList" class="track-list"></div>
+      </div>
+    </section>
+
+    <section class="section section--ink section--contact texture-grain">
+      <div class="section__inner section__inner--wide">
+        <p class="section-label" data-content="access.downloads_label">Downloads</p>
+        <div id="downloadList" class="downloads"></div>
+        <a class="vault__back" href="index.html" data-content="access.back_link">Back to the main site</a>
+      </div>
+
+      <footer class="site-footer" data-content-list="footer.lines"></footer>
+    </section>
+
+  </main>
+
+  <script src="content.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/access.js"></script>
+</body>
+</html>

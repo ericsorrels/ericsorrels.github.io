@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Gray Man — A Musical in Three Hurricanes</title>
+  <meta name="description" content="THE GRAY MAN, a new musical written by Eric Sorrels. A musical in three hurricanes." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ✏️  LOOKING TO CHANGE THE WORDS ON THE SITE?
+       Every piece of text lives in one file: content.js (in the same
+       folder as this file). Edit it there — the text written below is
+       only a fallback shown if JavaScript is turned off. -->
+
+  <nav class="site-nav" aria-label="Site">
+    <a href="#about" data-content="nav.about">About</a>
+    <a href="#music" data-content="nav.music">Music</a>
+    <a href="#news" data-content="nav.news">News</a>
+    <a href="#contact" data-content="nav.contact">Contact</a>
+  </nav>
+
+  <section class="hero texture-grain texture-halftone">
+    <div class="hero__fog"></div>
+
+    <div class="hero__content">
+      <p class="hero__byline"><span data-content="hero.byline_label">Written By</span> <strong data-content="hero.byline_name">Eric Sorrels</strong></p>
+      <h1 class="hero__title">
+        <img src="assets/img/gray-man-title.png" alt="The Gray Man" data-content-alt="hero.title" />
+      </h1>
+    </div>
+
+    <p class="hero__tagline" data-content="hero.tagline">A Musical in Three Hurricanes</p>
+
+    <a href="#about" class="hero__scroll-cue" data-content="hero.scroll_cue">Enter</a>
+  </section>
+
+  <!-- ============================================================
+       ABOUT THE SHOW
+       ✏️  To change the synopsis, edit content.js → "about".
+       ============================================================ -->
+  <section id="about" class="section section--paper section--from-ink texture-grain texture-halftone">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="about.label">About the Show</p>
+      <div class="section__prose" data-content-list="about.paragraphs">
+        <p>
+          They say that when a great storm is coming, a lone figure in gray
+          appears on the beach at dusk &mdash; walking the dunes, warning anyone
+          who will listen to leave the island. Those who see him are spared.
+        </p>
+        <div class="rule" aria-hidden="true"></div>
+        <p>
+          Drawn from the folklore of the South Carolina coast,
+          <em class="show-title">The Gray Man</em> is a new musical about love,
+          loss, and the storms that return for us &mdash; told across three
+          hurricanes, and the years between them.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MUSIC
+       ✏️  Text lives in content.js → "music".
+       When the concept album is ready to share, replace the
+       placeholder box below with an embed. Example (Spotify):
+       <iframe src="https://open.spotify.com/embed/album/YOUR_ALBUM_ID"
+               width="100%" height="352" frameborder="0"
+               allow="encrypted-media" loading="lazy"></iframe>
+       ============================================================ -->
+  <section id="music" class="section section--ink section--from-paper texture-grain">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="music.label">Music</p>
+      <div class="section__prose">
+        <p data-content="music.intro">
+          Songs from <em class="show-title">The Gray Man</em> &mdash; demo
+          recordings and the concept album &mdash; will be collected here.
+        </p>
+      </div>
+      <!-- The teaser video. Hidden automatically until a file is named
+           in content.js → music.video.file -->
+      <figure id="musicVideo" class="video" hidden>
+        <video class="video__player" controls preload="metadata" playsinline></video>
+        <figcaption class="video__caption"></figcaption>
+      </figure>
+
+      <div class="album-placeholder">
+        <span data-content="music.album_box_title">Concept Album</span>
+        <span class="album-placeholder__note" data-content="music.album_box_note">Coming Soon</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       NEWS / PRODUCTIONS
+       ✏️  To announce something, edit content.js → "news" and copy
+       an item block there. This page builds itself from that list.
+       ============================================================ -->
+  <section id="news" class="section section--paper section--from-ink texture-grain texture-halftone">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="news.label">News &amp; Productions</p>
+      <div data-content-list="news.items">
+        <article class="news-item">
+          <p class="news-item__date">Announcement Coming Soon</p>
+          <h2 class="news-item__title">Developmental Production</h2>
+          <div class="section__prose">
+            <p>
+              Information about upcoming readings, workshops, and the first
+              developmental production of
+              <em class="show-title">The Gray Man</em> will be posted here.
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CONTACT / PRESS
+       ✏️  The email address and text live in content.js → "contact".
+       ============================================================ -->
+  <section id="contact" class="section section--ink section--from-paper section--contact texture-grain">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="contact.label">Contact &amp; Press</p>
+      <div class="section__prose">
+        <p data-content="contact.intro">For press, rights, and general inquiries:</p>
+      </div>
+      <a class="contact-link" href="mailto:eric.sorrels@gmail.com" data-content="contact.email" data-email>eric.sorrels@gmail.com</a>
+    </div>
+
+    <footer class="site-footer" data-content-list="footer.lines">
+      <p>The Gray Man &mdash; A Musical in Three Hurricanes</p>
+      <p>&copy; 2026 Eric Sorrels. All rights reserved.</p>
+    </footer>
+  </section>
+
+  <script src="content.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

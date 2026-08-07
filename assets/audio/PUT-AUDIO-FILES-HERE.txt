@@ -1,0 +1,33 @@
+HOW TO ADD YOUR ALBUM TRACKS
+============================
+
+The site is set up for 21 tracks.
+
+1. Put your audio files in this folder (assets/audio).
+
+2. Name them by track number, in album order, always using two
+   digits:
+
+      01.mp3   02.mp3   03.mp3   04.mp3   05.mp3
+      06.mp3   07.mp3   08.mp3   09.mp3   10.mp3
+      11.mp3   12.mp3   13.mp3   14.mp3   15.mp3
+      16.mp3   17.mp3   18.mp3   19.mp3   20.mp3
+      21.mp3
+
+   The leading zero matters on 01 through 09.
+
+3. Open content.js (in the main website folder) and find the
+   "tracks:" list. Type the real song titles there, in the same
+   order — the first title goes with 01.mp3, the second with
+   02.mp3, and so on down to 21.mp3.
+
+You can add files a few at a time. Any track without a matching
+file simply shows "Soon" and can't be clicked, so the page always
+looks intentional while you're still recording.
+
+When a song finishes, the next one starts automatically, and
+tracks that aren't uploaded yet are skipped over.
+
+If the album ends up with more or fewer than 21 tracks, tell
+Claude rather than guessing — the list in content.js and these
+file names need to stay in step.
