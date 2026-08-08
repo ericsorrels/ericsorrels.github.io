@@ -411,7 +411,9 @@ img {
    doesn't jump as the file loads. */
 
 .video {
-  margin: 0 auto 3.5em;
+  /* Sits between the album box above and the buy button below, each of
+     which supplies its own spacing. */
+  margin: 0 auto;
   max-width: 640px;
 }
 
@@ -460,7 +462,7 @@ img {
   gap: 1em;
   align-items: center;
   max-width: 460px;
-  margin: 3em auto 0;
+  margin: 0 auto 3.5em;
   padding: 3.2em 2em;
   border: 1px solid rgba(237, 232, 221, 0.25);
 }

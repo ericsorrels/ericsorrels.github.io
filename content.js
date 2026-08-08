@@ -60,8 +60,6 @@ window.SITE_CONTENT = {
   /* ---- Music ------------------------------------------------------------ */
   music: {
     label: "Music",
-    intro:
-      "Songs from *The Gray Man* — demo recordings and the concept album — will be collected here.",
 
     // ---- The teaser video ----
     // Put your video file in the folder  assets/video/  and write its

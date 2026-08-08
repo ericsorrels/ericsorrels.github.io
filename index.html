@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=7" />
+  <link rel="stylesheet" href="assets/css/style.css?v=8" />
 </head>
 <body>
 
@@ -105,23 +105,18 @@
   <section id="music" class="section section--ink section--from-paper texture-grain">
     <div class="section__inner reveal">
       <p class="section-label" data-content="music.label">Music</p>
-      <div class="section__prose">
-        <p data-content="music.intro">
-          Songs from <em class="show-title">The Gray Man</em> &mdash; demo
-          recordings and the concept album &mdash; will be collected here.
-        </p>
+
+      <div class="album-placeholder">
+        <span data-content="music.album_box_title">Concept Album</span>
+        <span class="album-placeholder__note" data-content="music.album_box_note">Coming Soon</span>
       </div>
+
       <!-- The teaser video. Hidden automatically until a file is named
            in content.js → music.video.file -->
       <figure id="musicVideo" class="video" hidden>
         <video class="video__player" controls preload="metadata" playsinline></video>
         <figcaption class="video__caption"></figcaption>
       </figure>
-
-      <div class="album-placeholder">
-        <span data-content="music.album_box_title">Concept Album</span>
-        <span class="album-placeholder__note" data-content="music.album_box_note">Coming Soon</span>
-      </div>
 
       <!-- Buy early access. Stays hidden until a shop address is set in
            content.js → music.early_access.url -->
@@ -220,8 +215,8 @@
     </footer>
   </section>
 
-  <script src="content.js?v=7"></script>
-  <script src="assets/js/main.js?v=7"></script>
-  <script src="assets/js/weather.js?v=7"></script>
+  <script src="content.js?v=8"></script>
+  <script src="assets/js/main.js?v=8"></script>
+  <script src="assets/js/weather.js?v=8"></script>
 </body>
 </html>
