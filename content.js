@@ -72,7 +72,8 @@ window.SITE_CONTENT = {
 
       // A still image shown before anyone presses play. Optional —
       // leave it empty ("") and the first frame is used instead.
-      poster: "",
+      // This one is the frame from 0:33 of the teaser.
+      poster: "assets/img/teaser-poster.jpg",
 
       // The shape of your video. Instagram posts are often square or
       // tall rather than wide, so set whichever matches:
