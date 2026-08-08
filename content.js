@@ -101,7 +101,7 @@ window.SITE_CONTENT = {
     // While "url" is left empty ("") the button does not appear at all,
     // so the page never shows a link that goes nowhere.
     early_access: {
-      url: "",
+      url: "https://sorrels7.gumroad.com/l/earlyaccess",
       label: "Purchase Early Digital Access",
       note: "Hear the concept album before release.",
     },
