@@ -417,12 +417,69 @@ img {
   max-width: 640px;
 }
 
+.video__frame {
+  position: relative;
+}
+
 .video__player {
   display: block;
   width: 100%;
   height: auto;
   background: #000;
   border: 1px solid rgba(237, 232, 221, 0.18);
+}
+
+/* Stands in for the control bar until playback begins, so the cover
+   image — logo and all — is seen whole. The whole frame is the target;
+   the ring is only what you look at. */
+.video__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.video__play-mark {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 1px solid rgba(237, 232, 221, 0.8);
+  background: rgba(27, 26, 23, 0.28);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.35s ease, border-color 0.35s ease, transform 0.35s ease;
+}
+
+/* The triangle, drawn rather than typed so it stays crisp. */
+.video__play-mark::after {
+  content: '';
+  border-style: solid;
+  border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent var(--paper);
+  margin-left: 4px;
+}
+
+.video__play:hover .video__play-mark,
+.video__play:focus-visible .video__play-mark {
+  background: rgba(27, 26, 23, 0.5);
+  border-color: var(--paper);
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video__play-mark { transition: none; }
+  .video__play:hover .video__play-mark,
+  .video__play:focus-visible .video__play-mark { transform: none; }
 }
 
 .video[data-shape='wide'] .video__player {

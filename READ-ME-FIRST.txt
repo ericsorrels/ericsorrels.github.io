@@ -48,6 +48,16 @@ If you'd rather not think about it, just ask Claude to make the
 change for you — it gets handled automatically that way.
 
 
+REPLACING A PICTURE
+-------------------
+
+The same holds for images, and the version number does NOT cover
+them. If you swap in a new photo, give the file a NEW name rather
+than reusing the old one — otherwise browsers keep showing the
+picture they already have. Then update the name wherever it's
+written in content.js.
+
+
 WHERE THINGS ARE SET UP (for reference — you rarely need this)
 --------------------------------------------------------------
 

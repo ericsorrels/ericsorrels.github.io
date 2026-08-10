@@ -128,6 +128,34 @@
         figure.hidden = true;
       });
 
+      // Take the browser's control bar away until someone presses play,
+      // so it doesn't sit across the bottom of the cover image — which is
+      // where the logo falls. The moment playback starts, the ordinary
+      // controls come back and behave as usual.
+      var playButton = figure.querySelector('.video__play');
+      if (playButton) {
+        if (video.play_label) playButton.setAttribute('aria-label', video.play_label);
+
+        player.removeAttribute('controls');
+        playButton.hidden = false;
+
+        var reveal = function () {
+          player.setAttribute('controls', '');
+          playButton.hidden = true;
+          var started = player.play();
+          // Older browsers return nothing here; newer ones a promise that
+          // rejects if playback is refused, in which case put the button back.
+          if (started && typeof started.catch === 'function') {
+            started.catch(function () {
+              player.removeAttribute('controls');
+              playButton.hidden = false;
+            });
+          }
+        };
+
+        playButton.addEventListener('click', reveal);
+      }
+
       figure.hidden = false;
     }
 

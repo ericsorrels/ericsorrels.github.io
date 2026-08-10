@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=10" />
+  <link rel="stylesheet" href="assets/css/style.css?v=12" />
 </head>
 <body>
 
@@ -114,7 +114,16 @@
       <!-- The teaser video. Hidden automatically until a file is named
            in content.js → music.video.file -->
       <figure id="musicVideo" class="video" hidden>
-        <video class="video__player" controls preload="metadata" playsinline></video>
+        <div class="video__frame">
+          <!-- "controls" is here on purpose: if the site's JavaScript
+               never runs, the player still works normally. When it does
+               run, the controls are taken away and the button below
+               stands in, so the cover image isn't covered up. -->
+          <video class="video__player" controls preload="metadata" playsinline></video>
+          <button class="video__play" type="button" hidden aria-label="Play the teaser">
+            <span class="video__play-mark" aria-hidden="true"></span>
+          </button>
+        </div>
         <figcaption class="video__caption"></figcaption>
       </figure>
 
@@ -215,8 +224,8 @@
     </footer>
   </section>
 
-  <script src="content.js?v=10"></script>
-  <script src="assets/js/main.js?v=10"></script>
-  <script src="assets/js/weather.js?v=10"></script>
+  <script src="content.js?v=12"></script>
+  <script src="assets/js/main.js?v=12"></script>
+  <script src="assets/js/weather.js?v=12"></script>
 </body>
 </html>

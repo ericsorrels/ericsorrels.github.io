@@ -71,7 +71,11 @@ window.SITE_CONTENT = {
       // A still image shown before anyone presses play. Optional —
       // leave it empty ("") and the first frame is used instead.
       // This one is the frame from 0:33 of the teaser.
-      poster: "assets/img/teaser-poster.jpg",
+      //
+      // NOTE: when you replace this picture, give the new file a NEW
+      // name and change it here too. Browsers keep a copy of every
+      // image and will keep showing the old one if the name is reused.
+      poster: "assets/img/teaser-poster-logo.jpg",
 
       // The shape of your video. Instagram posts are often square or
       // tall rather than wide, so set whichever matches:
@@ -82,6 +86,9 @@ window.SITE_CONTENT = {
 
       // A short line printed under the player. Leave empty ("") for none.
       caption: "Concept album teaser",
+
+      // Spoken aloud by screen readers for the play button. Not visible.
+      play_label: "Play the teaser",
     },
 
     // The bordered "coming soon" box. When the album is ready, ask
