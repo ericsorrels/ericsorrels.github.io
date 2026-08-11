@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=18" />
+  <link rel="stylesheet" href="assets/css/style.css?v=19" />
 </head>
 <body>
 
@@ -51,7 +51,9 @@
     <a href="#about" data-content="nav.about">About</a>
     <a href="#music" data-content="nav.music">Music</a>
     <a href="#news" data-content="nav.news">News</a>
-    <a href="#contact" data-content="nav.contact">Contact</a>
+    <!-- Points at Track the Storm, which sits directly above the
+         representation details, so both are in view on arrival. -->
+    <a href="#storm" data-content="nav.contact">Contact</a>
   </nav>
 
   <section class="hero texture-grain texture-halftone">
@@ -66,7 +68,36 @@
 
     <p class="hero__tagline" data-content="hero.tagline">A Musical in Three Hurricanes</p>
 
-    <a href="#about" class="hero__scroll-cue" data-content="hero.scroll_cue">Enter</a>
+    <a href="#weather" class="hero__scroll-cue" data-content="hero.scroll_cue">Enter</a>
+  </section>
+
+  <!-- ============================================================
+       PAWLEYS ISLAND WEATHER
+       ✏️  Labels and settings live in content.js → "weather".
+       The reading is fetched live and kept for a few minutes so the
+       weather service isn't called on every single page view.
+
+       No gradient entrance here: the hero already ends in the dark,
+       so this carries straight on from it.
+       ============================================================ -->
+  <section id="weather" class="section section--ink texture-grain">
+    <div class="section__inner reveal">
+      <p class="section-label" data-content="weather.label">Pawleys Island</p>
+      <h2 class="weather__heading" data-content="weather.heading">Conditions on the Island</h2>
+
+      <div id="weatherPanel" class="weather" data-state="loading">
+        <p class="weather__status" data-content="weather.loading_text">Reading the sky&hellip;</p>
+
+        <div class="weather__now">
+          <p class="weather__temp"><span id="wxTemp">&mdash;</span><span class="weather__deg">&deg;</span></p>
+          <p class="weather__desc" id="wxDesc">&mdash;</p>
+        </div>
+
+        <dl class="weather__grid" id="wxGrid"></dl>
+
+        <p class="weather__stamp" id="wxStamp"></p>
+      </div>
+    </div>
   </section>
 
   <!-- ============================================================
@@ -164,32 +195,13 @@
   </section>
 
   <!-- ============================================================
-       PAWLEYS ISLAND WEATHER
-       ✏️  Labels and settings live in content.js → "weather".
-       The reading is fetched live and kept for a few minutes so the
-       weather service isn't called on every single page view.
+       TRACK THE STORM — subscribe
+       ✏️  Wording lives in content.js → "subscribe".
+       The form hands the address to Substack, which is where signing
+       up actually finishes. Nothing is collected or stored here.
        ============================================================ -->
-  <section id="weather" class="section section--ink section--from-paper texture-grain">
+  <section id="storm" class="section section--ink section--from-paper texture-grain">
     <div class="section__inner reveal">
-      <p class="section-label" data-content="weather.label">Pawleys Island</p>
-      <h2 class="weather__heading" data-content="weather.heading">Conditions on the Island</h2>
-
-      <div id="weatherPanel" class="weather" data-state="loading">
-        <p class="weather__status" data-content="weather.loading_text">Reading the sky&hellip;</p>
-
-        <div class="weather__now">
-          <p class="weather__temp"><span id="wxTemp">&mdash;</span><span class="weather__deg">&deg;</span></p>
-          <p class="weather__desc" id="wxDesc">&mdash;</p>
-        </div>
-
-        <dl class="weather__grid" id="wxGrid"></dl>
-
-        <p class="weather__stamp" id="wxStamp"></p>
-      </div>
-
-      <!-- Subscribe. A plain form that hands the address to Substack,
-           which is where signing up actually finishes. Nothing is
-           collected or stored by this website. -->
       <div class="subscribe">
         <h2 class="subscribe__heading" data-content="subscribe.heading">Track the Storm</h2>
 
@@ -227,8 +239,8 @@
     </footer>
   </section>
 
-  <script src="content.js?v=18"></script>
-  <script src="assets/js/main.js?v=18"></script>
-  <script src="assets/js/weather.js?v=18"></script>
+  <script src="content.js?v=19"></script>
+  <script src="assets/js/main.js?v=19"></script>
+  <script src="assets/js/weather.js?v=19"></script>
 </body>
 </html>
