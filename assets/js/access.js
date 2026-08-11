@@ -162,7 +162,10 @@
     var audio = document.createElement('audio');
     var number = (index + 1 < 10 ? '0' : '') + (index + 1);
     audio.preload = 'metadata';
-    audio.src = 'assets/audio/' + number + '.mp3';
+    // The version tag makes a replaced track count as a new address, so
+    // browsers fetch it instead of replaying the copy they already hold.
+    audio.src = 'assets/audio/' + number + '.mp3'
+      + (A.audio_version ? '?v=' + encodeURIComponent(A.audio_version) : '');
 
     var play = document.createElement('button');
     play.className = 'track__play';
