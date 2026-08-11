@@ -45,7 +45,7 @@ window.SITE_CONTENT = {
 
   /* ---- About the Show --------------------------------------------------- */
   about: {
-    label: "About the Show",
+    label: "The Legend",
 
     // Each block in quotes is one paragraph. A thin divider line is
     // drawn between paragraphs automatically. To add a paragraph, copy
@@ -59,7 +59,7 @@ window.SITE_CONTENT = {
 
   /* ---- Music ------------------------------------------------------------ */
   music: {
-    label: "Music",
+    label: "The Music",
 
     // ---- The teaser video ----
     // Put your video file in the folder  assets/video/  and write its
@@ -93,8 +93,8 @@ window.SITE_CONTENT = {
 
     // The bordered "coming soon" box. When the album is ready, ask
     // Claude to swap this box for a streaming player.
-    album_box_title: "Concept Album",
-    album_box_note: "Coming Soon",
+    album_box_title: "The Gray Man — Original Concept Album",
+    album_box_note: "Coming Fall 2026",
 
     // ---- The "buy early access" button ----
     // Sits underneath the concept album box.
@@ -114,7 +114,7 @@ window.SITE_CONTENT = {
 
   /* ---- News & Productions ----------------------------------------------- */
   news: {
-    label: "News & Productions",
+    label: "The Journey",
 
     // Each { ... } block is one announcement, shown top to bottom.
     // To add another announcement, copy a whole block — from its
