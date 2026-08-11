@@ -1199,6 +1199,143 @@ img {
   }
 }
 
+/* Volume — floats at the edge, halfway down the screen, so it stays
+   within reach however far into the album you have scrolled. */
+
+.volume {
+  position: fixed;
+  right: clamp(0.75rem, 2.4vw, 2.2rem);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1em;
+  padding: 1.4em 0.9em;
+  background: rgba(27, 26, 23, 0.55);
+  border: 1px solid rgba(237, 232, 221, 0.14);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Over the pale top of the page it turns inside out, so it stays
+   legible without shouting. */
+.volume--on-paper {
+  background: rgba(237, 232, 221, 0.72);
+  border-color: rgba(27, 26, 23, 0.16);
+}
+
+.volume__label {
+  font-family: var(--font-body);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  cursor: default;
+}
+
+.volume--on-paper .volume__label {
+  color: var(--ink-faint);
+}
+
+.volume--on-paper .volume__slider::-webkit-slider-runnable-track {
+  background: rgba(27, 26, 23, 0.3);
+}
+
+.volume--on-paper .volume__slider::-moz-range-track {
+  background: rgba(27, 26, 23, 0.3);
+}
+
+.volume--on-paper .volume__slider::-webkit-slider-thumb {
+  background: var(--ink);
+}
+
+.volume--on-paper .volume__slider::-moz-range-thumb {
+  background: var(--ink);
+}
+
+/* A vertical range control. writing-mode is the standard way to turn
+   one on its end; direction keeps loud at the top. */
+.volume__slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 18px;
+  height: clamp(90px, 18vh, 150px);
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+.volume__slider:focus-visible {
+  outline: 1px solid var(--paper);
+  outline-offset: 4px;
+}
+
+/* The groove */
+.volume__slider::-webkit-slider-runnable-track {
+  width: 2px;
+  background: rgba(237, 232, 221, 0.28);
+}
+
+.volume__slider::-moz-range-track {
+  width: 2px;
+  background: rgba(237, 232, 221, 0.28);
+}
+
+/* The handle */
+.volume__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: none;
+  margin-left: -5.5px;   /* centres it on the 2px groove */
+  transition: transform 0.2s ease;
+}
+
+.volume__slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: none;
+}
+
+.volume__slider:hover::-webkit-slider-thumb,
+.volume__slider:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* Smaller on a phone, and the page is given a margin on that side so
+   nothing scrolls underneath it. */
+@media (max-width: 620px) {
+  .volume {
+    right: 0.4rem;
+    padding: 0.9em 0.5em;
+    gap: 0.7em;
+  }
+
+  .volume__slider {
+    height: clamp(70px, 14vh, 110px);
+    width: 16px;
+  }
+
+  #vault .section {
+    padding-right: 60px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .volume__slider::-webkit-slider-thumb { transition: none; }
+  .volume__slider:hover::-webkit-slider-thumb { transform: none; }
+}
+
 /* Download buttons */
 
 .downloads {

@@ -139,6 +139,70 @@
 
   var built = false;
 
+  /* ------------------------------------------------------------------
+     Volume — one slider governing every track, remembered between visits.
+     ------------------------------------------------------------------ */
+
+  var VOLUME_KEY = 'tgm_volume';
+
+  function storedVolume() {
+    try {
+      var v = parseFloat(window.localStorage.getItem(VOLUME_KEY));
+      return (isFinite(v) && v >= 0 && v <= 1) ? v : 1;
+    } catch (e) {
+      return 1;   // private browsing, or nothing saved yet
+    }
+  }
+
+  function applyVolume(level) {
+    players.forEach(function (audio) { audio.volume = level; });
+  }
+
+  function setUpVolume() {
+    var panel = document.getElementById('volumePanel');
+    var slider = document.getElementById('volumeSlider');
+    if (!panel || !slider) return;
+
+    var level = storedVolume();
+    slider.value = Math.round(level * 100);
+    applyVolume(level);
+
+    slider.addEventListener('input', function () {
+      var next = slider.value / 100;
+      applyVolume(next);
+      try {
+        window.localStorage.setItem(VOLUME_KEY, next);
+      } catch (e) { /* nothing to do */ }
+    });
+
+    panel.hidden = false;
+
+    // The page runs pale at the top and dark below, so the panel flips
+    // between light and dark depending on what it happens to be over.
+    var paper = document.querySelector('#vault .section--paper');
+    if (paper) {
+      var ticking = false;
+
+      var matchBackdrop = function () {
+        var middle = window.scrollY + window.innerHeight / 2;
+        var overPaper = middle < paper.offsetTop + paper.offsetHeight;
+        panel.classList.toggle('volume--on-paper', overPaper);
+      };
+
+      window.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+          matchBackdrop();
+          ticking = false;
+        });
+      }, { passive: true });
+
+      window.addEventListener('resize', matchBackdrop);
+      matchBackdrop();
+    }
+  }
+
   function formatTime(seconds) {
     if (!isFinite(seconds)) return '–:––';
     var m = Math.floor(seconds / 60);
@@ -306,6 +370,9 @@
         downloadList.appendChild(link);
       });
     }
+
+    // Last, so every track already exists to be turned down.
+    setUpVolume();
   }
 
   /* ------------------------------------------------------------------
