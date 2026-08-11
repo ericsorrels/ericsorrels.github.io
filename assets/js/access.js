@@ -163,9 +163,25 @@
     var slider = document.getElementById('volumeSlider');
     if (!panel || !slider) return;
 
-    var level = storedVolume();
-    slider.value = Math.round(level * 100);
-    applyVolume(level);
+    // The slider isn't shown on phones, so there a saved setting is
+    // ignored in favour of full volume — otherwise a quiet level chosen
+    // on a laptop would follow the listener to a handset with nothing on
+    // screen to undo it. The phone's own buttons take over instead.
+    var narrow = window.matchMedia('(max-width: 620px)');
+
+    var sync = function () {
+      var level = narrow.matches ? 1 : storedVolume();
+      slider.value = Math.round(level * 100);
+      applyVolume(level);
+    };
+
+    sync();
+
+    if (narrow.addEventListener) {
+      narrow.addEventListener('change', sync);
+    } else if (narrow.addListener) {
+      narrow.addListener(sync);          // older Safari
+    }
 
     slider.addEventListener('input', function () {
       var next = slider.value / 100;
