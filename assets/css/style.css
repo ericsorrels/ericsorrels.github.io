@@ -712,10 +712,10 @@ img {
 /* Subscribe — sits beneath the readings, separated by a rule so the
    invitation reads as the point the weather was leading to. */
 
+/* Its own section now, so no rule above it — it used to hang beneath
+   the weather readings and needed separating from them. */
 .subscribe {
-  margin-top: 5em;
-  padding-top: 4.2em;
-  border-top: 1px solid rgba(237, 232, 221, 0.14);
+  margin-top: 0;
 }
 
 /* The call to action — set larger than the weather heading above it, so
