@@ -257,6 +257,9 @@ window.SITE_CONTENT = {
     // Just replace the words inside each set of quotation marks with the
     // real song title. To add a track, copy a whole line — including the
     // comma at the end — and add the matching audio file.
+    // The little volume slider that floats beside the track list.
+    volume_label: "Vol",
+
     // Raise this number by one WHENEVER you replace an audio file that
     // is already on the live site. Browsers keep a copy of every track
     // they have played, and without this they go on playing the old one.
