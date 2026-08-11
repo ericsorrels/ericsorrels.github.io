@@ -31,3 +31,15 @@ tracks that aren't uploaded yet are skipped over.
 If the album ends up with more or fewer than 21 tracks, tell
 Claude rather than guessing — the list in content.js and these
 file names need to stay in step.
+
+
+REPLACING A TRACK THAT IS ALREADY ONLINE
+----------------------------------------
+
+Drop the new file in with the same name as before, then open
+content.js and find "audio_version" in the access section. Raise
+that number by one.
+
+Without it, anyone who has already played the track — including
+you — keeps hearing the old recording, because browsers hold on to
+a copy. Adding a brand-new track needs no such step.

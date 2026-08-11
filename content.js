@@ -257,6 +257,12 @@ window.SITE_CONTENT = {
     // Just replace the words inside each set of quotation marks with the
     // real song title. To add a track, copy a whole line — including the
     // comma at the end — and add the matching audio file.
+    // Raise this number by one WHENEVER you replace an audio file that
+    // is already on the live site. Browsers keep a copy of every track
+    // they have played, and without this they go on playing the old one.
+    // Adding brand-new tracks doesn't need it — only replacements.
+    audio_version: 2,
+
     tracks_label: "The Album",
     tracks: [
       "The Legend of the Gray Man",
