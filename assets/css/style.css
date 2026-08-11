@@ -330,9 +330,17 @@ img {
 
 .section {
   position: relative;
+  /* The deep top padding clears the gradient a section fades in through,
+     so its words never sit inside the fade. */
   padding: clamp(200px, 24vh, 300px) 8vw 18vh;
   scroll-margin-top: 3rem;
   overflow: hidden;
+}
+
+/* A section that carries straight on from the one above has no gradient
+   to clear, so that same padding would just be empty space. */
+.section:not(.section--from-ink):not(.section--from-paper) {
+  padding-top: clamp(90px, 11vh, 150px);
 }
 
 .section--paper {
