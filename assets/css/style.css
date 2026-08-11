@@ -1312,22 +1312,11 @@ img {
   transform: scale(1.15);
 }
 
-/* Smaller on a phone, and the page is given a margin on that side so
-   nothing scrolls underneath it. */
+/* Left off on phones — they have volume buttons of their own, and the
+   strip of screen it costs is better spent on the album. */
 @media (max-width: 620px) {
   .volume {
-    right: 0.4rem;
-    padding: 0.9em 0.5em;
-    gap: 0.7em;
-  }
-
-  .volume__slider {
-    height: clamp(70px, 14vh, 110px);
-    width: 16px;
-  }
-
-  #vault .section {
-    padding-right: 60px;
+    display: none;
   }
 }
 
