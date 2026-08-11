@@ -526,10 +526,16 @@ img {
   flex-direction: column;
   gap: 1em;
   align-items: center;
-  max-width: 460px;
+  max-width: 520px;
   margin: 0 auto 3.5em;
   padding: 3.2em 2em;
   border: 1px solid rgba(237, 232, 221, 0.25);
+}
+
+/* The album's own line is long, so it is set a little tighter than the
+   note beneath it — otherwise the last word drops on its own. */
+.album-placeholder span:first-child {
+  letter-spacing: var(--tracking-wide);
 }
 
 .album-placeholder span {
