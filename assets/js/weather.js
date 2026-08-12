@@ -163,9 +163,10 @@
     return /^https?:\/\//i.test(a) ? a : 'https://' + a.replace(/^\/+/, '');
   }
 
-  // Prefer the relay at Cloudflare, which holds one reading for everyone.
-  // Only if none is configured does the browser ask the weather service
-  // itself, which exposes the key and costs a call per visitor.
+  // The relay at Cloudflare, which holds one reading for everyone and
+  // keeps the key off this site. The direct path below is only reachable
+  // if someone puts an api_key back into content.js — which would put
+  // that key on public display, so don't.
   var url = W.proxy_url
     ? absolute(W.proxy_url)
     : 'https://api.openweathermap.org/data/2.5/weather'

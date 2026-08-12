@@ -159,20 +159,15 @@ window.SITE_CONTENT = {
 
     // ---- Where the reading comes from ----
     //
-    // PREFERRED: the relay at Cloudflare (see the "cloudflare" folder).
-    // It fetches the weather once, holds it for ten minutes, and hands
-    // that same copy to every visitor — so the weather service is called
-    // a few times an hour no matter how busy the site is. It also keeps
-    // the key below out of the website entirely.
+    // The relay at Cloudflare (see the "cloudflare" folder). It fetches
+    // the weather once, holds it for ten minutes, and hands that same
+    // copy to every visitor — so the weather service is called a few
+    // times an hour no matter how busy the site is.
     //
-    // Paste the relay's address here once it's deployed. It looks like:
-    //     https://gray-man-weather.YOURNAME.workers.dev
+    // The weather key lives at Cloudflare, not here. Nothing secret
+    // belongs in this file: every word of it is public, because anyone
+    // can read it at graymanmusical.com/content.js
     proxy_url: "https://gray-man-weather.withered-credit-543f.workers.dev",
-
-    // FALLBACK: used only while proxy_url above is empty. This asks the
-    // weather service directly from each visitor's browser, which means
-    // the key below is visible to anyone who views the page.
-    api_key: "25d669ff5870ef3620d05f24b9350106",
 
     // How long each visitor's browser keeps a reading, in minutes.
     refresh_minutes: 12,
