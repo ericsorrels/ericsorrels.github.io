@@ -261,14 +261,27 @@
     name.className = 'track__title';
     name.textContent = title;
 
+    // A real range control rather than a bare line: it can be dragged,
+    // nudged with the arrow keys, and read out by a screen reader, all
+    // of which a plain div could not do.
     var timeline = document.createElement('div');
     timeline.className = 'track__timeline';
-    var bar = document.createElement('div');
-    bar.className = 'track__bar';
-    var progress = document.createElement('div');
-    progress.className = 'track__progress';
-    bar.appendChild(progress);
-    timeline.appendChild(bar);
+    var seek = document.createElement('input');
+    seek.className = 'track__seek';
+    seek.type = 'range';
+    seek.min = 0;
+    seek.max = 1000;
+    seek.step = 1;
+    seek.value = 0;
+    seek.disabled = true;                 // until we know how long it is
+    seek.setAttribute('aria-label', 'Scrub through ' + title);
+    timeline.appendChild(seek);
+
+    // How much of the line is filled in behind the handle.
+    function paint(fraction) {
+      seek.style.setProperty('--played', (fraction * 100).toFixed(2) + '%');
+    }
+    paint(0);
 
     var time = document.createElement('span');
     time.className = 'track__time';
@@ -283,14 +296,36 @@
 
     audio.addEventListener('loadedmetadata', function () {
       time.textContent = formatTime(audio.duration);
+      seek.disabled = false;              // now it can be dragged
     });
 
+    // True while the handle is being dragged, so the playing position
+    // doesn't yank it back out from under the listener's finger.
+    var scrubbing = false;
+
     audio.addEventListener('timeupdate', function () {
-      if (audio.duration) {
-        progress.style.width = (audio.currentTime / audio.duration) * 100 + '%';
-        time.textContent = formatTime(audio.currentTime);
-      }
+      if (!audio.duration || scrubbing) return;
+      var fraction = audio.currentTime / audio.duration;
+      seek.value = Math.round(fraction * 1000);
+      paint(fraction);
+      time.textContent = formatTime(audio.currentTime);
     });
+
+    // Dragging, clicking anywhere along the line, and the arrow keys all
+    // arrive here.
+    seek.addEventListener('input', function () {
+      if (!audio.duration) return;
+      var fraction = seek.value / 1000;
+      paint(fraction);
+      time.textContent = formatTime(fraction * audio.duration);
+      audio.currentTime = fraction * audio.duration;
+    });
+
+    seek.addEventListener('pointerdown', function () { scrubbing = true; });
+    seek.addEventListener('keydown', function () { scrubbing = true; });
+    window.addEventListener('pointerup', function () { scrubbing = false; });
+    seek.addEventListener('keyup', function () { scrubbing = false; });
+    seek.addEventListener('blur', function () { scrubbing = false; });
 
     audio.addEventListener('play', function () {
       play.innerHTML = PAUSE_ICON;
@@ -310,7 +345,8 @@
     // At the end of a song, roll straight into the next one that has
     // audio, so the album plays through like a record.
     audio.addEventListener('ended', function () {
-      progress.style.width = '0%';
+      seek.value = 0;
+      paint(0);
       time.textContent = formatTime(audio.duration);
       row.classList.remove('track--playing');
 
@@ -329,6 +365,7 @@
       audio.dataset.missing = 'true';
       row.classList.add('track--unavailable');
       play.disabled = true;
+      seek.disabled = true;
       time.textContent = 'Soon';
     });
 
@@ -338,13 +375,6 @@
       } else {
         audio.pause();
       }
-    });
-
-    timeline.addEventListener('click', function (event) {
-      if (!audio.duration) return;
-      var rect = bar.getBoundingClientRect();
-      var fraction = (event.clientX - rect.left) / rect.width;
-      audio.currentTime = Math.max(0, Math.min(1, fraction)) * audio.duration;
     });
 
     players.push(audio);

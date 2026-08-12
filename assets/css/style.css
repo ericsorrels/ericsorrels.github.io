@@ -1146,24 +1146,94 @@ img {
 
 .track__timeline {
   flex: 0 0 clamp(70px, 14%, 130px);
-  padding: 8px 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Still reads as a thin rule, but it is a real slider: draggable, and
+   the arrow keys nudge it. The handle is what tells you so. */
+.track__seek {
+  --played: 0%;
+  width: 100%;
+  height: 18px;                 /* a comfortable target around a 2px line */
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
 }
 
-.track__bar {
-  position: relative;
+.track__seek:disabled {
+  cursor: default;
+}
+
+.track__seek::-webkit-slider-runnable-track {
+  height: 2px;
+  background:
+    linear-gradient(var(--paper), var(--paper)) 0 / var(--played) 100% no-repeat,
+    rgba(237, 232, 221, 0.2);
+}
+
+.track__seek::-moz-range-track {
   height: 2px;
   background: rgba(237, 232, 221, 0.2);
 }
 
-.track__progress {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0;
+.track__seek::-moz-range-progress {
+  height: 2px;
   background: var(--paper);
 }
+
+/* The handle stays put rather than appearing on hover: it is the only
+   thing telling a listener the line can be moved at all. */
+.track__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: none;
+  margin-top: -3.5px;           /* centres the handle on the line */
+  transition: transform 0.2s ease;
+}
+
+.track__seek::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: none;
+}
+
+/* Nothing to drag on a track with no audio yet. */
+.track__seek:disabled::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+.track__seek:disabled::-moz-range-thumb {
+  opacity: 0;
+}
+
+.track:hover .track__seek:not(:disabled)::-webkit-slider-thumb,
+.track__seek:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.track__seek:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.track__seek:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.6);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track__seek::-webkit-slider-thumb { transition: none; }
+  .track__seek:active::-webkit-slider-thumb { transform: none; }
+}
+
 
 .track__time {
   font-family: var(--font-body);
