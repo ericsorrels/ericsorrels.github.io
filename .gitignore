@@ -10,3 +10,9 @@
 # Editor scratch
 *.swp
 *~
+
+# Notes written for Eric, not for visitors. Anything committed here is
+# served publicly at graymanmusical.com/<filename>, and these two carry
+# the access password and the weather key.
+READ-ME-FIRST.txt
+cloudflare/HOW-TO-DEPLOY.txt
