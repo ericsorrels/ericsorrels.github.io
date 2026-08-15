@@ -394,6 +394,16 @@ img {
   margin: 0 0 3.5em;
 }
 
+/* The four main section headers — The Legend, The Music, The Journey,
+   Representation — run larger than the rest of the .section-label family
+   (Pawleys Island's dateline, and every label on the access page). */
+#about .section-label,
+#music .section-label,
+#news .section-label,
+#contact .section-label {
+  font-size: clamp(0.76rem, 1.3vw, 0.95rem);
+}
+
 .section--ink .section-label {
   color: var(--gray-mid);
 }
