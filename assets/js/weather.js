@@ -156,35 +156,56 @@
     return;
   }
 
-  // An address written without https:// in front would be read as a page
-  // on this site rather than an outside one, so put it back if missing.
-  function absolute(address) {
-    var a = String(address).trim();
-    return /^https?:\/\//i.test(a) ? a : 'https://' + a.replace(/^\/+/, '');
+  // Works out what address to actually ask.
+  //
+  // An address beginning with "/" means "this same website" and is left
+  // exactly as written — that is the whole point of /api/weather. The
+  // browser asks the very host the page came from, so a network that
+  // allows the site inevitably allows the weather: to any filter, they
+  // are one and the same place.
+  //
+  // Anything else is an outside address. One written without https:// in
+  // front would be mistaken for a page on this site, so put it back.
+  function resolve(address) {
+    var a = String(address || '').trim();
+    if (!a) return '';
+    if (a.charAt(0) === '/') return a;
+    return /^https?:\/\//i.test(a) ? a : 'https://' + a;
   }
 
-  // The relay at Cloudflare, which holds one reading for everyone and
-  // keeps the key off this site. The direct path below is only reachable
-  // if someone puts an api_key back into content.js — which would put
-  // that key on public display, so don't.
-  var url = W.proxy_url
-    ? absolute(W.proxy_url)
-    : 'https://api.openweathermap.org/data/2.5/weather'
+  // Where to ask, in order of preference: the site's own address first,
+  // then the relay's direct Cloudflare address as a backstop. The second
+  // covers the window before the Route is set up, and previews served
+  // from anywhere other than the live domain.
+  var sources = [W.proxy_url, W.proxy_fallback_url].map(resolve).filter(Boolean);
+
+  // Only reachable if someone puts an api_key back into content.js —
+  // which would put that key on public display, so don't.
+  if (!sources.length && W.api_key) {
+    sources.push('https://api.openweathermap.org/data/2.5/weather'
       + '?lat=' + encodeURIComponent(W.latitude)
       + '&lon=' + encodeURIComponent(W.longitude)
       + '&units=imperial'
-      + '&appid=' + encodeURIComponent(W.api_key);
+      + '&appid=' + encodeURIComponent(W.api_key));
+  }
 
-  fetch(url)
-    .then(function (res) {
-      if (!res.ok) throw new Error('weather service returned ' + res.status);
-      return res.json();
-    })
-    .then(function (d) {
-      if (!d || !d.main) throw new Error('unexpected reply');
-      var reading = readingFrom(d);
-      store(reading);
-      draw(reading);
-    })
-    .catch(fail);
+  // Try each in turn; the panel only gives up once every one has failed.
+  function ask(i) {
+    if (i >= sources.length) return fail();
+
+    fetch(sources[i])
+      .then(function (res) {
+        if (!res.ok) throw new Error('weather relay returned ' + res.status);
+        return res.json();
+      })
+      .then(function (d) {
+        if (!d || !d.main) throw new Error('unexpected reply');
+        var reading = readingFrom(d);
+        store(reading);
+        draw(reading);
+      })
+      .catch(function () { ask(i + 1); });
+  }
+
+  ask(0);
 })();

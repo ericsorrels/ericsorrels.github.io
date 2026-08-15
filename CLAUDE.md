@@ -262,24 +262,38 @@ are separated by `bonus_starts_at`.
 ## Hosting
 
 GitHub Pages from the public repo `ericsorrels/ericsorrels.github.io`. Domain
-registered at Cloudflare, DNS-only (grey cloud) A records to GitHub's
-addresses.
+registered at Cloudflare and **proxied through it (orange cloud)** — the A
+records answer with Cloudflare addresses (`104.21.x`, `172.67.x`), not
+GitHub's `185.199.x`, and responses carry `server: cloudflare`. Verify with
+`dig +short graymanmusical.com` before assuming either way; this note was
+wrong once. The orange cloud is load-bearing — it's what lets Worker routes
+fire on the domain, so the weather relay depends on it.
 
 **Cloudflare SSL/TLS must stay on "Full".** Flexible causes an endless
 redirect loop whose symptom looks nothing like its cause.
 
 Weather comes through a Cloudflare Worker (source in `cloudflare/`) that holds
 one reading for ten minutes and serves it to everyone, keeping the API key off
-the page. The relay lives at
-`https://gray-man-weather.withered-credit-543f.workers.dev`, set as
-`weather.proxy_url` in `content.js`; the OpenWeatherMap key is a Worker secret
-named exactly **`OWM_KEY`**.
+the page. The OpenWeatherMap key is a Worker secret named exactly **`OWM_KEY`**.
 
-Its allowed-origins list is `graymanmusical.com`, `www.graymanmusical.com`,
-`ericsorrels.github.io` and `localhost:8420` — but **the localhost entry
-exists only in the repo copy, not the deployed one, so the weather panel shows
-its error state in local preview. That is expected, not a bug.** Simulate a
-reading to check that layout.
+**The site asks its own address for the weather — `/api/weather`.** Two
+Cloudflare Routes on the worker (`graymanmusical.com/api/*` and
+`www.graymanmusical.com/api/*`) hand those requests to the relay. This is
+deliberate and worth protecting: strict office, school and hotel networks
+block `workers.dev` wholesale, and the panel went dark on them. A network
+that allows the site cannot single out the site's own path. Because it's
+same-origin there is no CORS involved on the live site at all.
+
+`weather.proxy_fallback_url` in `content.js` still holds the relay's direct
+workers.dev address. It is tried only if `/api/weather` doesn't answer, which
+covers previews and any window where the routes aren't in place. The worker's
+allowed-origins list matters only for that fallback path.
+
+**Local preview always shows the weather's error state** — `/api/weather`
+404s against `python3 -m http.server`, and the workers.dev fallback rejects
+`localhost:8420` because the deployed worker's origin list omits it. Expected,
+not a bug. To check that layout with real data, drop a file of
+OpenWeatherMap JSON at `api/weather` in the project root, then delete it.
 
 There is no fallback key on the site any more. If the relay is down the panel
 reads "out of reach" — graceful, but the weather is genuinely gone until it's
@@ -291,6 +305,12 @@ mistyped key, so wait before debugging. Test the relay directly:
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: https://graymanmusical.com' https://gray-man-weather.withered-credit-543f.workers.dev
 ```
 
+And the route the site actually uses:
+
+```
+curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
+```
+
 ---
 
 ## Environment notes
@@ -298,9 +318,11 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: https://graymanmusical.com'
 - **Local preview:** `python3 -m http.server 8420` from the project root.
   Opening `index.html` as a `file://` URL blocks `content.js`, so the page
   falls back to placeholder copy. Expected.
-- **This sandbox cannot reach `graymanmusical.com`.** `api.github.com` and
-  `ericsorrels.github.io` do work. Verify DNS with `dig`, verify what's
-  published through the GitHub API, and ask Eric to confirm the live page.
+- **The sandbox can reach `graymanmusical.com`** — `curl -I` returns 200 and
+  the Cloudflare headers. (An earlier note here said it couldn't; that was
+  wrong, so test before believing either claim.) `api.github.com` and
+  `ericsorrels.github.io` work too. Still ask Eric to confirm anything
+  visual on the live page — reachability is not the same as rendering.
 - `~/Downloads` is blocked by macOS privacy protection; `~/Desktop` works. Ask
   Eric to put files on the Desktop.
 - No ffmpeg, HandBrake, PIL or Node. Available instead: `sips` for images,

@@ -14,6 +14,22 @@
    thousand. It also keeps the weather key at Cloudflare rather than in
    the website's code, where anyone could read it.
 
+   HOW THE WEBSITE REACHES IT
+   --------------------------
+   Not by its workers.dev address. Strict networks — offices, schools,
+   hotels — block workers.dev wholesale, and the weather panel went dark
+   on them. Instead a Cloudflare ROUTE hands this worker every request
+   to graymanmusical.com/api/*, so the site asks its own address for the
+   weather. A network that allows the site cannot single out the weather.
+
+   The routes are set in the Cloudflare dashboard, on this worker:
+     graymanmusical.com/api/*
+     www.graymanmusical.com/api/*
+
+   They work because graymanmusical.com is proxied through Cloudflare
+   (orange cloud). If those records are ever set to DNS-only, the routes
+   stop firing and the weather falls back to the workers.dev address.
+
    Deployment instructions are in HOW-TO-DEPLOY.txt next to this file.
    ========================================================================= */
 
