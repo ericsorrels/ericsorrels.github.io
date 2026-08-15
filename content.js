@@ -284,10 +284,22 @@ window.SITE_CONTENT = {
     // copy to every visitor — so the weather service is called a few
     // times an hour no matter how busy the site is.
     //
+    // "/api/weather" means "this same website" — the reading is asked
+    // for at graymanmusical.com itself, and Cloudflare quietly hands
+    // that address to the relay. This is deliberate: strict office and
+    // school networks block the relay's own workers.dev address, but
+    // they cannot block the site's own address without blocking the
+    // site. Don't replace this with a full web address.
+    //
     // The weather key lives at Cloudflare, not here. Nothing secret
     // belongs in this file: every word of it is public, because anyone
     // can read it at graymanmusical.com/content.js
-    proxy_url: "https://gray-man-weather.withered-credit-543f.workers.dev",
+    proxy_url: "/api/weather",
+
+    // Only used if the line above doesn't answer — the relay's own
+    // address at Cloudflare. Leave it: it keeps the weather working on
+    // previews and anywhere the address above isn't wired up yet.
+    proxy_fallback_url: "https://gray-man-weather.withered-credit-543f.workers.dev",
 
     // How long each visitor's browser keeps a reading, in minutes.
     refresh_minutes: 12,
