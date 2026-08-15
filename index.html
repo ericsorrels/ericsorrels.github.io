@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=25" />
+  <link rel="stylesheet" href="assets/css/style.css?v=26" />
 </head>
 <body>
 
@@ -175,22 +175,71 @@
        ✏️  To announce something, edit content.js → "news" and copy
        an item block there. This page builds itself from that list.
        ============================================================ -->
+  <!-- ============================================================
+       THE JOURNEY — the storm advisory track
+       ✏️  Every word lives in content.js → "news". The chart itself is
+       drawn by assets/js/storm-track.js; the articles below are only
+       what a visitor without JavaScript reads.
+       ============================================================ -->
   <section id="news" class="section section--paper section--from-ink texture-grain texture-halftone">
-    <div class="section__inner reveal">
-      <p class="section-label" data-content="news.label">News &amp; Productions</p>
-      <div data-content-list="news.items">
+    <div class="section__inner section__inner--wide reveal">
+      <p class="section-label" data-content="news.label">The Journey</p>
+      <p class="advisory__intro" data-content="news.intro">
+        The development of <em class="show-title">The Gray Man</em>,
+        plotted the way the coast plots a storm.
+      </p>
+
+      <div id="stormTrackFallback">
         <article class="news-item">
-          <p class="news-item__date">Announcement Coming Soon</p>
-          <h2 class="news-item__title">Developmental Production</h2>
+          <p class="news-item__date">2024 — A Disturbance in the Water</p>
+          <h2 class="news-item__title">The First Songs</h2>
           <div class="section__prose">
             <p>
-              Information about upcoming readings, workshops, and the first
-              developmental production of
-              <em class="show-title">The Gray Man</em> will be posted here.
+              The first song, &ldquo;Riptide&rdquo;, is written in January 2024
+              and performed that May as part of a solo show in Raleigh,
+              North Carolina.
+            </p>
+          </div>
+        </article>
+        <article class="news-item">
+          <p class="news-item__date">2025 — Wind Circulates</p>
+          <h2 class="news-item__title">Readings and Concerts</h2>
+          <div class="section__prose">
+            <p>
+              A public table read with the Tennessee Stage Company New Play
+              Festival, songs in concert at Joe&rsquo;s Pub in New York City,
+              and a private table read in New York.
+            </p>
+          </div>
+        </article>
+        <article class="news-item">
+          <p class="news-item__date">2026 — The Storm Strengthens</p>
+          <h2 class="news-item__title">The Concept Album</h2>
+          <div class="section__prose">
+            <p>
+              A 29-hour reading with Carolina Theatre Workshop in Raleigh, a
+              Kickstarter with more than fifty backers across the country,
+              and the concept album — recorded with North Carolina and
+              Broadway artists, releasing October 2026.
+            </p>
+          </div>
+        </article>
+        <article class="news-item">
+          <p class="news-item__date">January 2027 — First Landfall</p>
+          <h2 class="news-item__title">Knoxville, Tennessee</h2>
+          <div class="section__prose">
+            <p>
+              <em class="show-title">The Gray Man</em> makes landfall in
+              Knoxville, presented in partnership with the Clarence Brown
+              Theatre (LORT) and the Tennessee Stage Company New Play
+              Festival — with a concert presentation at Joe&rsquo;s Pub in
+              New York City to follow in spring 2027.
             </p>
           </div>
         </article>
       </div>
+
+      <div id="stormTrack"></div>
     </div>
   </section>
 
@@ -239,8 +288,9 @@
     </footer>
   </section>
 
-  <script src="content.js?v=25"></script>
-  <script src="assets/js/main.js?v=25"></script>
-  <script src="assets/js/weather.js?v=25"></script>
+  <script src="content.js?v=26"></script>
+  <script src="assets/js/main.js?v=26"></script>
+  <script src="assets/js/weather.js?v=26"></script>
+  <script src="assets/js/storm-track.js?v=26"></script>
 </body>
 </html>

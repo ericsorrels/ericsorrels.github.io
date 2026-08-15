@@ -15,8 +15,17 @@
   --font-display: 'Oswald', sans-serif;
   --font-body: 'Josefin Sans', sans-serif;
 
+  /* The teletype voice — system Courier, loaded from nowhere. Reserved
+     for the storm advisory's small print: dates, coordinates, the key. */
+  --font-mono: 'Courier New', Courier, monospace;
+
   --tracking-wide: 0.28em;
   --tracking-wider: 0.4em;
+
+  /* The one sanctioned break from duotone: the grease-pencil red of a
+     plotted hurricane track. Used ONLY by the Journey's advisory chart —
+     its line, markers, and landfall stamp. Nowhere else. */
+  --storm-red: #8a3d33;
 }
 
 *,
@@ -334,7 +343,13 @@ img {
      so its words never sit inside the fade. */
   padding: clamp(200px, 24vh, 300px) 8vw 18vh;
   scroll-margin-top: 3rem;
+  /* "clip" instead of "hidden", on purpose: both cut off anything poking
+     out of the section, but "hidden" also becomes the thing sticky
+     elements pin to — which silently unpins the advisory key in the
+     Journey. Browsers too old for "clip" keep the "hidden" line above
+     and only lose the pinning, nothing worse. */
   overflow: hidden;
+  overflow: clip;
 }
 
 /* A section that carries straight on from the one above has no gradient
@@ -615,6 +630,314 @@ img {
   text-transform: uppercase;
   color: var(--ink);
   margin: 0 0 1.6em;
+}
+
+/* --------------------------------------------------------------------
+   The Journey — the storm advisory track.
+   A hurricane chart plotted down the page: a red line drawn by scroll,
+   fixes marked in chart symbols, teletype small print. Built entirely
+   by assets/js/storm-track.js; the .news-item styles above only dress
+   the no-JS fallback.
+   -------------------------------------------------------------------- */
+
+#news .section-label {
+  margin-bottom: 1.4em;
+}
+
+.advisory__intro {
+  font-family: var(--font-body);
+  font-size: clamp(0.78rem, 1vw, 0.85rem);
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin: 0 0 4.5em;
+}
+
+.advisory {
+  text-align: left;
+}
+
+/* The key — a chart legend in a ruled box. */
+
+.advisory__key {
+  border: 1px solid var(--paper-shadow);
+  background: var(--paper);
+  padding: 1.1em 1.4em 1.2em;
+  margin: 0 0 3.5em;
+}
+
+.advisory__key-title {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.9em;
+}
+
+.advisory__key-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7em 1.7em;
+}
+
+.advisory__key-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.advisory__key-list svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* On a wide screen the key rides in the right-hand gutter and stays
+   with the reader while the track scrolls past. The negative margin
+   pulls the second grid column out beyond the 720px inner column, so
+   the chart itself keeps its full width. */
+@media (min-width: 1200px) {
+  .advisory {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 170px;
+    column-gap: 48px;
+    margin-right: -218px;
+  }
+
+  .advisory__key {
+    align-self: start;
+    position: sticky;
+    top: 96px;
+    order: 2;
+    margin: 0;
+  }
+
+  .advisory__chart {
+    order: 1;
+  }
+}
+
+/* The chart — track behind, bulletins in front. */
+
+.advisory__chart {
+  position: relative;
+  /* The rail: the strip of map the track wanders through. Cards clear
+     it entirely, so the line never runs beneath the words. */
+  --rail: clamp(56px, 12vw, 130px);
+}
+
+.advisory__svg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.advisory__track {
+  will-change: stroke-dashoffset;
+}
+
+.advisory__forecast,
+.advisory__cone {
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+.advisory__forecast.is-on {
+  opacity: 0.9;
+}
+
+.advisory__cone.is-on {
+  opacity: 1;
+}
+
+.advisory__phases {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 110px;
+}
+
+.advisory__phase + .advisory__phase {
+  margin-top: 4.5em;
+}
+
+/* Each advisory's masthead, set clear of the rail. */
+
+.advisory__masthead {
+  margin: 0 0 2.4em var(--rail);
+}
+
+.advisory__no {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.9em;
+}
+
+.advisory__name {
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 0.7em;
+}
+
+.advisory__cat {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+/* The plotted fixes. */
+
+.advisory__events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.advisory__event {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+}
+
+.advisory__event + .advisory__event {
+  margin-top: 3em;
+}
+
+.advisory__marker {
+  position: absolute;
+  left: calc(var(--drift, 0.5) * var(--rail));
+  top: 0.5em;
+  transform: translate(-50%, -50%);
+  opacity: 0.25;
+  filter: grayscale(0.7);
+  transition: opacity 0.9s ease, filter 0.9s ease;
+}
+
+.advisory__marker svg {
+  display: block;
+}
+
+.advisory__marker.is-lit {
+  opacity: 1;
+  filter: none;
+}
+
+/* Landfall's slow shockwave — two rings breathing outward. */
+
+.advisory__marker--landfall::before,
+.advisory__marker--landfall::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border: 1px solid var(--storm-red);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.advisory__marker--landfall.is-lit::before {
+  animation: advisory-ring 6s ease-out infinite;
+}
+
+.advisory__marker--landfall.is-lit::after {
+  animation: advisory-ring 6s ease-out 3s infinite;
+}
+
+@keyframes advisory-ring {
+  0% { transform: scale(0.55); opacity: 0.5; }
+  70% { opacity: 0.12; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+/* The bulletins. */
+
+.advisory__card {
+  grid-column: 2;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 1.4s ease, transform 1.4s ease;
+}
+
+.advisory__card.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.advisory__date {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 0.5em;
+}
+
+.advisory__place {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 1.1em;
+}
+
+.advisory__text {
+  font-family: var(--font-body);
+  font-size: clamp(0.9rem, 1.1vw, 1rem);
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* Landfall — the bulletin the whole track was drawn toward. */
+
+.advisory__event--landfall .advisory__card {
+  position: relative;
+  background: var(--paper-dim);
+  border: 1px solid var(--paper-shadow);
+  border-top: 3px solid var(--storm-red);
+  padding: 1.6em 1.8em 1.7em;
+}
+
+.advisory__stamp {
+  position: absolute;
+  top: -0.9em;
+  right: 1.2em;
+  transform: rotate(-6deg);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--storm-red);
+  border: 2px solid currentColor;
+  padding: 0.35em 0.7em 0.3em;
+  background: var(--paper);
+  opacity: 0.9;
 }
 
 /* Pawleys Island weather — read as an instrument panel: a large
@@ -1471,5 +1794,26 @@ img {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  /* The storm track arrives as the finished map — everything drawn,
+     the landfall rings still, nothing replaying. */
+  .advisory__card,
+  .advisory__marker {
+    opacity: 1;
+    filter: none;
+    transition: none;
+  }
+  .advisory__forecast.is-on,
+  .advisory__cone.is-on { transition: none; }
+  .advisory__marker--landfall.is-lit::before {
+    animation: none;
+    transform: scale(1.15);
+    opacity: 0.3;
+  }
+  .advisory__marker--landfall.is-lit::after {
+    animation: none;
+    transform: scale(1.5);
+    opacity: 0.15;
   }
 }

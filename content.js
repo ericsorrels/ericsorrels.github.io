@@ -112,18 +112,138 @@ window.SITE_CONTENT = {
     },
   },
 
-  /* ---- News & Productions ----------------------------------------------- */
+  /* ---- The Journey — the storm advisory track ----------------------------
+     The show's development, plotted like a hurricane's track. Each block
+     below is one advisory — a chapter of the storm — holding the events
+     that happened during it. The line on the page draws itself from the
+     first advisory down to landfall as the reader scrolls.
+     ----------------------------------------------------------------------- */
   news: {
     label: "The Journey",
 
-    // Each { ... } block is one announcement, shown top to bottom.
-    // To add another announcement, copy a whole block — from its
-    // opening {  to its closing },  — and edit the three lines.
-    items: [
+    // The line under the heading.
+    intro: "The development of *The Gray Man*, plotted the way the coast plots a storm.",
+
+    // The small key beside the track that explains the symbols.
+    legend: {
+      title: "Advisory Key",
+      disturbance: "Disturbance",
+      storm: "Tropical Storm",
+      hurricane: "Hurricane",
+      landfall: "Landfall",
+      projected: "Projected Path",
+    },
+
+    // Stamped across the landfall card.
+    landfall_stamp: "Landfall",
+
+    // Each advisory's "strength" sets how the track draws it — the size
+    // of its markers and how deeply red the line runs. Not words; leave
+    // these numbers alone unless the storm itself changes course:
+    //   1  a disturbance — small open circle, pencil gray
+    //   2  a tropical storm — filled circle, the line warming
+    //   3  hurricane, category 1
+    //   4  hurricane, category 2
+    //   5  hurricane, category 3 — landfall, the deepest red
+    //   6  the projected path — the dashed line beyond landfall
+    phases: [
       {
-        date: "January 2027",
-        title: "Developmental Production",
-        text: "The first developmental production of *The Gray Man* will take place in Knoxville, Tennessee, as part of the Tennessee Stage Company New Play Festival.",
+        advisory: "Advisory No. 1",
+        name: "A Disturbance in the Water",
+        category: "Tropical Disturbance",
+        strength: 1,
+        events: [
+          {
+            date: "January 2024",
+            place: "35.8°N 78.6°W — Raleigh, NC",
+            text: "The first song is written for the show — \"Riptide\".",
+          },
+          {
+            date: "May 2024",
+            place: "35.8°N 78.6°W — Raleigh, NC",
+            text: "\"Riptide\" is performed as part of a solo show in Raleigh, North Carolina.",
+          },
+        ],
+      },
+      {
+        advisory: "Advisory No. 2",
+        name: "Wind Circulates",
+        category: "Tropical Depression / Tropical Storm",
+        strength: 2,
+        events: [
+          {
+            date: "January 2025",
+            place: "35.9°N 83.9°W — Knoxville, TN",
+            text: "Public table read with the Tennessee Stage Company New Play Festival.",
+          },
+          {
+            date: "April 2025",
+            place: "40.7°N 74.0°W — New York, NY",
+            text: "Select songs performed in concert at Joe's Pub in New York City.",
+          },
+          {
+            date: "December 2025",
+            place: "40.7°N 74.0°W — New York, NY",
+            text: "Private table read in New York City.",
+          },
+        ],
+      },
+      {
+        advisory: "Advisory No. 3",
+        name: "An Eye Begins to Form",
+        category: "Category 1",
+        strength: 3,
+        events: [
+          {
+            date: "May 2026",
+            place: "35.8°N 78.6°W — Raleigh, NC",
+            text: "29-hour reading with Carolina Theatre Workshop in Raleigh, North Carolina.",
+          },
+        ],
+      },
+      {
+        advisory: "Advisory No. 4",
+        name: "Growing Intensity",
+        category: "Category 2",
+        strength: 4,
+        events: [
+          {
+            date: "July – August 2026",
+            place: "All Stations",
+            text: "A Kickstarter campaign gathers more than fifty backers across the country, and the concept album is recorded with North Carolina and Broadway artists.",
+          },
+          {
+            date: "October 2026",
+            place: "All Stations",
+            text: "The concept album releases.",
+          },
+        ],
+      },
+      {
+        advisory: "Advisory No. 5",
+        name: "First Landfall",
+        category: "Category 3",
+        strength: 5,
+        events: [
+          {
+            date: "January 2027",
+            place: "35.9°N 83.9°W — Knoxville, TN",
+            text: "*The Gray Man* makes landfall in Knoxville, Tennessee, presented in partnership with the Clarence Brown Theatre (LORT) and the Tennessee Stage Company New Play Festival.",
+          },
+        ],
+      },
+      {
+        advisory: "Advisory No. 6",
+        name: "Projected Path",
+        category: "Forecast Position",
+        strength: 6,
+        events: [
+          {
+            date: "Spring 2027",
+            place: "40.7°N 74.0°W — New York, NY",
+            text: "Concert presentation at Joe's Pub in New York City.",
+          },
+        ],
       },
     ],
   },

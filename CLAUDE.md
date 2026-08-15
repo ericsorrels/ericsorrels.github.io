@@ -80,7 +80,7 @@ Three different rules, because three different mechanisms:
 | An image | Give the new file a **new name** and update `content.js` |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
 
-**`?v=` currently stands at 25.** Bump both pages together — they must always
+**`?v=` currently stands at 26.** Bump both pages together — they must always
 match, or one page runs new code against the other's cached copy.
 
 The `?v=` tags apply only to the site's own files — never to the Google Fonts
@@ -108,11 +108,21 @@ all of it in use — don't invent new values, use the variable:
 | `--ink-soft` | `#35322C` | secondary text |
 | `--ink-faint` | `#5C584E` | captions, small print |
 | `--gray-mid` | `#8B8579` | the middle tone, dividers, disabled states |
+| `--storm-red` | `#8A3D33` | **the one sanctioned exception** — see below |
+
+`--storm-red` is the grease-pencil red of a plotted hurricane track. Eric
+approved it 2026-08-15 for the Journey's advisory chart ONLY — its track
+line, storm markers, and landfall stamp. It appears nowhere else on the
+site, and nothing else steps outside duotone. Don't spread it.
 
 **Type** — two faces, both from Google Fonts, loaded on both pages:
 
 - `--font-display` — **Oswald** (500, 600). Headings and labels.
 - `--font-body` — **Josefin Sans** (400–700). Everything else.
+- `--font-mono` — system Courier, loaded from nowhere. The teletype voice,
+  reserved for the advisory chart's small print: dates, coordinates, the
+  key. Approved alongside the red as a section-only accent — it is not a
+  third site-wide face.
 - `--tracking-wide: 0.28em` and `--tracking-wider: 0.4em`. The wide uppercase
   treatment carries half the identity — reach for the token, not a new value.
 
@@ -144,6 +154,17 @@ the spacing honest.
 The nav's "Contact" points at `#storm`, so a visitor lands on the signup with
 the representation details just below.
 
+**The news section IS the storm advisory chart.** The Journey renders the
+show's development as a hurricane track: `assets/js/storm-track.js` builds
+it from `content.js → news.phases` and draws the red line by scroll. The
+`.news-item` styles still exist but dress only the no-JS fallback inside
+`index.html`. The chart plots its SVG path by *measuring* the rendered
+markers — never by assumed positions — and replots on resize and after
+fonts load, so text edits and screen sizes need no re-tuning. Each phase's
+`strength` number (1–6, commented in `content.js`) picks its marker and how
+red the track runs; the key beside the track goes sticky in the right
+gutter at ≥1200px.
+
 ---
 
 ## Load-bearing rules that look deletable
@@ -169,6 +190,12 @@ there. Leave them alone.
 - **`assets/js/access.js` runs its startup block last inside the IIFE.**
   Moving it earlier means auto-unlock fires before the player list exists,
   and the vault silently fails to build for returning visitors.
+
+- **`.section` sets `overflow: hidden` AND `overflow: clip`, in that
+  order.** Both lines matter. `hidden` alone turns every section into the
+  thing sticky elements pin to, which silently unpins the advisory key;
+  `clip` clips identically without doing that. Old browsers drop the
+  `clip` line and fall back to `hidden`, losing only the pinning.
 
 ---
 
