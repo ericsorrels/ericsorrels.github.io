@@ -197,7 +197,7 @@ window.SITE_CONTENT = {
           {
             date: "May 2026",
             place: "35.8°N 78.6°W — Raleigh, NC",
-            text: "29-hour reading with Carolina Theatre Workshop in Raleigh, North Carolina.",
+            text: "29-hour reading with Carolina Theater Workshop in Raleigh, North Carolina.",
           },
         ],
       },
@@ -210,7 +210,7 @@ window.SITE_CONTENT = {
           {
             date: "July – August 2026",
             place: "All Stations",
-            text: "A Kickstarter campaign gathers more than fifty backers across the country, and the concept album is recorded with North Carolina and Broadway artists.",
+            text: "A Kickstarter campaign gathers backers from all over the country, and the concept album is recorded with North Carolina and Broadway artists.",
           },
           {
             date: "October 2026",
@@ -241,7 +241,7 @@ window.SITE_CONTENT = {
           {
             date: "Spring 2027",
             place: "40.7°N 74.0°W — New York, NY",
-            text: "Concert presentation at Joe's Pub in New York City.",
+            text: "Concert presentation at Joe's Pub in New York City produced by Carolina Theater Workshop.",
           },
         ],
       },
