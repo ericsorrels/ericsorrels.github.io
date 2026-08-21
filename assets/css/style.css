@@ -549,14 +549,23 @@ img {
   display: block;
 }
 
+/* Room to breathe if the caption ever wraps on a narrow screen too. */
+.video__caption-text {
+  line-height: 1.9;
+}
+
 /* The producer credit sits in the site's white, a step brighter than the
    dim caption above it, so it reads clearly against the ink. */
 .video__credit {
-  margin-top: 0.8em;
+  margin-top: 0.9em;
   color: var(--paper);
   /* On a narrow screen this runs to two lines; balancing them keeps the
      break from landing inside the company's name. */
   text-wrap: balance;
+  /* Underlined text needs its own leading. At the default "normal" the
+     underline of the first line lands on the capitals of the second,
+     which reads as cramped on a phone — the only place this wraps. */
+  line-height: 2.2;
 }
 
 /* Matches .contact-link — the site's way of setting a link on ink. */
