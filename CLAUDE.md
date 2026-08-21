@@ -38,7 +38,9 @@ Two deliberate exceptions, both commented in place:
 Helper conventions inside `content.js`:
 
 - `*Asterisks*` around words render them in the show-title treatment.
-- A `|` in a download button's label forces a line break there.
+- A `|` forces a line break. In a download button's label it always
+  breaks; in the teaser's `music.video.credit` it breaks only on phones
+  (≤430px), where the line would otherwise run edge to edge.
 - An empty string `""` hides whatever it controls — a video, a button, a
   contact line. Nothing on the site ever shows a link that leads nowhere.
 

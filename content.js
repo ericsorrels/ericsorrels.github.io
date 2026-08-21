@@ -90,8 +90,11 @@ window.SITE_CONTENT = {
       // A second line under the caption, set brighter so it stands out.
       // Leave "text" empty ("") and the whole line disappears. Leave
       // "url" empty and the words still show, just not as a link.
+      //
+      // The bar  |  marks where this breaks into two lines ON PHONES.
+      // On anything wider it stays one line and the bar does nothing.
       credit: {
-        text: "Produced by Carolina Theater Workshop",
+        text: "Produced by|Carolina Theater Workshop",
         url: "https://www.carolinatheatreworkshop.com/",
       },
 

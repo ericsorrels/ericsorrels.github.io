@@ -141,7 +141,11 @@
         } else {
           creditEl = document.createElement('span');
         }
-        creditEl.innerHTML = format(credit.text);
+        // A bar in the credit marks where it splits on a phone. The space
+        // goes before the break so the line still reads as one sentence
+        // on wider screens, where the break is switched off in CSS.
+        creditEl.innerHTML = format(credit.text)
+          .replace(/\|/g, ' <br class="video__credit-break">');
         creditBox.appendChild(creditEl);
       } else {
         creditBox.remove();
