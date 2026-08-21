@@ -559,13 +559,24 @@ img {
 .video__credit {
   margin-top: 0.9em;
   color: var(--paper);
-  /* On a narrow screen this runs to two lines; balancing them keeps the
-     break from landing inside the company's name. */
-  text-wrap: balance;
   /* Underlined text needs its own leading. At the default "normal" the
      underline of the first line lands on the capitals of the second,
      which reads as cramped on a phone — the only place this wraps. */
   line-height: 2.2;
+}
+
+/* The break marked by a bar in content.js. Off by default: the credit
+   measures 321px, so it sits on one line everywhere with room to spare.
+   Below 430px — the widest phone — it would otherwise run edge to edge
+   and wrap mid-company-name, so there the bar becomes a real break. */
+.video__credit-break {
+  display: none;
+}
+
+@media (max-width: 430px) {
+  .video__credit-break {
+    display: inline;
+  }
 }
 
 /* Matches .contact-link — the site's way of setting a link on ink. */
