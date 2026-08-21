@@ -87,6 +87,14 @@ window.SITE_CONTENT = {
       // A short line printed under the player. Leave empty ("") for none.
       caption: "Concept album teaser",
 
+      // A second line under the caption, set brighter so it stands out.
+      // Leave "text" empty ("") and the whole line disappears. Leave
+      // "url" empty and the words still show, just not as a link.
+      credit: {
+        text: "Produced by Carolina Theater Workshop",
+        url: "https://www.carolinatheatreworkshop.com/",
+      },
+
       // Spoken aloud by screen readers for the play button. Not visible.
       play_label: "Play the teaser",
     },
@@ -210,7 +218,7 @@ window.SITE_CONTENT = {
           {
             date: "July – August 2026",
             place: "All Stations",
-            text: "A Kickstarter campaign gathers backers from all over the country, and the concept album is recorded with North Carolina and Broadway artists.",
+            text: "A concept album featuring North Carolina and Broadway artists is recorded with the support of Carolina Theater Workshop",
           },
           {
             date: "October 2026",

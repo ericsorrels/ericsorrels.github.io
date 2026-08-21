@@ -116,11 +116,39 @@
       if (video.poster) player.setAttribute('poster', video.poster);
       figure.setAttribute('data-shape', video.shape || 'wide');
 
+      // The caption and the credit beneath it are independent: either can
+      // be left empty in content.js, and only what's written shows up.
+      var captionText = figure.querySelector('.video__caption-text');
+      var creditBox = figure.querySelector('.video__credit');
+      var credit = video.credit || {};
+
       if (video.caption) {
-        caption.innerHTML = format(video.caption);
+        captionText.innerHTML = format(video.caption);
       } else {
-        caption.remove();
+        captionText.remove();
       }
+
+      if (credit.text) {
+        // With an address the credit becomes a link; without one it's
+        // just words, so the page never shows a link leading nowhere.
+        var creditEl;
+        if (credit.url) {
+          creditEl = document.createElement('a');
+          creditEl.className = 'video__credit-link';
+          creditEl.href = credit.url;
+          creditEl.target = '_blank';
+          creditEl.rel = 'noopener noreferrer';
+        } else {
+          creditEl = document.createElement('span');
+        }
+        creditEl.innerHTML = format(credit.text);
+        creditBox.appendChild(creditEl);
+      } else {
+        creditBox.remove();
+      }
+
+      // Nothing to say at all — drop the empty line and its spacing.
+      if (!video.caption && !credit.text) caption.remove();
 
       // A missing or unplayable file leaves the section as it was
       // rather than showing an empty black box.
