@@ -544,6 +544,36 @@ img {
   text-align: center;
 }
 
+.video__caption-text,
+.video__credit {
+  display: block;
+}
+
+/* The producer credit sits in the site's white, a step brighter than the
+   dim caption above it, so it reads clearly against the ink. */
+.video__credit {
+  margin-top: 0.8em;
+  color: var(--paper);
+  /* On a narrow screen this runs to two lines; balancing them keeps the
+     break from landing inside the company's name. */
+  text-wrap: balance;
+}
+
+/* Matches .contact-link — the site's way of setting a link on ink. */
+.video__credit-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgba(237, 232, 221, 0.35);
+  transition: text-decoration-color 0.3s ease;
+}
+
+.video__credit-link:hover,
+.video__credit-link:focus-visible {
+  text-decoration-color: var(--paper);
+}
+
 /* Music — placeholder for the future album embed */
 
 .album-placeholder {
