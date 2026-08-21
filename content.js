@@ -221,7 +221,7 @@ window.SITE_CONTENT = {
           {
             date: "July – August 2026",
             place: "All Stations",
-            text: "A concept album featuring North Carolina and Broadway artists is recorded with the support of Carolina Theater Workshop",
+            text: "A concept album featuring North Carolina and Broadway artists is recorded with the support of Carolina Theater Workshop.",
           },
           {
             date: "October 2026",
