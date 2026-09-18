@@ -450,6 +450,12 @@ img {
   max-width: 640px;
 }
 
+/* When videos stack, each after the first needs clear air above it, or
+   it crowds the caption of the one before. */
+.video + .video {
+  margin-top: 4.5em;
+}
+
 .video__frame {
   position: relative;
 }
@@ -549,9 +555,12 @@ img {
   display: block;
 }
 
-/* Room to breathe if the caption ever wraps on a narrow screen too. */
+/* Room to breathe if the caption wraps on a narrow screen, and even
+   lines when it does — otherwise a long caption leaves its last word
+   stranded alone on the second line. */
 .video__caption-text {
   line-height: 1.9;
+  text-wrap: balance;
 }
 
 /* The producer credit sits in the site's white, a step brighter than the

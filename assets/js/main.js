@@ -105,11 +105,32 @@
       });
     }
 
-    // Teaser video — only appears once a file is named in content.js.
-    var figure = document.getElementById('musicVideo');
-    var video = C.music && C.music.video;
-    if (figure && video && video.file) {
+    // Videos — one player per entry in content.js → music.videos, in the
+    // order written there. An entry with no file is skipped.
+    var videoBox = document.getElementById('musicVideos');
+    var videoTemplate = document.getElementById('videoTemplate');
+    var videoList = (C.music && C.music.videos) || [];
+    var players = [];
+
+    if (videoBox && videoTemplate) {
+      videoList.forEach(function (video) {
+        if (video && video.file) videoBox.appendChild(buildVideo(video));
+      });
+
+      // Only one plays at a time: starting a video pauses any other.
+      players.forEach(function (player) {
+        player.addEventListener('play', function () {
+          players.forEach(function (other) {
+            if (other !== player && !other.paused) other.pause();
+          });
+        });
+      });
+    }
+
+    function buildVideo(video) {
+      var figure = videoTemplate.content.firstElementChild.cloneNode(true);
       var player = figure.querySelector('.video__player');
+      players.push(player);
       var caption = figure.querySelector('.video__caption');
 
       player.src = video.file;
@@ -161,9 +182,9 @@
       });
 
       // Take the browser's control bar away until someone presses play,
-      // so it doesn't sit across the bottom of the cover image — which is
-      // where the logo falls. The moment playback starts, the ordinary
-      // controls come back and behave as usual.
+      // so it doesn't sit across the bottom of the cover image — where a
+      // logo or a caption tends to fall. The moment playback starts, the
+      // ordinary controls come back and behave as usual.
       var playButton = figure.querySelector('.video__play');
       if (playButton) {
         if (video.play_label) playButton.setAttribute('aria-label', video.play_label);
@@ -188,7 +209,7 @@
         playButton.addEventListener('click', reveal);
       }
 
-      figure.hidden = false;
+      return figure;
     }
 
     // Subscribe form — the placeholder, button and destination come from
