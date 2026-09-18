@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=31" />
+  <link rel="stylesheet" href="assets/css/style.css?v=32" />
 </head>
 <body>
 
@@ -142,30 +142,33 @@
         <span class="album-placeholder__note" data-content="music.album_box_note">Coming Soon</span>
       </div>
 
-      <!-- The teaser video. Hidden automatically until a file is named
-           in content.js → music.video.file -->
-      <figure id="musicVideo" class="video" hidden>
-        <div class="video__frame">
-          <!-- "controls" is here on purpose: if the site's JavaScript
-               never runs, the player still works normally. When it does
-               run, the controls are taken away and the button below
-               stands in, so the cover image isn't covered up. -->
-          <!-- controlsList="nodownload" takes Download out of the little
-               three-dot menu on the player. -->
-          <video class="video__player" controls controlsList="nodownload"
-                 preload="metadata" playsinline></video>
-          <button class="video__play" type="button" hidden aria-label="Play the teaser">
-            <span class="video__play-mark" aria-hidden="true"></span>
-          </button>
-        </div>
-        <!-- Two lines: the caption, then the producer credit beneath it.
-             Both are filled from content.js → music.video, and either
-             one left empty there simply doesn't appear. -->
-        <figcaption class="video__caption">
-          <span class="video__caption-text"></span>
-          <span class="video__credit"></span>
-        </figcaption>
-      </figure>
+      <!-- The videos. One player per entry in content.js → music.videos,
+           in that order, each built from the template below. -->
+      <div id="musicVideos" class="videos"></div>
+
+      <template id="videoTemplate">
+        <figure class="video">
+          <div class="video__frame">
+            <!-- "controls" is here on purpose: it stays if the play button
+                 can't be set up, and comes back if the browser refuses to
+                 start playback. Normally it's taken away until someone
+                 presses play, so the cover image isn't covered up. -->
+            <!-- controlsList="nodownload" takes Download out of the little
+                 three-dot menu on the player. -->
+            <video class="video__player" controls controlsList="nodownload"
+                   preload="metadata" playsinline></video>
+            <button class="video__play" type="button" hidden aria-label="Play the video">
+              <span class="video__play-mark" aria-hidden="true"></span>
+            </button>
+          </div>
+          <!-- Two lines: the caption, then the credit beneath it. Either
+               one left empty in content.js simply doesn't appear. -->
+          <figcaption class="video__caption">
+            <span class="video__caption-text"></span>
+            <span class="video__credit"></span>
+          </figcaption>
+        </figure>
+      </template>
 
       <!-- Buy early access. Stays hidden until a shop address is set in
            content.js → music.early_access.url -->
@@ -294,9 +297,9 @@
     </footer>
   </section>
 
-  <script src="content.js?v=31"></script>
-  <script src="assets/js/main.js?v=31"></script>
-  <script src="assets/js/weather.js?v=31"></script>
-  <script src="assets/js/storm-track.js?v=31"></script>
+  <script src="content.js?v=32"></script>
+  <script src="assets/js/main.js?v=32"></script>
+  <script src="assets/js/weather.js?v=32"></script>
+  <script src="assets/js/storm-track.js?v=32"></script>
 </body>
 </html>

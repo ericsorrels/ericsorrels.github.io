@@ -12,6 +12,12 @@
 *.swp
 *~
 
+# Raw video masters. Only the small web-ready .mp4 copies belong on the
+# site. Masters are huge — over GitHub's 100 MB file limit, which fails
+# the whole push — and publishing one would put the full-quality
+# original at a public address.
+assets/video/*.mov
+
 # Notes written for Eric, not for visitors. Anything committed here is
 # served publicly at graymanmusical.com/<filename>, and these two carry
 # the access password and the weather key.

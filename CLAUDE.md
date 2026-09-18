@@ -39,8 +39,8 @@ Helper conventions inside `content.js`:
 
 - `*Asterisks*` around words render them in the show-title treatment.
 - A `|` forces a line break. In a download button's label it always
-  breaks; in the teaser's `music.video.credit` it breaks only on phones
-  (≤430px), where the line would otherwise run edge to edge.
+  breaks; in a video's `credit` (under `music.videos`) it breaks only on
+  phones (≤430px), where the line would otherwise run edge to edge.
 - An empty string `""` hides whatever it controls — a video, a button, a
   contact line. Nothing on the site ever shows a link that leads nowhere.
 
@@ -82,8 +82,10 @@ Three different rules, because three different mechanisms:
 | An image | Give the new file a **new name** and update `content.js` |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
 
-**`?v=` currently stands at 26.** Bump both pages together — they must always
-match, or one page runs new code against the other's cached copy.
+**Find the current number with `grep -o '?v=[0-9]*' index.html | head -1`**
+— don't trust a number written here; one was, and went stale five bumps
+running. Bump both pages together — they must always match, or one page runs
+new code against the other's cached copy.
 
 The `?v=` tags apply only to the site's own files — never to the Google Fonts
 link (Oswald and Josefin Sans) or anything else external.
@@ -183,11 +185,12 @@ there. Leave them alone.
   `0 0 3.6em`, and only `.track__title` flexing. Content sizing goes ragged
   across 21 rows, because "Soon" and "0:02" are different widths.
 
-- **The video's `controls` attribute is in the HTML and removed by JS.**
-  That order matters: no-JS visitors still get a working player, while
-  everyone else gets the custom play button over an uncovered poster frame —
-  the browser's control bar sits exactly where the logo falls. Controls come
-  back the moment playback starts, and go away again if `play()` is refused.
+- **The video's `controls` attribute is in the `<template>` markup and
+  removed by JS.** That order matters: if the custom play button can't be
+  set up, the ordinary controls are simply left in place. Normally they're
+  removed so the poster is seen whole — the control bar sits exactly where
+  a logo or caption falls — then come back the moment playback starts, and
+  go away again if `play()` is refused.
 
 - **`assets/js/access.js` runs its startup block last inside the IIFE.**
   Moving it earlier means auto-unlock fires before the player list exists,
@@ -217,6 +220,49 @@ remeasuring.
 
 The hero photograph is portrait, so `background-position: center 62%` pins the
 wave crest to 62% of hero height on any screen width.
+
+---
+
+## Video
+
+The Music section shows a **list** — `music.videos` in `content.js`, top to
+bottom in the order written, newest first — built by `main.js` from the
+`<template id="videoTemplate">` in `index.html`. Starting one video pauses
+any other.
+
+**Every video must be re-encoded before it goes on the site.** Masters out of
+an editor are enormous and often HEVC, which Firefox and many Windows
+browsers can't play at all. avconvert's presets are the wrong tool: they
+don't let you set a bitrate and they overspend badly (Preset1280x720 put a
+2-minute clip at 106 MB — over GitHub's 100 MB file limit). Use the tools in
+`tools/`, compiled into the scratchpad, never into the repo:
+
+```
+swiftc -swift-version 5 -O tools/transcode-video.swift -o "$SCRATCH/transcode-video"
+"$SCRATCH/transcode-video" master.mov "$SCRATCH/name.mp4" 720 1280 2200000
+cp "$SCRATCH/name.mp4" assets/video/
+```
+
+Encode into the scratchpad, then copy. Fast-start makes the writer leave an
+unoptimized `name.mp4.sb-xxxx` copy beside its output; written straight into
+`assets/video/` that 32 MB leftover would get published.
+
+The settings that worked: **720×1280 H.264 High at 2.2 Mbps** (tall clips;
+the players display at most 380px wide, so 720 covers retina), keyframes
+every 2s, fast-start, source AAC passed through. That lands a 112-second
+clip at 32 MB. Eric's footage is grain- and scanline-heavy VHS styling,
+which is where compression breaks first — at 1.6 Mbps it visibly smeared,
+so check a grainy frame against the master, not a title card. Confirm
+`ftyp → moov → mdat` order afterward, or playback waits for the whole file.
+
+Posters: `tools/grab-frame.swift` pulls an exact frame (720 wide, JPEG
+quality 0.82 ≈ 110 KB) into `assets/img/`, with a new filename per the cache
+rule. The play button sits dead center, so pick a frame whose center isn't
+a title card. Note the timestamp in `content.js` beside the poster — Eric
+chooses posters by time.
+
+Raw `.mov` masters are gitignored. An `.mp4` master is not — it would be
+published — so tell Eric to move it out once the web copy exists.
 
 ---
 
@@ -328,9 +374,11 @@ curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
 - `~/Downloads` is blocked by macOS privacy protection; `~/Desktop` works. Ask
   Eric to put files on the Desktop.
 - No ffmpeg, HandBrake, PIL or Node. Available instead: `sips` for images,
-  `avconvert` for video, `qlmanage -t` to pull a still frame from a clip, and
-  `osascript -l JavaScript` for AppKit image compositing and for syntax-checking
-  `content.js` before committing.
+  **`swiftc`** for anything AVFoundation can do (video encoding and exact
+  frame grabs — see `tools/` and the Video section), and
+  `osascript -l JavaScript` for AppKit image compositing and for
+  syntax-checking `content.js` before committing. Spotlight's `mdls` often
+  returns nothing for freshly added video; read the file's own headers.
 
 ---
 

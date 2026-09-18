@@ -61,46 +61,53 @@ window.SITE_CONTENT = {
   music: {
     label: "The Music",
 
-    // ---- The teaser video ----
-    // Put your video file in the folder  assets/video/  and write its
-    // name below. Leave "file" empty ("") and the whole video block
-    // disappears from the page.
-    video: {
-      file: "assets/video/teaser.mp4",
-
-      // A still image shown before anyone presses play. Optional —
-      // leave it empty ("") and the first frame is used instead.
-      // This one is the frame from 0:33 of the teaser.
-      //
-      // NOTE: when you replace this picture, give the new file a NEW
-      // name and change it here too. Browsers keep a copy of every
-      // image and will keep showing the old one if the name is reused.
-      poster: "assets/img/teaser-poster-logo.jpg",
-
-      // The shape of your video. Instagram posts are often square or
-      // tall rather than wide, so set whichever matches:
-      //   "wide"    a normal landscape video (16:9)
-      //   "square"  as tall as it is wide (1:1)
-      //   "tall"    a vertical phone video (9:16)
-      shape: "tall",
-
-      // A short line printed under the player. Leave empty ("") for none.
-      caption: "Concept album teaser",
-
-      // A second line under the caption, set brighter so it stands out.
-      // Leave "text" empty ("") and the whole line disappears. Leave
-      // "url" empty and the words still show, just not as a link.
-      //
-      // The bar  |  marks where this breaks into two lines ON PHONES.
-      // On anything wider it stays one line and the bar does nothing.
-      credit: {
-        text: "Produced by|Carolina Theater Workshop",
-        url: "https://www.carolinatheatreworkshop.com/",
+    // ---- The videos ----
+    // Each { ... } block below is one video, shown top to bottom in the
+    // order written here — so the newest goes first. They sit between
+    // the concept album box and the buy button.
+    //
+    // To add a video: ask Claude to prepare the file (it has to be
+    // shrunk and converted to play well on the web), then copy a whole
+    // block — from its  {  to its  },  — and edit it. To take one down,
+    // delete its block, or leave its "file" empty ("").
+    //
+    // What each line does:
+    //   file        the video, in the folder  assets/video/
+    //   poster      the still shown before anyone presses play, in
+    //               assets/img/ — leave empty ("") to use the first frame.
+    //               When you replace a picture, give the new file a NEW
+    //               name: browsers keep showing the old one otherwise.
+    //   shape       "wide" (16:9), "square" (1:1) or "tall" (9:16, phone)
+    //   caption     the small line under the player; "" for none
+    //   credit      a brighter second line, a link if it has a "url".
+    //               "" in "text" hides it. A bar  |  marks where it
+    //               breaks onto two lines ON PHONES only.
+    //   play_label  read aloud by screen readers for the play button
+    //               (never shown)
+    videos: [
+      {
+        file: "assets/video/st-elmos-fire.mp4",
+        poster: "assets/img/st-elmos-fire-poster.jpg",   // the frame at 1:39
+        shape: "tall",
+        caption: "St. Elmo's Fire — concept album teaser",
+        credit: {
+          text: "",
+          url: "",
+        },
+        play_label: "Play the St. Elmo's Fire teaser",
       },
-
-      // Spoken aloud by screen readers for the play button. Not visible.
-      play_label: "Play the teaser",
-    },
+      {
+        file: "assets/video/teaser.mp4",
+        poster: "assets/img/teaser-poster-logo.jpg",     // the frame at 0:33
+        shape: "tall",
+        caption: "Concept album teaser",
+        credit: {
+          text: "Produced by|Carolina Theater Workshop",
+          url: "https://www.carolinatheatreworkshop.com/",
+        },
+        play_label: "Play the teaser",
+      },
+    ],
 
     // The bordered "coming soon" box. When the album is ready, ask
     // Claude to swap this box for a streaming player.
