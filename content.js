@@ -445,17 +445,16 @@ window.SITE_CONTENT = {
       "The Gray Man",
       "How to Be Young",
       "Is That You?",
-      "The Legend of the Gray Man (Charli's Version)",
       "Eye of the Storm III",
       "I Will Reach For You",
       "The Gray Man (Voice Memo)",
     ],
 
     // Bonus tracks are set apart under their own heading. The number
-    // below is the track the bonus section starts at — 20 means tracks
-    // 20 and 21 sit below the heading, and 1 through 19 read as the
-    // album proper. Set it to 0 to run all 21 as one continuous list.
-    bonus_starts_at: 20,
+    // below is the track the bonus section starts at — 19 means tracks
+    // 19 and 20 sit below the heading, and 1 through 18 read as the
+    // album proper. Set it to 0 to run all 20 as one continuous list.
+    bonus_starts_at: 19,
     bonus_label: "Bonus Tracks",
 
     /* ---- The download buttons -------------------------------------------- */
