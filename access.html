@@ -61,6 +61,38 @@
            min="0" max="100" step="1" value="100" aria-label="Volume" />
   </div>
 
+  <!-- Lyrics, following whichever track is playing. The tab opens and
+       closes the panel and rides its top edge; both appear once the page
+       is unlocked. Words come from the files in assets/lyrics/, labels
+       from content.js → "access", and the working parts from
+       assets/js/lyrics.js. -->
+  <button class="lyrics-tab" id="lyricsTab" type="button" hidden
+          aria-expanded="false" aria-controls="lyricsPanel"
+          data-content="access.lyrics_button">Lyrics</button>
+
+  <section class="lyrics" id="lyricsPanel" hidden
+           aria-labelledby="lyricsLabel lyricsTitle">
+    <header class="lyrics__head">
+      <p class="lyrics__eyebrow">
+        <span id="lyricsLabel" data-content="access.lyrics_button">Lyrics</span><span
+          class="lyrics__num" id="lyricsNum"></span>
+      </p>
+      <h2 class="lyrics__title" id="lyricsTitle" hidden></h2>
+    </header>
+
+    <div class="lyrics__scroll" id="lyricsScroll">
+      <p class="lyrics__status" id="lyricsStatus" data-content="access.lyrics_waiting">
+        Press play on any track and its words appear here.
+      </p>
+      <ol class="lyrics__lines" id="lyricsLines" hidden></ol>
+    </div>
+
+    <!-- Says which track's words are on screen. Deliberately not used
+         for the lines themselves: reading each one aloud would talk
+         over the song. -->
+    <p class="sr-only" id="lyricsAnnounce" aria-live="polite"></p>
+  </section>
+
   <main id="vault" hidden>
 
     <section class="section section--paper texture-grain texture-halftone">
@@ -92,8 +124,12 @@
 
   </main>
 
-  <script src="content.js?v=32"></script>
-  <script src="assets/js/main.js?v=32"></script>
-  <script src="assets/js/access.js?v=32"></script>
+  <script src="content.js?v=33"></script>
+  <script src="assets/js/main.js?v=33"></script>
+  <!-- Before access.js on purpose: it listens for the album being
+       built, which happens the moment access.js runs for a visitor who
+       is already through the gate. -->
+  <script src="assets/js/lyrics.js?v=33"></script>
+  <script src="assets/js/access.js?v=33"></script>
 </body>
 </html>

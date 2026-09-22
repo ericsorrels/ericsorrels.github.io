@@ -1801,6 +1801,290 @@ img {
   .volume__slider:hover::-webkit-slider-thumb { transform: none; }
 }
 
+/* --------------------------------------------------------------------
+   Lyrics — a panel that follows whichever track is playing.
+
+   One mechanism in three shapes: a drawer that rises from the lower
+   left, with the Lyrics tab as its handle.
+
+     1280px and up    in the empty margin beside the album, covering
+                      nothing at all
+     621 – 1279px     docked along the bottom, stopping well short of
+                      the volume slider at the right edge
+     620px and under  a sheet across the full width (no volume slider
+                      to avoid down there)
+
+   The panel is always an opaque dark card, so it reads the same over
+   the pale top of the page and the dark album below. Only the small
+   tab turns light over paper, the way the volume panel does — a card
+   this size changing colour mid-scroll would be anything but quiet.
+   -------------------------------------------------------------------- */
+
+:root {
+  --lyrics-edge: clamp(0.75rem, 2.4vw, 2.2rem);   /* matches .volume's inset */
+  --lyrics-h: 42vh;
+}
+
+@media (max-width: 620px) {
+  :root { --lyrics-h: 52vh; }
+}
+
+@media (min-width: 1280px) {
+  :root { --lyrics-h: min(64vh, 620px); }
+}
+
+.lyrics-tab {
+  position: fixed;
+  z-index: 21;
+  left: var(--lyrics-edge);
+  bottom: var(--lyrics-edge);
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  /* The extra on the left answers the space letterspacing leaves on
+     the right, so the word sits centred. */
+  padding: 0 1.4em 0 calc(1.4em + var(--tracking-wide));
+  font-family: var(--font-body);
+  font-size: 0.56rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--paper);
+  background: rgba(27, 26, 23, 0.55);
+  border: 1px solid rgba(237, 232, 221, 0.14);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1),
+              background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+.lyrics-tab:hover {
+  border-color: rgba(237, 232, 221, 0.4);
+}
+
+.lyrics-tab:focus-visible {
+  outline: 1px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* Over the pale top of the page it turns inside out. */
+.lyrics-tab--on-paper {
+  color: var(--ink-soft);
+  background: rgba(237, 232, 221, 0.72);
+  border-color: rgba(27, 26, 23, 0.16);
+}
+
+.lyrics-tab--on-paper:hover {
+  border-color: rgba(27, 26, 23, 0.4);
+}
+
+.lyrics-tab--on-paper:focus-visible {
+  outline-color: var(--ink);
+}
+
+/* Open, the tab rides the top edge of the panel, joined to it: it sits
+   one pixel low so its own dark fill covers the panel's top border. */
+html.lyrics-open .lyrics-tab {
+  transform: translateY(calc(var(--lyrics-edge) - var(--lyrics-h) + 1px));
+  color: var(--paper);
+  background: var(--ink);
+  border-color: rgba(237, 232, 221, 0.16);
+  border-bottom-color: var(--ink);
+}
+
+.lyrics {
+  position: fixed;
+  z-index: 20;
+  left: var(--lyrics-edge);
+  /* Clear of the volume slider: its own inset, its width, and air. */
+  right: calc(var(--lyrics-edge) + 4.25rem);
+  bottom: 0;
+  max-width: 640px;
+  height: var(--lyrics-h);
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  border: 1px solid rgba(237, 232, 221, 0.16);
+  border-bottom: 0;
+  box-shadow: 0 -12px 40px rgba(27, 26, 23, 0.5);
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1),
+              visibility 0s linear 0.8s;
+}
+
+html.lyrics-open .lyrics {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1),
+              visibility 0s linear 0s;
+}
+
+/* Docked along the bottom, the panel would otherwise sit under the last
+   of the page for good. */
+@media (max-width: 1279px) {
+  html.lyrics-open body { padding-bottom: var(--lyrics-h); }
+}
+
+@media (max-width: 620px) {
+  .lyrics {
+    left: 0;
+    right: 0;
+    max-width: none;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .lyrics-tab { min-height: 44px; }      /* a comfortable target for a thumb */
+}
+
+/* Wide enough for the album to keep its middle and the words to stand
+   beside it. The width is what's left of the margin. */
+@media (min-width: 1280px) {
+  .lyrics {
+    right: auto;
+    bottom: var(--lyrics-edge);
+    width: min(340px, calc((100vw - 720px) / 2 - 2 * var(--lyrics-edge)));
+    max-width: none;
+    border-bottom: 1px solid rgba(237, 232, 221, 0.16);
+    box-shadow: 0 0 40px rgba(27, 26, 23, 0.45);
+    transform: translateY(calc(100% + var(--lyrics-edge) + 2px));
+  }
+
+  html.lyrics-open .lyrics-tab {
+    transform: translateY(calc(1px - var(--lyrics-h)));
+  }
+}
+
+.lyrics__head {
+  flex: 0 0 auto;
+  padding: 1.25em 1.5em 0.95em;
+  border-bottom: 1px solid rgba(237, 232, 221, 0.1);
+}
+
+.lyrics__eyebrow {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+}
+
+.lyrics__num:not(:empty)::before {
+  content: '·';
+  margin: 0 0.9em;
+}
+
+.lyrics__title {
+  margin: 0.7em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--paper);
+}
+
+/* The words scroll here, and only here: the page behind never moves. */
+.lyrics__scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.1em 1.5em 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(237, 232, 221, 0.22) transparent;
+  /* Lines arrive and leave through a soft edge rather than a hard cut. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.4em,
+                      #000 calc(100% - 2.6em), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 1.4em,
+              #000 calc(100% - 2.6em), transparent 100%);
+}
+
+.lyrics__scroll:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.5);
+  outline-offset: -4px;
+}
+
+.lyrics__status {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  color: var(--gray-mid);
+}
+
+.lyrics__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A verse break, or a pause where nothing is sung. */
+.lyrics__gap {
+  height: 1.1em;
+}
+
+.lyrics__line {
+  display: block;
+  width: calc(100% + 1.1em);
+  margin: 0 -0.55em;
+  padding: 0.28em 0.55em;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  text-align: left;
+  color: var(--gray-mid);
+  background: none;
+  border: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color 0.35s ease, background 0.35s ease;
+}
+
+button.lyrics__line {
+  cursor: pointer;
+}
+
+button.lyrics__line:hover {
+  background: rgba(237, 232, 221, 0.05);
+}
+
+button.lyrics__line:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.6);
+  outline-offset: -1px;
+}
+
+/* The line being sung. */
+.lyrics__line.is-current {
+  color: var(--paper);
+}
+
+/* Plain words have no line to single out, so they all read alike. */
+.lyrics__line--plain {
+  color: var(--paper-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics,
+  html.lyrics-open .lyrics,
+  .lyrics-tab,
+  html.lyrics-open .lyrics-tab,
+  .lyrics__line {
+    transition: none;
+  }
+}
+
 /* Download buttons */
 
 .downloads {

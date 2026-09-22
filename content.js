@@ -411,6 +411,21 @@ window.SITE_CONTENT = {
     // Adding brand-new tracks doesn't need it — only replacements.
     audio_version: 2,
 
+    /* ---- The lyrics panel ----
+       Opens and closes with a small tab in the bottom corner, and
+       follows whichever track is playing. The words themselves are
+       files in the folder  assets/lyrics/  — there's a note in there
+       explaining how to add them. */
+    lyrics_button: "Lyrics",
+    lyrics_waiting: "Press play on any track and its words appear here.",
+    lyrics_loading: "Finding the words…",
+    lyrics_none: "No lyrics for this track",
+
+    // Raise this number by one whenever you add or change a lyrics
+    // file, so listeners get the new words instead of a copy their
+    // browser kept. Works exactly like audio_version above.
+    lyrics_version: 1,
+
     tracks_label: "The Album",
     tracks: [
       "The Legend of the Gray Man",

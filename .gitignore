@@ -12,11 +12,20 @@
 *.swp
 *~
 
+# Python's compiled leftovers, from running the preview server
+__pycache__/
+*.pyc
+
 # Raw video masters. Only the small web-ready .mp4 copies belong on the
 # site. Masters are huge — over GitHub's 100 MB file limit, which fails
 # the whole push — and publishing one would put the full-quality
 # original at a public address.
 assets/video/*.mov
+
+# Eric's tap-along tool for timing lyrics. It runs by double-clicking it
+# and never needs to be online, so it stays on his computer instead of
+# being published with the site.
+tools/lyric-timer.html
 
 # Notes written for Eric, not for visitors. Anything committed here is
 # served publicly at graymanmusical.com/<filename>, and these two carry

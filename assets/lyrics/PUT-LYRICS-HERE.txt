@@ -1,0 +1,44 @@
+HOW TO ADD LYRICS
+=================
+
+Each song's words go in this folder, named by its track number — the
+same numbers as the audio files:
+
+      12.lrc     timed words. The line lights up as it is sung, and a
+                 listener can click any line to jump the song there.
+
+      12.txt     plain words. Shown as they are, with no timing.
+
+If a track has both, the timed one is used. If it has neither, the
+panel simply says there are no lyrics for that track, and nothing looks
+broken.
+
+Plain words are just the song typed out, one line per line, with a
+blank line between verses.
+
+
+MAKING A TIMED FILE
+-------------------
+
+Use the tap-along tool on your computer:
+
+      tools/lyric-timer.html      (double-click it)
+
+Load the song and its plain words, press play, and tap the space bar as
+each line begins. When you're done it hands you the finished file, named
+for you. Move that file into this folder.
+
+
+AFTER ADDING OR CHANGING ANY FILE HERE
+--------------------------------------
+
+Open content.js, find "lyrics_version" under "access", and raise the
+number by one. Browsers keep a copy of everything they have already
+read; this is what tells them to fetch the new words instead.
+
+
+WORTH KNOWING
+-------------
+
+Like the album audio, anything in this folder can be read by anyone who
+knows its address, password or not.

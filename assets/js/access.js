@@ -235,6 +235,10 @@
 
   var players = [];
 
+  // The same tracks, with the number and title that go with each player,
+  // for anything that follows the album — the lyrics panel does.
+  var album = [];
+
   function buildTrack(title, index) {
     var row = document.createElement('div');
     row.className = 'track';
@@ -378,6 +382,7 @@
     });
 
     players.push(audio);
+    album.push({ number: number, title: title, audio: audio });
     return row;
   }
 
@@ -419,6 +424,12 @@
 
     // Last, so every track already exists to be turned down.
     setUpVolume();
+
+    // Hand the finished album to whatever follows it — the lyrics panel
+    // in lyrics.js. Left on the window as well as announced, so it is
+    // found whichever of the two scripts is ready first.
+    window.TGM_ALBUM = album;
+    document.dispatchEvent(new CustomEvent('tgm:album-ready', { detail: album }));
   }
 
   /* ------------------------------------------------------------------
