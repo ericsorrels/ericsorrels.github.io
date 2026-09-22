@@ -301,10 +301,19 @@ publicly for five days before anyone noticed. `READ-ME-FIRST.txt` and
 `cloudflare/HOW-TO-DEPLOY.txt` are gitignored for that reason — they stay on
 Eric's disk. Check any new documentation file for secrets before adding it.
 
-The album is 21 tracks, expecting `assets/audio/01.mp3` … `21.mp3`, matched
+The album is 20 tracks, expecting `assets/audio/01.mp3` … `20.mp3`, matched
 line-for-line against the `tracks:` list in `content.js`. Tracks with no file
 read "Soon" and disable themselves; play-through skips over them. Bonus tracks
 are separated by `bonus_starts_at`.
+
+**Numbers come from position in that list, not from anything written down.**
+So adding or deleting a track renumbers every track below it, and the files
+on disk do not follow: `assets/audio/NN.mp3` and `assets/lyrics/NN.lrc` would
+then belong to the wrong songs, silently. After any change to the list, check
+which numbered files sit below the change and rename them — and move
+`bonus_starts_at` by the same amount, or the bonus heading lands on the wrong
+song. (Eric removed track 18 in September 2026; every file happened to be
+numbered 17 or lower, so nothing needed renaming that time.)
 
 **To open the vault while testing, don't type the password** — that is Eric's
 to type. Set `sessionStorage` `tgm_early_access` to `open` in the preview and
