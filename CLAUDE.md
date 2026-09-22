@@ -81,6 +81,7 @@ Three different rules, because three different mechanisms:
 | `content.js`, any `.js`, `style.css` | Bump `?v=N` in **both** `index.html` and `access.html` |
 | An image | Give the new file a **new name** and update `content.js` |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
+| A lyrics file, added or changed | Bump `access.lyrics_version` in `content.js` |
 
 **Find the current number with `grep -o '?v=[0-9]*' index.html | head -1`**
 — don't trust a number written here; one was, and went stale five bumps
@@ -305,6 +306,64 @@ line-for-line against the `tracks:` list in `content.js`. Tracks with no file
 read "Soon" and disable themselves; play-through skips over them. Bonus tracks
 are separated by `bonus_starts_at`.
 
+**To open the vault while testing, don't type the password** — that is Eric's
+to type. Set `sessionStorage` `tgm_early_access` to `open` in the preview and
+reload; that is the same door a returning visitor comes back through.
+
+---
+
+## Lyrics
+
+`assets/js/lyrics.js` runs the panel that follows the album, loaded **before**
+`access.js` in `access.html` — deliberately, because `access.js` builds the
+album the instant it runs for a visitor already through the gate, and the
+panel has to be listening by then. The handover is `window.TGM_ALBUM` plus a
+`tgm:album-ready` event carrying `{ number, title, audio }` per track; the
+panel reads both, so load order can't silently break it.
+
+When a track starts, it fetches `assets/lyrics/NN.lrc`, falls back to
+`NN.txt`, then says there are none. Answers are kept per track for the visit,
+and a stale one is dropped if the listener switches tracks mid-fetch.
+
+**The `.lrc` reader handles** several timestamps on one line (a chorus written
+once, stamped three times), an `[offset:…]` tag, `[ti:…]`-style tags, empty
+timed lines as verse breaks, and word-by-word `<00:12.34>` timings, which are
+stripped. An `.lrc` with no timings at all is shown as plain words.
+
+**Following the song runs on `requestAnimationFrame`** while a track plays and
+the panel is open — `timeupdate` fires far too rarely to land a line on the
+beat. Seeking is covered separately by the audio's own `seeking`/`seeked`,
+which is what keeps the words with the seek bar as it's dragged (the bar moves
+the song live, so no extra hook is needed). Scrolling happens **inside the
+panel only** — never `scrollIntoView`, which would drag the page too — and
+stands down for four seconds after the listener scrolls it by hand.
+
+**Layout, all in `style.css`:** one drawer rising from the lower left with the
+Lyrics tab as its handle. At ≥1280px it sits in the margin beside the 720px
+album column; from 621–1279px it docks along the bottom, its right edge held
+clear of the volume slider by `right: calc(var(--lyrics-edge) + 4.25rem)`
+(13px of daylight at the tightest point, 621px); at ≤620px it's a full-width
+sheet, where the volume slider isn't shown anyway. Below 1280px the body gains
+bottom padding so the end of the page can still be scrolled clear of it.
+
+**The panel is an opaque ink card everywhere.** Only the small tab flips light
+over the paper section, the way the volume panel does — a card that size
+changing colour mid-scroll would be the opposite of quiet.
+
+**Screen readers get the track, not the song.** Changing tracks announces
+"Lyrics: <title>" through a polite live region; lines are never announced, as
+that would talk straight over the music. The lines are one tab stop with a
+roving `tabindex` — arrows move, Enter jumps the song, Escape closes and
+returns focus to the tab.
+
+**Timing new lyrics:** `tools/lyric-timer.html`, which is **gitignored and
+lives only on Eric's disk** — it runs by double-clicking and never needs to be
+online. Load a song and its words, tap Space per line, download the `.lrc`.
+Its wording is hardcoded rather than in `content.js`: it is Eric's tool, not
+something a visitor sees, and it has to work with no site around it. If it
+ever goes missing it can be rebuilt from this description; nothing on the
+site depends on it.
+
 ---
 
 ## Hosting
@@ -363,9 +422,13 @@ curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
 
 ## Environment notes
 
-- **Local preview:** `python3 -m http.server 8420` from the project root.
-  Opening `index.html` as a `file://` URL blocks `content.js`, so the page
-  falls back to placeholder copy. Expected.
+- **Local preview:** `python3 tools/preview-server.py` (port 8420). Use it
+  rather than `python3 -m http.server`, which cannot send part of a file:
+  without ranges, dragging a track's seek bar throws the song back to the
+  start, so anything to do with seeking — the lyrics keeping up, most of all
+  — tests as broken when it isn't. It also sends `no-store`, so edits show on
+  refresh. Opening `index.html` as a `file://` URL blocks `content.js`, so the
+  page falls back to placeholder copy. Expected.
 - **The sandbox can reach `graymanmusical.com`** — `curl -I` returns 200 and
   the Cloudflare headers. (An earlier note here said it couldn't; that was
   wrong, so test before believing either claim.) `api.github.com` and
