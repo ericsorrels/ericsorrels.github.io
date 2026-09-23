@@ -418,6 +418,12 @@ window.SITE_CONTENT = {
        explaining how to add them. */
     lyrics_button: "Lyrics",
     lyrics_waiting: "Press play on any track and its words appear here.",
+
+    // The same moment, but with the words filling the screen — where the
+    // track list is hidden behind them, so there is nothing to point at
+    // except the play button along the bottom.
+    lyrics_waiting_expanded: "Press play to begin.",
+
     lyrics_loading: "Finding the words…",
     lyrics_none: "No lyrics for this track",
 

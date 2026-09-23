@@ -77,6 +77,7 @@
   var isOpen = false;
   var isExpanded = false;
   var album = [];          // every track, so the stage can start one
+  var waiting = true;      // true until the first track plays
   var current = null;      // the track on show: { number, title, audio }
   var entries = [];        // its timed lines, in time order
   var buttons = [];        // entry index → the button showing it (gaps have none)
@@ -185,6 +186,17 @@
   function setStatus(text) {
     statusEl.textContent = text || '';
     statusEl.hidden = !text;
+  }
+
+  // The line shown before anything has played reads differently on the
+  // stage, where the track list it would otherwise send you to is behind
+  // the words. Once a track has played this line is gone for good, so
+  // opening and closing the stage after that leaves the status alone.
+  function refreshWaiting() {
+    if (!waiting) return;
+    setStatus(isExpanded
+      ? (A.lyrics_waiting_expanded || 'Press play to begin.')
+      : (A.lyrics_waiting || 'Press play on any track and its words appear here.'));
   }
 
   function announce(text) {
@@ -302,6 +314,7 @@
 
   function show(track) {
     current = track;
+    waiting = false;        // something has played; the invitation is spent
     stopFollowing();
     clearLines();
     drawTransport();        // the album has rolled on; the stage follows
@@ -756,6 +769,7 @@
     setAside(tab, true);
     setExpandButton();
     drawTransport();
+    refreshWaiting();
     startFollowing();
 
     // Asked for from inside the click, where the browser will grant it.
@@ -788,6 +802,7 @@
     setAside(vault, false);
     setAside(tab, false);
     setExpandButton();
+    refreshWaiting();
 
     remeasure();
     if (isOpen) startFollowing();

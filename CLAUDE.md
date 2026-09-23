@@ -448,6 +448,15 @@ is why the album's own row for the track stays in step without being told —
 both are working the one `<audio>` element. Its play button and seek bar
 reuse `.track__play` and `.track__seek`, so they *are* the album's controls.
 
+**The line shown before anything has played comes in two versions** —
+`lyrics_waiting` for the panel, `lyrics_waiting_expanded` for the stage,
+where the track list the first one points at is behind the words. A
+`waiting` flag, true until the first `show()`, is what lets opening and
+closing the stage swap between them without ever overwriting "No lyrics
+for this track". On the stage the status is absolutely centred rather than
+in the flow, which is safe because the status and the words are never both
+on screen.
+
 With nothing playing yet the stage's play button **starts the album** at
 its first track that has audio, and says which one in its label. In full
 screen the track list is out of sight, so this is the only way in.
@@ -627,12 +636,6 @@ test visibility.
   check failed`), so only the refused path — the overlay standing on its
   own — has been seen working. Everything else about the stage was
   measured. Ask Eric to confirm it in Chrome or Safari.
-- **The stage's waiting line still reads "Press play on any track…"**,
-  which in full screen names a track list the listener cannot see — though
-  the stage's own play button now does exactly that. It is one line in
-  `content.js` (`access.lyrics_waiting`) shared with the small panel, so
-  changing it for the stage alone would need a second key. Eric's to
-  reword if it bothers him.
 - **No favicon**, on either page. Eric has declined twice; don't offer again.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
