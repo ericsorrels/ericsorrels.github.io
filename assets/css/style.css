@@ -1959,10 +1959,46 @@ html.lyrics-open .lyrics {
 }
 
 .lyrics__head {
+  position: relative;                    /* the expand button sits in its corner */
   flex: 0 0 auto;
   padding: 1.25em 1.5em 0.95em;
   border-bottom: 1px solid rgba(237, 232, 221, 0.1);
 }
+
+/* Opens the words out to fill the screen. Left off below 768px, where
+   the panel already takes most of it and there is nothing to gain. */
+.lyrics__expand {
+  display: none;
+  position: absolute;
+  top: 1.1em;
+  right: 1.2em;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--gray-mid);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .lyrics__expand { display: inline-flex; }
+}
+
+.lyrics__expand:hover {
+  color: var(--paper);
+  border-color: rgba(237, 232, 221, 0.28);
+}
+
+.lyrics__expand:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.6);
+  outline-offset: 2px;
+}
+
+.lyrics__expand svg { display: block; }
 
 .lyrics__eyebrow {
   margin: 0;
@@ -2081,6 +2117,284 @@ button.lyrics__line:focus-visible {
   .lyrics-tab,
   html.lyrics-open .lyrics-tab,
   .lyrics__line {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------
+   The lyrics stage — the words opened out to fill the screen.
+
+   It is an empty room. The lyrics panel is carried into it when it
+   opens and carried back out when it closes, and the volume slider
+   comes along, so everything below is the same panel wearing a
+   different size. Nothing here duplicates it.
+
+   Asked for as true full screen on top of that, and written to stand
+   up without it, because the browser can say no.
+   -------------------------------------------------------------------- */
+
+:root {
+  --stage-edge: clamp(1.5rem, 4vw, 4rem);
+}
+
+.stage {
+  position: fixed;
+  z-index: 40;                 /* over the volume slider and the tab both */
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+
+html.stage-open .stage {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.45s ease, visibility 0s linear 0s;
+}
+
+.stage:focus-visible {
+  outline: none;               /* the stage takes focus only to catch keys */
+}
+
+/* Behind a full-screen element the browser paints its own backdrop, and
+   white is not this site's idea of nothing. Two rules, not one list:
+   an unknown selector would throw the whole list away. */
+.stage::backdrop { background: var(--ink); }
+.stage::-webkit-backdrop { background: var(--ink); }
+
+.stage:fullscreen { width: 100%; height: 100%; }
+.stage:-webkit-full-screen { width: 100%; height: 100%; }
+
+/* The page behind can't be scrolled out from under it. */
+html.stage-open,
+html.stage-open body {
+  overflow: hidden;
+}
+
+.stage__well {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  padding: clamp(1.25rem, 3vh, 2.5rem) var(--stage-edge) 0;
+}
+
+/* The panel, standing up. It arrives still dressed as a drawer in the
+   corner: fixed, inset, part-way off the bottom of the screen. */
+html.stage-open .stage .lyrics {
+  position: static;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  transform: none;
+  visibility: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.stage .lyrics__head {
+  padding: 0 3.5rem 1.6rem;
+  text-align: center;
+  border-bottom: 0;
+}
+
+.stage .lyrics__expand {
+  top: -0.35rem;
+  right: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.stage .lyrics__title {
+  margin-top: 0.8em;
+  font-size: 0.78rem;
+}
+
+.stage .lyrics__scroll {
+  padding: 0;
+  overflow-x: hidden;
+  text-align: center;
+  /* A deeper fade than the panel's: there is far more room here for
+     lines to arrive and leave through. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%,
+                      #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%,
+              #000 82%, transparent 100%);
+}
+
+.stage .lyrics__lines {
+  max-width: min(52rem, 100%);
+  margin: 0 auto;
+}
+
+.stage .lyrics__status {
+  max-width: 28rem;
+  margin: 18vh auto 0;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.stage .lyrics__gap {
+  height: 1.7rem;
+}
+
+/* About three times the panel's size at a full-width window, and never
+   so small that this stopped being worth doing. */
+.stage .lyrics__line {
+  width: 100%;
+  margin: 0;
+  padding: 0.16em 0.4em;
+  font-size: clamp(1.75rem, 1.2rem + 1.9vw, 2.75rem);
+  line-height: 1.34;
+  letter-spacing: 0.01em;
+  text-align: center;
+  /* Sung and unsung are told apart by light alone — no movement, no
+     weight change. Still 3.5:1 against the ink at this size. */
+  color: rgba(237, 232, 221, 0.42);
+}
+
+.stage button.lyrics__line:hover {
+  background: rgba(237, 232, 221, 0.04);
+}
+
+.stage .lyrics__line.is-current {
+  color: var(--paper);
+}
+
+/* Words with no timings have no line to single out, so they all read
+   alike — and brighter than the dimmed state, which means nothing here. */
+.stage .lyrics__line--plain {
+  color: var(--paper-dim);
+}
+
+/* The transport. Its parts are the album's own, so a listener who has
+   used the track rows already knows them. */
+.stage__transport {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 2vw, 1.8rem);
+  padding: 1.1rem var(--stage-edge);
+  padding-bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(237, 232, 221, 0.12);
+}
+
+.stage__play {
+  width: 46px;
+  height: 46px;
+}
+
+/* A fixed column each, so the numbers changing never shifts the line. */
+.stage__clock {
+  flex: 0 0 3.6em;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--gray-mid);
+}
+
+.stage__clock--end {
+  text-align: right;
+}
+
+.stage__timeline {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+
+.stage__timeline .track__seek:not(:disabled):hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.stage__volume {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/* The volume slider, lying on its side to join the row. It is the same
+   control, carried in from the edge of the page — in true full screen
+   nothing outside this element is drawn at all, so it had to travel. */
+.stage .volume {
+  position: static;
+  transform: none;
+  flex-direction: row;
+  gap: 0.8em;
+  padding: 0;
+  background: none;
+  border: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.stage .volume__slider {
+  writing-mode: horizontal-tb;
+  direction: ltr;
+  width: clamp(70px, 8vw, 110px);
+  height: 18px;
+}
+
+.stage .volume__slider::-webkit-slider-runnable-track {
+  width: auto;
+  height: 2px;
+}
+
+.stage .volume__slider::-moz-range-track {
+  width: auto;
+  height: 2px;
+}
+
+.stage .volume__slider::-webkit-slider-thumb {
+  width: 11px;
+  height: 11px;
+  margin-left: 0;
+  margin-top: -4.5px;
+}
+
+.stage .volume__slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+}
+
+/* Going full screen counts as a resize, which sets the panel's light
+   and dark by where the page behind happens to be scrolled to. On the
+   stage that answer is always dark. */
+.stage .volume--on-paper {
+  background: none;
+  border: 0;
+}
+
+.stage .volume--on-paper .volume__label {
+  color: var(--gray-mid);
+}
+
+.stage .volume--on-paper .volume__slider::-webkit-slider-runnable-track {
+  background: rgba(237, 232, 221, 0.28);
+}
+
+.stage .volume--on-paper .volume__slider::-moz-range-track {
+  background: rgba(237, 232, 221, 0.28);
+}
+
+.stage .volume--on-paper .volume__slider::-webkit-slider-thumb {
+  background: var(--paper);
+}
+
+.stage .volume--on-paper .volume__slider::-moz-range-thumb {
+  background: var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage,
+  html.stage-open .stage {
     transition: none;
   }
 }

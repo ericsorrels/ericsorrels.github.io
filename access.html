@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=35" />
+  <link rel="stylesheet" href="assets/css/style.css?v=36" />
 </head>
 <body>
 
@@ -78,6 +78,14 @@
           class="lyrics__num" id="lyricsNum"></span>
       </p>
       <h2 class="lyrics__title" id="lyricsTitle" hidden></h2>
+
+      <!-- Opens the words out to fill the screen, and closes them again.
+           Its icon and its label are set by lyrics.js — the words come
+           from content.js → access.lyrics_expand / lyrics_collapse.
+           Hidden under 768px, where the panel is already most of the
+           screen. -->
+      <button class="lyrics__expand" id="lyricsExpand" type="button"
+              aria-expanded="false" aria-controls="lyricsStage"></button>
     </header>
 
     <div class="lyrics__scroll" id="lyricsScroll">
@@ -92,6 +100,29 @@
          over the song. -->
     <p class="sr-only" id="lyricsAnnounce" aria-live="polite"></p>
   </section>
+
+  <!-- The expanded view. It holds no words of its own: when it opens,
+       the panel above is lifted into the empty stage below and the
+       volume slider comes with it, then both go back where they were.
+       So there is only ever one set of lines on the page. The transport
+       moves whichever track the panel is following, which is the same
+       <audio> the album's own row moves — nothing to keep in step. -->
+  <div class="stage texture-grain" id="lyricsStage" hidden tabindex="-1"
+       role="dialog" aria-labelledby="lyricsLabel lyricsTitle">
+
+    <div class="stage__well" id="lyricsStageWell"></div>
+
+    <div class="stage__transport">
+      <button class="track__play stage__play" id="lyricsStagePlay" type="button"></button>
+      <span class="stage__clock" id="lyricsStageElapsed">0:00</span>
+      <div class="stage__timeline">
+        <input class="track__seek" id="lyricsStageSeek" type="range"
+               min="0" max="1000" step="1" value="0" disabled />
+      </div>
+      <span class="stage__clock stage__clock--end" id="lyricsStageLength">&ndash;:&ndash;&ndash;</span>
+      <div class="stage__volume" id="lyricsStageVolume"></div>
+    </div>
+  </div>
 
   <main id="vault" hidden>
 
@@ -124,12 +155,12 @@
 
   </main>
 
-  <script src="content.js?v=35"></script>
-  <script src="assets/js/main.js?v=35"></script>
+  <script src="content.js?v=36"></script>
+  <script src="assets/js/main.js?v=36"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=35"></script>
-  <script src="assets/js/access.js?v=35"></script>
+  <script src="assets/js/lyrics.js?v=36"></script>
+  <script src="assets/js/access.js?v=36"></script>
 </body>
 </html>

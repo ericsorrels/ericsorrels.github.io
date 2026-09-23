@@ -421,6 +421,13 @@ window.SITE_CONTENT = {
     lyrics_loading: "Finding the words…",
     lyrics_none: "No lyrics for this track",
 
+    // The little arrows button in the corner of the lyrics panel, which
+    // opens the words out to fill the whole screen. These two are what
+    // it says when you rest the pointer on it. On a computer only —
+    // there's no room for it on a phone.
+    lyrics_expand: "Full screen",
+    lyrics_collapse: "Leave full screen",
+
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their
     // browser kept. Works exactly like audio_version above.

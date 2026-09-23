@@ -427,6 +427,46 @@ bottom padding so the end of the page can still be scrolled clear of it.
 over the paper section, the way the volume panel does — a card that size
 changing colour mid-scroll would be the opposite of quiet.
 
+### The expanded view
+
+The arrows button in the panel's corner opens the words out to fill the
+screen — `.stage` in `access.html`, empty markup that holds nothing of its
+own. Opening it **moves the panel element itself** into the stage and moves
+it back on close, so the loader, the highlighter, click-to-seek and the
+keyboard handling are all the same code in a different place, restyled by
+`.stage …` rules. Nothing is duplicated and nothing has to be kept in step.
+
+**The volume slider travels with it**, and this is the reason the design
+works this way at all: in true full screen the browser paints *nothing*
+outside the expanded element, so a fixed control left behind on the page
+simply disappears, however high its `z-index`. Anything the listener still
+needs has to be inside. Both moves are undone by a comment node left where
+the element was, so the page comes back exactly as it was.
+
+**The transport at the bottom moves `current.audio` and nothing else.** That
+is why the album's own row for the track stays in step without being told —
+both are working the one `<audio>` element. Its play button and seek bar
+reuse `.track__play` and `.track__seek`, so they *are* the album's controls.
+
+**`isShowing()` is `isOpen || isExpanded`.** The words follow the song when
+they are being read, which is a different question from whether the drawer
+is open — the panel can be shut and the stage still up.
+
+Full screen is asked for on top of the overlay and refused gracefully: the
+request is made inside the click, where a browser will grant it, and a
+rejection is swallowed. Leaving full screen by any route (Escape, F11, the
+browser's own control) closes the stage, but only if it ever got in —
+`wasFullscreen` guards that, because a refused request fires no event at all
+and the stage is meant to survive it. Desktop only: the button is
+`display: none` below 768px, and pulling the window narrower than that while
+expanded closes the stage, since the way out would go with it.
+
+Expanded, Escape leaves, Space stops and starts, and ←/→ step 5 seconds —
+skipped when a button or slider already has the caret, which answers for
+itself. The line being sung sits dead centre (`READING_LINE_EXPANDED`)
+rather than a third of the way down, and the lines get a top gutter so the
+first one can reach the middle.
+
 **Screen readers get the track, not the song.** Changing tracks announces
 "Lyrics: <title>" through a polite live region; lines are never announced, as
 that would talk straight over the music. The lines are one tab stop with a
@@ -573,6 +613,16 @@ test visibility.
   Man · 18 Eye of the Storm III. They read "Soon" and are skipped.
 - **Three tracks have audio but no words:** 02, 12 and 13. Their panel says
   there are no lyrics, which is correct but not final.
+- **The expanded lyrics view was never tested in real full screen.** The
+  built-in browser pane refuses the Fullscreen API outright (`Permissions
+  check failed`), so only the refused path — the overlay standing on its
+  own — has been seen working. Everything else about the stage was
+  measured. Ask Eric to confirm it in Chrome or Safari.
+- **Expanding before pressing play** shows "Press play on any track…" in
+  large type with a dead transport, which in full screen refers to an album
+  the listener cannot see. Correct but a small dead end; the fix, if Eric
+  wants it, is to have the stage's play button start the first track that
+  has audio.
 - **No favicon**, on either page. Eric has declined twice; don't offer again.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
