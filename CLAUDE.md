@@ -8,6 +8,41 @@ Live at **https://graymanmusical.com**.
 
 ---
 
+## The files
+
+Two pages. `index.html` is the public site; `access.html` is the gated album.
+Everything a visitor reads lives in `content.js`.
+
+```
+index.html          the public page: hero, weather, about, music, journey,
+                    subscribe, contact
+access.html         the gated album: password gate, then the vault
+content.js          EVERY word on both pages, and a few settings
+assets/css/style.css   the whole site's styling, one file
+assets/js/
+  main.js           pours content.js into both pages; the teaser videos;
+                    the subscribe form; scroll reveals; hero fog
+  weather.js        the Pawleys Island panel (index only)
+  storm-track.js    the Journey's hurricane chart (index only)
+  access.js         the password gate and the album player (access only)
+  lyrics.js         the lyrics panel following the album (access only)
+assets/audio/NN.mp3    one per track, numbered by position in the list
+assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
+assets/video/       the teasers, plus gitignored .mov masters
+assets/img/         title artwork, hero photograph, video posters, share card
+assets/downloads/   the four supporter downloads (still empty — see below)
+cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
+tools/              Claude's working tools, not part of the site
+CNAME               the custom domain, required by GitHub Pages
+```
+
+Each folder under `assets/` carries a plain-language note for Eric
+(`PUT-…-HERE.txt`) explaining what goes in it. Those are published but
+harmless. `READ-ME-FIRST.txt` and `cloudflare/HOW-TO-DEPLOY.txt` are
+gitignored — they hold secrets and stay on Eric's disk.
+
+---
+
 ## Working with Eric
 
 Eric is not a developer. Explain things in plain language, name files rather
@@ -18,6 +53,17 @@ GitHub Desktop.
 **He publishes, not you.** Commit freely; the push is his. GitHub Desktop
 holds credentials this environment cannot reach, so `git push` will fail —
 that's expected, not a fault to debug. End work by telling him what's waiting.
+
+**How it reaches the world:** he pushes in GitHub Desktop → GitHub Pages
+rebuilds, taking a minute or two → Cloudflare passes it through. Once he says
+he's pushed, confirm it rather than assuming:
+
+```
+curl -s "https://graymanmusical.com/access.html?cb=$RANDOM" | grep -o '?v=[0-9]*' | sort -u
+```
+
+When that shows the number just committed, the push is live. Poll it a few
+times if it still shows the old one; it is a build delay, not a failure.
 
 ---
 
@@ -184,7 +230,7 @@ there. Leave them alone.
 - **Fixed flex bases on the track rows.** `.track__num` at `0 0 1.6em`,
   `.track__timeline` at `0 0 clamp(70px, 14%, 130px)`, `.track__time` at
   `0 0 3.6em`, and only `.track__title` flexing. Content sizing goes ragged
-  across 21 rows, because "Soon" and "0:02" are different widths.
+  across twenty rows, because "Soon" and "0:02" are different widths.
 
 - **The video's `controls` attribute is in the `<template>` markup and
   removed by JS.** That order matters: if the custom play button can't be
@@ -305,6 +351,28 @@ The album is 20 tracks, expecting `assets/audio/01.mp3` … `20.mp3`, matched
 line-for-line against the `tracks:` list in `content.js`. Tracks with no file
 read "Soon" and disable themselves; play-through skips over them. Bonus tracks
 are separated by `bonus_starts_at`.
+
+### The album player
+
+`access.js` builds one row per track, each with **its own `<audio>` element**
+(`preload="metadata"`), so twenty players exist at once and the page asks the
+server for twenty files on load. Tracks with no file fire `error`, get flagged
+`data-missing`, read "Soon" and disable themselves — which is why a half-built
+album still looks deliberate rather than broken.
+
+- **Starting one track pauses every other**, so nothing ever doubles up.
+- **When a song ends, the next one with audio starts**, skipping the gaps, so
+  the album plays through like a record.
+- **The timeline is a real `<input type="range">`**, not a drawn line: it can
+  be dragged, nudged with the arrow keys, and read aloud. A `scrubbing` flag
+  stops playback yanking the handle out from under a finger mid-drag, and the
+  `input` handler moves the song as it goes — which is what the lyrics panel
+  rides on.
+- **Volume is one slider governing every track**, floating at the right edge,
+  remembered in `localStorage`. It flips light over the paper section, and is
+  hidden entirely at ≤620px, where a saved level is ignored in favour of full
+  volume — a quiet level chosen on a laptop must not follow a listener to a
+  phone with nothing on screen to undo it.
 
 **Numbers come from position in that list, not from anything written down.**
 So adding or deleting a track renumbers every track below it, and the files
@@ -445,6 +513,11 @@ curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
   visual on the live page — reachability is not the same as rendering.
 - `~/Downloads` is blocked by macOS privacy protection; `~/Desktop` works. Ask
   Eric to put files on the Desktop.
+- **GitHub Desktop is usually open and watching this folder.** Now and then it
+  holds the git index as it refreshes, and a commit fails with
+  `index.lock … Operation timed out`. Nothing is broken and nothing is lost —
+  check that no `.git/index.lock` is left behind, then run the same commit
+  again. Don't delete a lock file that another process is genuinely using.
 - No ffmpeg, HandBrake, PIL or Node. Available instead: `sips` for images,
   **`swiftc`** for anything AVFoundation can do (video encoding and exact
   frame grabs — see `tools/` and the Video section), and
@@ -464,5 +537,56 @@ element rectangles rather than trusting a glance.
 `offsetParent` is null for fixed-position elements; use computed `display` to
 test visibility.
 
+---
+
+## Where things stand (23 September 2026)
+
+**Settled. Don't raise these again unless Eric does.**
+
+- **`05.lrc` has one line with no timestamp** — "Waste a time, my ass.",
+  between 2:58 and 3:04 — so it never appears in the panel. It was found,
+  shown to Eric, and he is happy with how it reads. Leave it.
+- **Track 20's title breaks mid-date on phones**, as
+  "THE GRAY MAN_08-23-" / "24 (VOICE MEMO)", because browsers break at
+  hyphens. Raised and waved off for now. If he ever wants it fixed: the
+  non-breaking hyphen `‑` measures exactly the same width as `-` in Josefin
+  Sans, so swapping the two in the date is invisible and never splits —
+  but ordinary hyphens return if he retypes the title by hand.
+- **`audio_version` is bumped only when a track already online is replaced**,
+  never when one is added. It changes the address of *every* track, so a
+  needless bump makes every listener re-download the whole album.
+  `lyrics_version` is bumped for additions too — those files are a few
+  kilobytes, so the cost is nothing and new words appear at once.
+
+**Unfinished, in rough order of how much they matter.**
+
+- **All four download buttons on the access page lead nowhere.** The Listening
+  Guide, Digital Lyric Book, About Pawleys Island and full-album zip are named
+  in `content.js` but `assets/downloads/` holds only its instructions file, so
+  a supporter clicking any of them gets a 404 — checked live, 23 September
+  2026. Unlike the video and buy-access links, download buttons are always
+  drawn, so emptying the label won't hide one. Worth raising with Eric: either
+  the files, or have the buttons hide themselves when the file is missing.
+- **Six tracks have no audio:** 04 September, Remember · 08 Eye of the Storm I
+  · 09 Some Things Never Leave You · 14 Hurricane Chatter (2022) · 15 The Gray
+  Man · 18 Eye of the Storm III. They read "Soon" and are skipped.
+- **Three tracks have audio but no words:** 02, 12 and 13. Their panel says
+  there are no lyrics, which is correct but not final.
+- **No favicon**, on either page. Eric has declined twice; don't offer again.
+- **The Gumroad product is live** and sells early access, but nothing connects
+  a purchase to this page or its password — a buyer is still let in by hand.
+  That is a setting on Gumroad's side, not something in this repo.
+
 Always syntax-check `content.js` after editing it — one missing comma blanks
-every word on the site.
+every word on the site. Evaluating it and printing the track list back is
+better still: it proves the file parses *and* shows the numbering the site
+will actually use.
+
+**Check new album files before committing them.** Eric uploads audio and
+lyrics in batches and asks whether they look right. Read the `.lrc` with the
+same rules `lyrics.js` uses and report per file: how many sung lines and
+verse breaks, first and last timestamp, whether times ascend, whether the
+last one falls inside the song's length (`afinfo` gives the duration), that
+it decodes as UTF-8, and any line carrying no timestamp — those simply never
+appear, silently. Then confirm each number still points at the song it
+should, and name any track that has audio but no words, or the reverse.
