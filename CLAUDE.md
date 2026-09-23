@@ -564,9 +564,10 @@ test visibility.
   Guide, Digital Lyric Book, About Pawleys Island and full-album zip are named
   in `content.js` but `assets/downloads/` holds only its instructions file, so
   a supporter clicking any of them gets a 404 — checked live, 23 September
-  2026. Unlike the video and buy-access links, download buttons are always
-  drawn, so emptying the label won't hide one. Worth raising with Eric: either
-  the files, or have the buttons hide themselves when the file is missing.
+  2026. **Eric knows and is making the files; don't raise it again.** If they
+  are still missing much later, the alternative is to have a button hide
+  itself when its file is absent — download buttons are always drawn, so
+  unlike the video and buy-access links, emptying a label won't do it.
 - **Six tracks have no audio:** 04 September, Remember · 08 Eye of the Storm I
   · 09 Some Things Never Leave You · 14 Hurricane Chatter (2022) · 15 The Gray
   Man · 18 Eye of the Storm III. They read "Soon" and are skipped.
