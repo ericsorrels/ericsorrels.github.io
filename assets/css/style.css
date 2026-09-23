@@ -2233,10 +2233,19 @@ html.stage-open .stage .lyrics {
   margin: 0 auto;
 }
 
+/* One quiet line on a whole dark screen, so it sits in the middle of it
+   rather than stranded near the top. Safe to take out of the flow: the
+   status and the words are never both on screen. */
 .stage .lyrics__status {
-  max-width: 28rem;
-  margin: 18vh auto 0;
-  font-size: 1.1rem;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  max-width: 32rem;
+  margin: 0 auto;
+  transform: translateY(-50%);
+  font-size: clamp(1.05rem, 0.75rem + 0.6vw, 1.35rem);
+  letter-spacing: 0.06em;
   text-align: center;
 }
 
