@@ -424,7 +424,7 @@ window.SITE_CONTENT = {
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their
     // browser kept. Works exactly like audio_version above.
-    lyrics_version: 1,
+    lyrics_version: 2,
 
     tracks_label: "The Album",
     tracks: [
@@ -447,7 +447,7 @@ window.SITE_CONTENT = {
       "Is That You?",
       "Eye of the Storm III",
       "I Will Reach For You",
-      "The Gray Man (Voice Memo)",
+      "The Gray Man_08-23-24 (Voice Memo)",
     ],
 
     // Bonus tracks are set apart under their own heading. The number
