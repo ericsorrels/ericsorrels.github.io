@@ -76,6 +76,7 @@
   var started = false;
   var isOpen = false;
   var isExpanded = false;
+  var album = [];          // every track, so the stage can start one
   var current = null;      // the track on show: { number, title, audio }
   var entries = [];        // its timed lines, in time order
   var buttons = [];        // entry index → the button showing it (gaps have none)
@@ -466,9 +467,15 @@
 
     // How long the song runs isn't known until the file's head arrives,
     // and the stage's clock and seek bar wait on it.
-    ['loadedmetadata', 'durationchange', 'ended', 'error'].forEach(function (type) {
+    ['loadedmetadata', 'durationchange', 'ended'].forEach(function (type) {
       audio.addEventListener(type, function () { if (isOnShow(audio)) drawTransport(); });
     });
+
+    // A track with no file yet is flagged by access.js, whose own
+    // listener was attached first and so has already run. Redrawn even
+    // when nothing is playing, because which track the stage would
+    // start has just changed.
+    audio.addEventListener('error', function () { drawTransport(); });
   }
 
   /* ------------------------------------------------------------------
@@ -616,6 +623,16 @@
     stageSeek.style.setProperty('--played', (fraction * 100).toFixed(2) + '%');
   }
 
+  // With nothing playing yet, the stage's button starts the album at its
+  // first track that has audio. In full screen the track list is out of
+  // sight entirely, so this is the only way in.
+  function firstPlayable() {
+    for (var i = 0; i < album.length; i++) {
+      if (!album[i].audio.dataset.missing) return album[i];
+    }
+    return null;
+  }
+
   // Everything that only changes when the track does.
   function drawTransport() {
     if (!canExpand) return;
@@ -623,12 +640,13 @@
     var audio = current && current.audio;
     var playing = !!audio && !audio.paused && !audio.ended;
     var length = audio ? audio.duration : NaN;
+    var opener = current ? null : firstPlayable();
 
     stagePlay.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
-    stagePlay.disabled = !audio || !!audio.dataset.missing;
+    stagePlay.disabled = audio ? !!audio.dataset.missing : !opener;
     stagePlay.setAttribute('aria-label', current
       ? (playing ? 'Pause ' : 'Play ') + current.title
-      : (A.lyrics_expand || 'Full screen'));
+      : (opener ? 'Play ' + opener.title : 'Play'));
 
     stageSeek.disabled = !length || !isFinite(length);
     stageSeek.setAttribute('aria-label', current
@@ -653,7 +671,11 @@
   }
 
   function playPause() {
-    if (!current) return;
+    if (!current) {
+      var opener = firstPlayable();
+      if (opener) opener.audio.play();    // its own play event does the rest
+      return;
+    }
     if (current.audio.paused) current.audio.play();
     else current.audio.pause();
   }
@@ -843,9 +865,9 @@
         && event.target.closest('button, input, select, textarea');
 
       if (event.key === ' ' || event.key === 'Spacebar') {
-        if (onControl || !current) return;
+        if (onControl) return;
         event.preventDefault();
-        playPause();
+        playPause();          // with nothing playing, this starts the album
         return;
       }
 
@@ -866,6 +888,7 @@
     if (started || !albumTracks || !albumTracks.length) return;
     started = true;
 
+    album = albumTracks;
     albumTracks.forEach(watch);
 
     tab.hidden = false;
