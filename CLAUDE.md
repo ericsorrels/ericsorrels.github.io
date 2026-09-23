@@ -448,6 +448,15 @@ is why the album's own row for the track stays in step without being told —
 both are working the one `<audio>` element. Its play button and seek bar
 reuse `.track__play` and `.track__seek`, so they *are* the album's controls.
 
+With nothing playing yet the stage's play button **starts the album** at
+its first track that has audio, and says which one in its label. In full
+screen the track list is out of sight, so this is the only way in.
+`firstPlayable()` skips tracks flagged `data-missing`, which means the
+transport is redrawn on any track's `error` — not only the one on show,
+because a 404 changes which track the button would start. access.js sets
+that flag from its own `error` listener, attached first and so already run
+by the time this one fires.
+
 **`isShowing()` is `isOpen || isExpanded`.** The words follow the song when
 they are being read, which is a different question from whether the drawer
 is open — the panel can be shut and the stage still up.
@@ -618,11 +627,12 @@ test visibility.
   check failed`), so only the refused path — the overlay standing on its
   own — has been seen working. Everything else about the stage was
   measured. Ask Eric to confirm it in Chrome or Safari.
-- **Expanding before pressing play** shows "Press play on any track…" in
-  large type with a dead transport, which in full screen refers to an album
-  the listener cannot see. Correct but a small dead end; the fix, if Eric
-  wants it, is to have the stage's play button start the first track that
-  has audio.
+- **The stage's waiting line still reads "Press play on any track…"**,
+  which in full screen names a track list the listener cannot see — though
+  the stage's own play button now does exactly that. It is one line in
+  `content.js` (`access.lyrics_waiting`) shared with the small panel, so
+  changing it for the stage alone would need a second key. Eric's to
+  reword if it bothers him.
 - **No favicon**, on either page. Eric has declined twice; don't offer again.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
