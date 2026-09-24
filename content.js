@@ -411,11 +411,16 @@ window.SITE_CONTENT = {
     // Adding brand-new tracks doesn't need it — only replacements.
     audio_version: 2,
 
-    /* ---- The lyrics panel ----
-       Opens and closes with a small tab in the bottom corner, and
-       follows whichever track is playing. The words themselves are
-       files in the folder  assets/lyrics/  — there's a note in there
-       explaining how to add them. */
+    /* ---- The panel that follows the track ----
+       Opens and closes with a small tab in the bottom corner. Inside it
+       are two views of whatever is playing — its words, and whatever
+       you've written about it — so the panel is named for both. */
+    panel_button: "Liner Notes",
+
+    /* ---- The words ----
+       The panel's first tab, and the one a listener sees first. The
+       words themselves are files in the folder  assets/lyrics/  —
+       there's a note in there explaining how to add them. */
     lyrics_button: "Lyrics",
     lyrics_waiting: "Press play on any track and its words appear here.",
 
@@ -439,7 +444,7 @@ window.SITE_CONTENT = {
     // browser kept. Works exactly like audio_version above.
     lyrics_version: 2,
 
-    /* ---- The liner notes ----
+    /* ---- What you've written about the song ----
        The panel's other tab, beside Lyrics. Whichever tab a listener
        last chose is the one they come back to. The notes themselves
        are files in the folder  assets/notes/  — there's a note in

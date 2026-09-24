@@ -418,7 +418,9 @@ panel only** — never `scrollIntoView`, which would drag the page too — and
 stands down for four seconds after the listener scrolls it by hand.
 
 **Layout, all in `style.css`:** one drawer rising from the lower left with the
-Lyrics tab as its handle. At ≥1280px it sits in the margin beside the 720px
+Liner Notes tab as its handle — `access.panel_button`, which is deliberately
+a different key from `lyrics_button`: the handle names the whole panel, the
+tab inside names one view of it. At ≥1280px it sits in the margin beside the 720px
 album column; from 621–1279px it docks along the bottom, its right edge held
 clear of the volume slider by `right: calc(var(--lyrics-edge) + 4.25rem)`
 (13px of daylight at the tightest point, 621px); at ≤620px it's a full-width
