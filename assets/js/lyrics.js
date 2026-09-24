@@ -105,6 +105,32 @@
     return isOpen || isExpanded;
   }
 
+  // The page runs pale at the top and dark below, so the handle flips
+  // between light and dark depending on what it is over — the same way
+  // the volume panel does. Set once the album is built.
+  var paperSection = null;
+
+  function matchBackdrop() {
+    if (!paperSection) return;
+    var tabBox = tab.getBoundingClientRect();
+    tab.classList.toggle(
+      'lyrics-tab--on-paper',
+      tabBox.top + tabBox.height / 2 < paperSection.getBoundingClientRect().bottom
+    );
+  }
+
+  // Asks again once the handle should have finished travelling. The end
+  // of the slide asks too, and gets there first — this is for when there
+  // is no slide to end: motion turned down, a browser that skipped it,
+  // an interrupted one. Asking twice costs nothing and gives the same
+  // answer, so this stays honest even if the 0.8s in style.css changes.
+  var backdropTimer = 0;
+
+  function matchBackdropSoon() {
+    window.clearTimeout(backdropTimer);
+    backdropTimer = window.setTimeout(matchBackdrop, 850);
+  }
+
   // And are the words the view on show? The song is only followed then —
   // with the notes up, the lines are hidden and have no height to
   // measure against.
@@ -697,6 +723,11 @@
     } else if (!isExpanded) {
       stopFollowing();
     }
+
+    // The handle is about to travel the whole height of the panel, from
+    // over the pale top of the page to over the dark album below or
+    // back, and neither a scroll nor a resize will happen to notice.
+    matchBackdropSoon();
   }
 
   tab.addEventListener('click', function () { setOpen(!isOpen, true); });
@@ -1167,20 +1198,8 @@
     var saved = remembered();
     setOpen(saved === null ? wideEnough.matches : saved, false);
 
-    // The page runs pale at the top and dark below, so the tab flips
-    // between light and dark depending on what it is over — the same
-    // way the volume panel does.
-    var paper = document.querySelector('#vault .section--paper');
+    paperSection = document.querySelector('#vault .section--paper');
     var ticking = false;
-
-    function matchBackdrop() {
-      if (!paper) return;
-      var tabBox = tab.getBoundingClientRect();
-      tab.classList.toggle(
-        'lyrics-tab--on-paper',
-        tabBox.top + tabBox.height / 2 < paper.getBoundingClientRect().bottom
-      );
-    }
 
     window.addEventListener('scroll', function () {
       if (ticking) return;
@@ -1194,6 +1213,13 @@
     window.addEventListener('resize', function () {
       matchBackdrop();
       remeasure();          // the reading line is a share of the height
+    });
+
+    // Asked at the end of the slide rather than the start of it: until
+    // then the handle is still in transit and would answer for where it
+    // set off from. See setOpen for the other half of this.
+    tab.addEventListener('transitionend', function (event) {
+      if (event.propertyName === 'transform') matchBackdrop();
     });
 
     matchBackdrop();
