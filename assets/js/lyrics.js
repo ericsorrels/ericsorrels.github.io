@@ -6,8 +6,10 @@
 // (.lrc) light the line being sung, scroll themselves along with it, and
 // jump the song when a line is clicked. Plain words are simply shown.
 //
-// The panel opens and closes with the Lyrics tab, and that choice is
-// remembered between visits, like the volume.
+// The panel opens and closes with the Liner Notes tab, and that choice
+// is remembered between visits, like the volume. Pressing play opens it
+// too, whatever the track — that one isn't remembered, so the tab still
+// has the last word on how the panel arrives next time.
 //
 // On a wide screen it also opens out to fill the screen. That view holds
 // no words of its own: this same panel is lifted bodily into it and put
@@ -647,10 +649,24 @@
     return !!current && current.audio === audio;
   }
 
+  // Playing anything brings the panel up with it, on any screen and for
+  // every track — including the roll-on to the next one, so the words
+  // follow the album through. Deliberately not remembered: the tab is
+  // still what decides how the panel arrives on the next visit, and a
+  // press of play shouldn't quietly overrule a listener who shut it.
+  // Skipped while the stage is up, where the panel is already on screen
+  // in its largest form and `isOpen` only says what to return to.
+  function openForPlay() {
+    if (isVisible()) return;
+    setOpen(true, false);
+  }
+
   function watch(track) {
     var audio = track.audio;
 
     audio.addEventListener('play', function () {
+      openForPlay();             // before the words are asked for, so the
+                                 // panel is already travelling by then
       if (isOnShow(audio)) startFollowing();
       else show(track);          // sets current, so the redraw below lands
       drawTransport();
