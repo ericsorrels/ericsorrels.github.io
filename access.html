@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=38" />
+  <link rel="stylesheet" href="assets/css/style.css?v=39" />
 </head>
 <body>
 
@@ -71,12 +71,20 @@
           data-content="access.lyrics_button">Lyrics</button>
 
   <section class="lyrics" id="lyricsPanel" hidden
-           aria-labelledby="lyricsLabel lyricsTitle">
+           aria-labelledby="lyricsTabWords lyricsTitle">
     <header class="lyrics__head">
-      <p class="lyrics__eyebrow">
-        <span id="lyricsLabel" data-content="access.lyrics_button">Lyrics</span><span
-          class="lyrics__num" id="lyricsNum"></span>
-      </p>
+      <!-- Two views of the same track. Which one a listener last chose
+           is remembered, the way the panel's own open/closed is. -->
+      <div class="lyrics__tabs" role="tablist">
+        <button class="lyrics__tab" id="lyricsTabWords" type="button"
+                role="tab" aria-selected="true" aria-controls="lyricsScroll"
+                data-content="access.lyrics_button">Lyrics</button>
+        <button class="lyrics__tab" id="lyricsTabNotes" type="button"
+                role="tab" aria-selected="false" aria-controls="notesScroll"
+                tabindex="-1" data-content="access.notes_button">Notes</button>
+        <span class="lyrics__num" id="lyricsNum"></span>
+      </div>
+
       <h2 class="lyrics__title" id="lyricsTitle" hidden></h2>
 
       <!-- Opens the words out to fill the screen, and closes them again.
@@ -88,11 +96,24 @@
               aria-expanded="false" aria-controls="lyricsStage"></button>
     </header>
 
-    <div class="lyrics__scroll" id="lyricsScroll">
+    <div class="lyrics__scroll" id="lyricsScroll"
+         role="tabpanel" aria-labelledby="lyricsTabWords">
       <p class="lyrics__status" id="lyricsStatus" data-content="access.lyrics_waiting">
         Press play on any track and its words appear here.
       </p>
       <ol class="lyrics__lines" id="lyricsLines" hidden></ol>
+    </div>
+
+    <!-- The other view. Prose rather than sung lines, so it keeps its
+         own scroll position and reads left-aligned even where the
+         lyrics are centred. Written as Markdown files in
+         assets/notes/ and turned into these few tags by lyrics.js. -->
+    <div class="lyrics__scroll lyrics__scroll--notes" id="notesScroll" hidden
+         role="tabpanel" aria-labelledby="lyricsTabNotes" tabindex="0">
+      <p class="lyrics__status" id="notesStatus" data-content="access.notes_waiting">
+        Press play on any track and its notes appear here.
+      </p>
+      <div class="notes__body" id="notesBody" hidden></div>
     </div>
 
     <!-- Says which track's words are on screen. Deliberately not used
@@ -108,7 +129,7 @@
        moves whichever track the panel is following, which is the same
        <audio> the album's own row moves — nothing to keep in step. -->
   <div class="stage texture-grain" id="lyricsStage" hidden tabindex="-1"
-       role="dialog" aria-labelledby="lyricsLabel lyricsTitle">
+       role="dialog" aria-labelledby="lyricsTabWords lyricsTitle">
 
     <div class="stage__well" id="lyricsStageWell"></div>
 
@@ -155,12 +176,12 @@
 
   </main>
 
-  <script src="content.js?v=38"></script>
-  <script src="assets/js/main.js?v=38"></script>
+  <script src="content.js?v=39"></script>
+  <script src="assets/js/main.js?v=39"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=38"></script>
-  <script src="assets/js/access.js?v=38"></script>
+  <script src="assets/js/lyrics.js?v=39"></script>
+  <script src="assets/js/access.js?v=39"></script>
 </body>
 </html>

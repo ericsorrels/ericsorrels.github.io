@@ -28,6 +28,7 @@ assets/js/
   lyrics.js         the lyrics panel following the album (access only)
 assets/audio/NN.mp3    one per track, numbered by position in the list
 assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
+assets/notes/NN.md     liner notes, in a small subset of Markdown
 assets/video/       the teasers, plus gitignored .mov masters
 assets/img/         title artwork, hero photograph, video posters, share card
 assets/downloads/   the four supporter downloads (still empty — see below)
@@ -128,6 +129,7 @@ Three different rules, because three different mechanisms:
 | An image | Give the new file a **new name** and update `content.js` |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
 | A lyrics file, added or changed | Bump `access.lyrics_version` in `content.js` |
+| A notes file, added or changed | Bump `access.notes_version` in `content.js` |
 
 **Find the current number with `grep -o '?v=[0-9]*' index.html | head -1`**
 — don't trust a number written here; one was, and went stale five bumps
@@ -472,7 +474,10 @@ is open — the panel can be shut and the stage still up.
 
 Full screen is asked for on top of the overlay and refused gracefully: the
 request is made inside the click, where a browser will grant it, and a
-rejection is swallowed. Leaving full screen by any route (Escape, F11, the
+rejection is swallowed. **Confirmed working in Chrome and Safari**
+(24 September 2026) — the built-in browser pane refuses the API outright
+with `Permissions check failed`, so only the refused path can be tested
+here, and that is not a fault to chase. Leaving full screen by any route (Escape, F11, the
 browser's own control) closes the stage, but only if it ever got in —
 `wasFullscreen` guards that, because a refused request fires no event at all
 and the stage is meant to survive it. Desktop only: the button is
@@ -490,6 +495,46 @@ first one can reach the middle.
 that would talk straight over the music. The lines are one tab stop with a
 roving `tabindex` — arrows move, Enter jumps the song, Escape closes and
 returns focus to the tab.
+
+### Liner notes — the panel's other tab
+
+The head carries a `role="tablist"`: Lyrics and Notes, with the track
+number after them. The choice is remembered in `localStorage` under
+`tgm_lyrics_view`, Lyrics is the default, and because the whole panel is
+what the stage lifts, the tabs work unchanged in the expanded view and in
+the phone's slide-up sheet.
+
+**Two panes, not one that is rebuilt.** `#lyricsScroll` and `#notesScroll`
+both exist and one is `hidden`; switching only flips that. Each keeps its
+own scroll position, and the lyrics keep their rendered lines, their
+timings and their place in the song while the notes are on top. Only the
+view being read is fetched — `loadView()` leaves a pane alone once
+`wordsFor` / `notesFor` says it already holds the right track, so
+switching back and forth costs nothing.
+
+**Two questions, not one.** `isVisible()` is whether the panel is on
+screen at all; `isShowing()` adds *and the words are the view*. The song
+is only followed when `isShowing()`, because a hidden pane has no height
+to measure the reading line against. Switching back to Lyrics calls
+`remeasure()` for exactly that reason.
+
+**Notes are Markdown** in `assets/notes/NN.md`, numbered like everything
+else, with `notes_version` in `content.js` as their cache tag. The reader
+in `lyrics.js` is deliberately small: paragraphs, `#`–`###` headings
+(rendered h3–h5, since the track title is the h2 above), `*italic*`,
+`**bold**`, `***both***`, and `---` for a rule. One Return is a line
+break, two start a paragraph — what someone typing into TextEdit expects.
+**Emphasis is asterisks only**: underscores are left alone on purpose so a
+file name or an address survives intact instead of turning silently into
+italics. Every line goes through `escapeHtml()` before any tag is added,
+so nothing written in a note can become markup of its own.
+
+Two things that look like details and are not. The notes pane fades only
+at its foot — the lyrics' top fade would half-dissolve a first heading,
+which reads as a fault in prose. And `.lyrics__tabs` wraps: at 1280px
+exactly the panel is at its narrowest and the row has 168px to work in,
+where overflow would put the track number underneath the expand button,
+an auto margin having no free space left to place it.
 
 **Timing new lyrics:** `tools/lyric-timer.html`, which is **gitignored and
 lives only on Eric's disk** — it runs by double-clicking and never needs to be
@@ -631,11 +676,10 @@ test visibility.
   Man · 18 Eye of the Storm III. They read "Soon" and are skipped.
 - **Three tracks have audio but no words:** 02, 12 and 13. Their panel says
   there are no lyrics, which is correct but not final.
-- **The expanded lyrics view was never tested in real full screen.** The
-  built-in browser pane refuses the Fullscreen API outright (`Permissions
-  check failed`), so only the refused path — the overlay standing on its
-  own — has been seen working. Everything else about the stage was
-  measured. Ask Eric to confirm it in Chrome or Safari.
+- **No track has liner notes yet.** `assets/notes/` holds only its
+  instructions, so every track's Notes tab reads "No notes for this track"
+  — correct, and what a half-filled album should look like. Eric writes
+  them one `.md` file at a time as he goes.
 - **No favicon**, on either page. Eric has declined twice; don't offer again.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.

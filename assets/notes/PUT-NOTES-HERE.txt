@@ -1,0 +1,74 @@
+HOW TO ADD LINER NOTES
+======================
+
+Whatever you want to say about a song — where it came from, who played
+on it, what it is really about — goes in this folder, named by its
+track number, the same numbers as the audio and the lyrics:
+
+      12.md
+
+It appears under the "Notes" tab at the top of the lyrics panel, beside
+"Lyrics", and follows whichever track is playing.
+
+If a track has no file here the panel simply says there are no notes
+for it, and nothing looks broken. You can write notes for one song and
+leave the rest until later.
+
+
+WRITING ONE
+-----------
+
+A .md file is an ordinary text file. TextEdit will do — but use
+Format > Make Plain Text first, or it saves a .rtf instead. Name it
+12.md, not 12.md.txt.
+
+Just type. A blank line starts a new paragraph:
+
+      We cut this one in a single take, at two in the morning,
+      with the windows open.
+
+      Nobody planned the ending.
+
+Press Return once and the words move to a new line but stay in the
+same paragraph. Press it twice for a new paragraph.
+
+
+MAKING WORDS STAND OUT
+----------------------
+
+      *one star*         italic
+      **two stars**      bold
+      ***three stars***  both
+
+      # A heading        a small heading
+      ## A heading       a smaller one
+
+      ---                a dividing line, on a line of its own
+
+Anything else you type comes out exactly as you typed it.
+
+ONE THING TO WATCH. In content.js, putting *stars* around the show's
+name is what makes it read as THE GRAY MAN in capitals. In here, stars
+mean italics instead — the ordinary writing kind. It is the same
+symbol doing a different job in a different place. If you want the
+show's name in capitals in a note, just type it in capitals.
+
+Underscores are left alone in here, so a file name or an address with
+_underscores_ in it stays exactly as you wrote it.
+
+
+AFTER ADDING OR CHANGING ANY FILE HERE
+--------------------------------------
+
+Open content.js, find "notes_version" under "access", and raise the
+number by one. Browsers keep a copy of everything they have already
+read; this is what tells them to fetch the new words instead.
+
+
+WORTH KNOWING
+-------------
+
+Like the album audio and the lyrics, anything in this folder can be
+read by anyone who knows its address, password or not. Write these for
+the people you let in, but don't put anything in them you would mind a
+stranger reading.
