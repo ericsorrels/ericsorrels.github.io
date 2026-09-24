@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=39" />
+  <link rel="stylesheet" href="assets/css/style.css?v=40" />
 </head>
 <body>
 
@@ -61,14 +61,16 @@
            min="0" max="100" step="1" value="100" aria-label="Volume" />
   </div>
 
-  <!-- Lyrics, following whichever track is playing. The tab opens and
-       closes the panel and rides its top edge; both appear once the page
-       is unlocked. Words come from the files in assets/lyrics/, labels
-       from content.js → "access", and the working parts from
+  <!-- The panel that follows whichever track is playing, holding two
+       views of it: its words, and the notes written about it. The tab
+       opens and closes the panel and rides its top edge; both appear
+       once the page is unlocked. Words come from the files in
+       assets/lyrics/ and notes from assets/notes/, labels from
+       content.js → "access", and the working parts from
        assets/js/lyrics.js. -->
   <button class="lyrics-tab" id="lyricsTab" type="button" hidden
           aria-expanded="false" aria-controls="lyricsPanel"
-          data-content="access.lyrics_button">Lyrics</button>
+          data-content="access.panel_button">Liner Notes</button>
 
   <section class="lyrics" id="lyricsPanel" hidden
            aria-labelledby="lyricsTabWords lyricsTitle">
@@ -176,12 +178,12 @@
 
   </main>
 
-  <script src="content.js?v=39"></script>
-  <script src="assets/js/main.js?v=39"></script>
+  <script src="content.js?v=40"></script>
+  <script src="assets/js/main.js?v=40"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=39"></script>
-  <script src="assets/js/access.js?v=39"></script>
+  <script src="assets/js/lyrics.js?v=40"></script>
+  <script src="assets/js/access.js?v=40"></script>
 </body>
 </html>
