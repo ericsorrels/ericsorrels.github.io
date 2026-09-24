@@ -409,7 +409,7 @@ window.SITE_CONTENT = {
     // is already on the live site. Browsers keep a copy of every track
     // they have played, and without this they go on playing the old one.
     // Adding brand-new tracks doesn't need it — only replacements.
-    audio_version: 2,
+    audio_version: 3,
 
     /* ---- The panel that follows the track ----
        Opens and closes with a small tab in the bottom corner. Inside it
