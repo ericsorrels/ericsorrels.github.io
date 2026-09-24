@@ -404,6 +404,17 @@ When a track starts, it fetches `assets/lyrics/NN.lrc`, falls back to
 `NN.txt`, then says there are none. Answers are kept per track for the visit,
 and a stale one is dropped if the listener switches tracks mid-fetch.
 
+**Pressing play opens the panel**, on any screen and for every track —
+including the roll-on to the next one, so the words follow the album through.
+`openForPlay()` hangs off each track's own `play` event, before the words are
+asked for, so the panel is already travelling while the file is being found.
+It stands down when the panel is already on screen (`isVisible()`), which is
+what lets a listener shut it mid-song and have it stay shut until something
+new starts — and what keeps a roll-on from disturbing the expanded stage.
+It deliberately does **not** write to `tgm_lyrics`: the tab is still what
+decides how the panel arrives on the next visit, and a press of play
+shouldn't quietly overrule a listener who closed it.
+
 **The `.lrc` reader handles** several timestamps on one line (a chorus written
 once, stamped three times), an `[offset:…]` tag, `[ti:…]`-style tags, empty
 timed lines as verse breaks, and word-by-word `<00:12.34>` timings, which are
@@ -673,11 +684,12 @@ test visibility.
   are still missing much later, the alternative is to have a button hide
   itself when its file is absent — download buttons are always drawn, so
   unlike the video and buy-access links, emptying a label won't do it.
-- **Six tracks have no audio:** 04 September, Remember · 08 Eye of the Storm I
-  · 09 Some Things Never Leave You · 14 Hurricane Chatter (2022) · 15 The Gray
-  Man · 18 Eye of the Storm III. They read "Soon" and are skipped.
-- **Three tracks have audio but no words:** 02, 12 and 13. Their panel says
-  there are no lyrics, which is correct but not final.
+- **Three tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
+  Man · 18 Eye of the Storm III. They read "Soon" and are skipped. (Eric
+  added 04, 08 and 14 and replaced 02, 12 and 13 on 24 September 2026,
+  bumping `audio_version` to 3 — the whole album now runs at 127 kbps.)
+- **Six tracks have audio but no words:** 02, 04, 08, 12, 13 and 14. Their
+  panel says there are no lyrics, which is correct but not final.
 - **No track has liner notes yet.** `assets/notes/` holds only its
   instructions, so every track's Notes tab reads "No notes for this track"
   — correct, and what a half-filled album should look like. Eric writes
