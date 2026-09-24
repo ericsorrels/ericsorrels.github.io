@@ -2000,19 +2000,88 @@ html.lyrics-open .lyrics {
 
 .lyrics__expand svg { display: block; }
 
-.lyrics__eyebrow {
-  margin: 0;
+/* Lyrics / Notes, and the track number after them. The right padding
+   keeps the row clear of the expand button in the same corner.
+
+   It wraps, which matters: at 1280px exactly the panel is at its
+   narrowest — just 168px of room here — and a row that overflowed
+   instead would push the number underneath that button, where an auto
+   margin has no free space left to place it properly. */
+.lyrics__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 1.1em;
+  padding-right: 2.4em;
+}
+
+.lyrics__tab {
+  position: relative;
+  padding: 0 0 0.5em;
   font-family: var(--font-body);
   font-size: 0.5rem;
   font-weight: 600;
-  letter-spacing: var(--tracking-wider);
+  line-height: 1;
+  /* The narrower of the two tokens: the wider one costs 6px a word,
+     which is the difference between this row fitting and not. */
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
+  color: var(--gray-mid);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+/* The rule stops short of the space letterspacing leaves after the last
+   letter, so it sits under the word rather than past it. */
+.lyrics__tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: var(--tracking-wide);
+  bottom: 0;
+  height: 1px;
+  background: var(--paper);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lyrics__tab:hover {
+  color: var(--paper-dim);
+}
+
+.lyrics__tab:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.6);
+  outline-offset: 3px;
+}
+
+.lyrics__tab[aria-selected="true"] {
+  color: var(--paper);
+}
+
+.lyrics__tab[aria-selected="true"]::after {
+  opacity: 1;
+}
+
+.lyrics__num {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
   color: var(--gray-mid);
 }
 
-.lyrics__num:not(:empty)::before {
-  content: '·';
-  margin: 0 0.9em;
+/* On a phone these are 12px of text to hit with a thumb, so they take
+   the same 44px the drawer's own handle does. The head gives back most
+   of the height by tightening its top padding. Must sit after the rules
+   above, not up with the panel's other phone rules: same specificity,
+   so source order is what decides. */
+@media (max-width: 620px) {
+  .lyrics__head { padding-top: 0.5em; }
+  .lyrics__tab { padding: 1.1rem 0; }
+  .lyrics__tab::after { bottom: 0.82rem; }
 }
 
 .lyrics__title {
@@ -2109,6 +2178,82 @@ button.lyrics__line:focus-visible {
 /* Plain words have no line to single out, so they all read alike. */
 .lyrics__line--plain {
   color: var(--paper-dim);
+}
+
+/* --------------------------------------------------------------------
+   Liner notes — the panel's other view.
+
+   Prose, not sung lines: it keeps a reading measure, stays
+   left-aligned even where the lyrics are centred, and is the one place
+   on the site with running body text on ink. The few tags it can
+   contain are all lyrics.js will make from a notes file.
+   -------------------------------------------------------------------- */
+
+.notes__body {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.85;
+  letter-spacing: 0.02em;
+  color: rgba(237, 232, 221, 0.78);
+}
+
+.notes__body p {
+  margin: 0 0 1.3em;
+}
+
+.notes__body em {
+  font-style: italic;
+}
+
+.notes__body strong {
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.notes__body h3,
+.notes__body h4,
+.notes__body h5 {
+  margin: 2.1em 0 0.85em;
+  font-family: var(--font-body);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gray-mid);
+}
+
+.notes__body h3 { font-size: 0.6rem; }
+.notes__body h4 { font-size: 0.55rem; }
+
+/* The third level stops shouting — three ranks of letterspaced capitals
+   in one note would be a filing cabinet, not a sleeve note. */
+.notes__body h5 {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-style: italic;
+  color: var(--paper-dim);
+}
+
+.notes__body hr {
+  height: 0;
+  margin: 1.9em 0;
+  border: 0;
+  border-top: 1px solid rgba(237, 232, 221, 0.16);
+}
+
+/* Nothing pushes away from the top of its own pane. */
+.notes__body > :first-child { margin-top: 0; }
+.notes__body > :last-child { margin-bottom: 0; }
+
+/* The lyrics arrive and leave through a fade at both ends, which suits
+   lines flowing past. Notes have a beginning, and a first heading half
+   dissolved reads as a fault — so this pane fades only at the foot,
+   where it means there is more below. */
+.lyrics__scroll--notes {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2219,7 +2364,6 @@ html.stage-open .stage .lyrics {
 .stage .lyrics__scroll {
   padding: 0;
   overflow-x: hidden;
-  text-align: center;
   /* A deeper fade than the panel's: there is far more room here for
      lines to arrive and leave through. */
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%,
@@ -2280,6 +2424,52 @@ html.stage-open .stage .lyrics {
    alike — and brighter than the dimmed state, which means nothing here. */
 .stage .lyrics__line--plain {
   color: var(--paper-dim);
+}
+
+/* The notes grow too, but nothing like as far: these are read, not
+   sung along to, so they keep a reading measure in the middle of the
+   screen rather than spanning it. */
+.stage .notes__body {
+  max-width: 42rem;
+  margin: 0 auto;
+  font-size: clamp(1.05rem, 0.8rem + 0.55vw, 1.35rem);
+  line-height: 1.8;
+}
+
+.stage .lyrics__scroll--notes {
+  padding-top: 0.5rem;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 4rem), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 4rem), transparent 100%);
+}
+
+.stage .notes__body h3 { font-size: clamp(0.72rem, 0.6rem + 0.26vw, 0.9rem); }
+.stage .notes__body h4 { font-size: clamp(0.66rem, 0.56rem + 0.22vw, 0.8rem); }
+.stage .notes__body h5 { font-size: clamp(1rem, 0.78rem + 0.48vw, 1.25rem); }
+
+/* The tabs are the one part of the head that grows on the stage — they
+   are the way between the two views, and have to be findable from
+   across a room. */
+.stage .lyrics__tabs {
+  position: relative;
+  justify-content: center;
+  gap: 2.2em;
+  padding-right: 0;
+}
+
+.stage .lyrics__tab {
+  font-size: 0.62rem;
+  padding-bottom: 0.6em;
+}
+
+/* Centred tabs leave nowhere in the row for the number, so it drops out
+   of the flow to the left — the expand button has the right corner. */
+.stage .lyrics__num {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+  font-size: 0.55rem;
 }
 
 /* The transport. Its parts are the album's own, so a listener who has

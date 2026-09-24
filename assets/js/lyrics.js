@@ -36,6 +36,14 @@
   var list = document.getElementById('lyricsLines');
   var announcer = document.getElementById('lyricsAnnounce');
 
+  // The panel's other view: the same track's liner notes.
+  var tabWords = document.getElementById('lyricsTabWords');
+  var tabNotes = document.getElementById('lyricsTabNotes');
+  var notesScroll = document.getElementById('notesScroll');
+  var notesStatus = document.getElementById('notesStatus');
+  var notesBody = document.getElementById('notesBody');
+  var hasNotes = !!(tabWords && tabNotes && notesScroll && notesStatus && notesBody);
+
   // The expanded view, and the parts of the page it borrows.
   var expandButton = document.getElementById('lyricsExpand');
   var stage = document.getElementById('lyricsStage');
@@ -53,6 +61,7 @@
   var canExpand = !!(stage && well && expandButton && stagePlay && stageSeek);
 
   var OPEN_KEY = 'tgm_lyrics';
+  var VIEW_KEY = 'tgm_lyrics_view';
 
   // How long the panel leaves the listener alone after they scroll it
   // themselves, so it doesn't drag the words back mid-read.
@@ -76,6 +85,7 @@
   var started = false;
   var isOpen = false;
   var isExpanded = false;
+  var view = 'lyrics';     // or 'notes' — which tab is on show
   var album = [];          // every track, so the stage can start one
   var waiting = true;      // true until the first track plays
   var current = null;      // the track on show: { number, title, audio }
@@ -86,12 +96,20 @@
   var scrolledAt = 0;
   var loadToken = 0;
   var cache = {};          // track number → what was found for it
+  var notesCache = {};     // and the same for its notes
+  var wordsFor = null;     // the track each pane is currently showing,
+  var notesFor = null;     // so neither is fetched or redrawn twice
 
-  // The words follow the song whenever they are being read — in the
-  // panel or on the expanded stage, which is a different question from
-  // whether the panel itself is open.
-  function isShowing() {
+  // Is the panel on screen at all, in either of its shapes?
+  function isVisible() {
     return isOpen || isExpanded;
+  }
+
+  // And are the words the view on show? The song is only followed then —
+  // with the notes up, the lines are hidden and have no height to
+  // measure against.
+  function isShowing() {
+    return isVisible() && view === 'lyrics';
   }
 
   /* ------------------------------------------------------------------
@@ -180,6 +198,94 @@
   }
 
   /* ------------------------------------------------------------------
+     Reading a notes file
+
+     A deliberately small piece of Markdown: paragraphs, headings, bold
+     and italic, and a dividing line. Everything else comes out as the
+     words Eric typed, which is the point — he writes these in TextEdit
+     and should never have to think about what is markup and what isn't.
+
+     Emphasis is asterisks only. Underscores are left alone on purpose,
+     so a file name or an address with _underscores_ in it survives
+     intact rather than turning silently into italics.
+     ------------------------------------------------------------------ */
+
+  // Every scrap of the file goes through here before any tag is added,
+  // so nothing written in a note can become markup of its own.
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function inlineMarkup(text) {
+    return escapeHtml(text)
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  }
+
+  function renderMarkdown(text) {
+    var out = [];
+    var paragraph = [];
+
+    // One Return moves to a new line, two start a new paragraph — which
+    // is what someone typing into TextEdit expects to happen.
+    function flush() {
+      if (!paragraph.length) return;
+      out.push('<p>' + paragraph.join('<br />') + '</p>');
+      paragraph = [];
+    }
+
+    String(text).replace(/^﻿/, '').split(/\r\n|\r|\n/).forEach(function (raw) {
+      var line = raw.trim();
+
+      if (!line) {
+        flush();
+        return;
+      }
+
+      if (/^-{3,}$/.test(line)) {
+        flush();
+        out.push('<hr />');
+        return;
+      }
+
+      var heading = /^(#{1,6})\s+(.+)$/.exec(line);
+      if (heading) {
+        flush();
+        // The track's title is the h2 above the panel, so the notes'
+        // own headings start below it at h3.
+        var level = Math.min(heading[1].length + 2, 5);
+        out.push('<h' + level + '>' + inlineMarkup(heading[2].trim()) + '</h' + level + '>');
+        return;
+      }
+
+      paragraph.push(inlineMarkup(line));
+    });
+
+    flush();
+    return out.join('');
+  }
+
+  function notesUrl(number) {
+    return 'assets/notes/' + number + '.md'
+      + (A.notes_version ? '?v=' + encodeURIComponent(A.notes_version) : '');
+  }
+
+  // Resolves to the file's text, or null when there is none worth showing.
+  function findNotes(number) {
+    if (notesCache[number] !== undefined) return Promise.resolve(notesCache[number]);
+
+    return fetchText(notesUrl(number)).then(function (text) {
+      var kept = (text != null && text.trim()) ? text : null;
+      notesCache[number] = kept;        // an empty file counts as none
+      return kept;
+    });
+  }
+
+  /* ------------------------------------------------------------------
      Putting them on screen
      ------------------------------------------------------------------ */
 
@@ -197,10 +303,29 @@
     setStatus(isExpanded
       ? (A.lyrics_waiting_expanded || 'Press play to begin.')
       : (A.lyrics_waiting || 'Press play on any track and its words appear here.'));
+    if (hasNotes) {
+      setNotesStatus(isExpanded
+        ? (A.lyrics_waiting_expanded || 'Press play to begin.')
+        : (A.notes_waiting || 'Press play on any track and its notes appear here.'));
+    }
+  }
+
+  function setNotesStatus(text) {
+    if (!hasNotes) return;
+    notesStatus.textContent = text || '';
+    notesStatus.hidden = !text;
+  }
+
+  function clearNotes() {
+    if (!hasNotes) return;
+    notesBody.textContent = '';
+    notesBody.hidden = true;
+    notesScroll.scrollTop = 0;
+    notesFor = null;
   }
 
   function announce(text) {
-    if (!isShowing() || !text) return;
+    if (!isVisible() || !text) return;
     announcer.textContent = '';
     window.setTimeout(function () { announcer.textContent = text; }, 60);
   }
@@ -213,9 +338,9 @@
     entries = [];
     buttons = [];
     activeIndex = -1;
+    wordsFor = null;
     scroller.scrollTop = 0;
     scroller.removeAttribute('tabindex');
-    scroller.removeAttribute('aria-labelledby');
   }
 
   // Breaks are held back until a line actually follows, so a blank line
@@ -295,9 +420,8 @@
     sizeTail();
 
     // Nothing here takes focus by itself, so let the words be scrolled
-    // from the keyboard.
+    // from the keyboard. (Its name comes from its own tab, in the markup.)
     scroller.tabIndex = 0;
-    scroller.setAttribute('aria-labelledby', 'lyricsLabel lyricsTitle');
   }
 
   // Room under the last line, so it can still rise to the reading line —
@@ -317,34 +441,85 @@
     waiting = false;        // something has played; the invitation is spent
     stopFollowing();
     clearLines();
+    clearNotes();
     drawTransport();        // the album has rolled on; the stage follows
 
     numEl.textContent = track.number;
     titleEl.textContent = track.title;
     titleEl.hidden = false;
+
+    loadToken++;              // anything still in the air belongs to the last track
+    loadView();
+  }
+
+  // Only the view on show is fetched. The other waits until it's asked
+  // for, and once a pane holds the right track it is left alone — so
+  // switching back and forth doesn't refetch or lose your place.
+  function loadView() {
+    if (!current) return;
+    if (view === 'notes') {
+      if (notesFor !== current.number) loadNotes(current, loadToken);
+    } else if (wordsFor !== current.number) {
+      loadWords(current, loadToken);
+    }
+  }
+
+  function loadWords(track, token) {
     setStatus(A.lyrics_loading || 'Finding the words…');
 
-    var token = ++loadToken;
     findWords(track.number).then(function (result) {
       if (token !== loadToken) return;        // another track took over
+      wordsFor = track.number;
+
+      // The listener may have moved to the notes while this was in the
+      // air; the words still go in, but quietly.
+      var onShow = view === 'lyrics';
 
       if (result.kind === 'timed') {
         setStatus('');
         renderTimed(result.entries);
-        announce((A.lyrics_button || 'Lyrics') + ': ' + track.title);
+        if (onShow) announce((A.lyrics_button || 'Lyrics') + ': ' + track.title);
         sync(true);
         startFollowing();
       } else if (result.kind === 'plain') {
         setStatus('');
         renderPlain(result.text);
-        announce((A.lyrics_button || 'Lyrics') + ': ' + track.title);
+        if (onShow) announce((A.lyrics_button || 'Lyrics') + ': ' + track.title);
       } else {
         setStatus(A.lyrics_none || 'No lyrics for this track');
-        announce(A.lyrics_none || 'No lyrics for this track');
+        if (onShow) announce(A.lyrics_none || 'No lyrics for this track');
       }
     }, function () {
       if (token !== loadToken) return;
       setStatus(A.lyrics_none || 'No lyrics for this track');
+    });
+  }
+
+  function loadNotes(track, token) {
+    setNotesStatus(A.notes_loading || 'Finding the notes…');
+
+    findNotes(track.number).then(function (text) {
+      if (token !== loadToken) return;
+      notesFor = track.number;
+
+      var onShow = view === 'notes';
+      var html = text == null ? '' : renderMarkdown(text);
+
+      if (html) {
+        setNotesStatus('');
+        notesBody.innerHTML = html;       // every word of it escaped first
+        notesBody.hidden = false;
+        notesScroll.scrollTop = 0;
+        if (onShow) announce((A.notes_button || 'Notes') + ': ' + track.title);
+      } else {
+        clearNotes();
+        notesFor = track.number;
+        setNotesStatus(A.notes_none || 'No notes for this track');
+        if (onShow) announce(A.notes_none || 'No notes for this track');
+      }
+    }, function () {
+      if (token !== loadToken) return;
+      setNotesStatus(A.notes_none || 'No notes for this track');
     });
   }
 
@@ -525,6 +700,66 @@
   }
 
   tab.addEventListener('click', function () { setOpen(!isOpen, true); });
+
+  /* ------------------------------------------------------------------
+     The two views — the words, and the notes about them
+     ------------------------------------------------------------------ */
+
+  function setView(next, remember) {
+    if (!hasNotes) return;
+    view = (next === 'notes') ? 'notes' : 'lyrics';
+    var onNotes = view === 'notes';
+
+    tabWords.setAttribute('aria-selected', onNotes ? 'false' : 'true');
+    tabNotes.setAttribute('aria-selected', onNotes ? 'true' : 'false');
+    // One stop on the way through the panel; the arrows move inside it.
+    tabWords.tabIndex = onNotes ? -1 : 0;
+    tabNotes.tabIndex = onNotes ? 0 : -1;
+
+    scroller.hidden = onNotes;
+    notesScroll.hidden = !onNotes;
+
+    // The panel — and the stage, when it's up — takes its name from
+    // whichever view is being read.
+    var named = (onNotes ? 'lyricsTabNotes' : 'lyricsTabWords') + ' lyricsTitle';
+    panel.setAttribute('aria-labelledby', named);
+    if (stage) stage.setAttribute('aria-labelledby', named);
+
+    if (remember) {
+      try {
+        window.localStorage.setItem(VIEW_KEY, view);
+      } catch (e) { /* private browsing */ }
+    }
+
+    loadView();
+
+    if (onNotes) {
+      stopFollowing();
+    } else {
+      // The lines have been sitting hidden, so they had no height to be
+      // measured against until this moment.
+      remeasure();
+      startFollowing();
+    }
+  }
+
+  if (hasNotes) {
+    tabWords.addEventListener('click', function () { setView('lyrics', true); });
+    tabNotes.addEventListener('click', function () { setView('notes', true); });
+
+    [tabWords, tabNotes].forEach(function (button) {
+      button.addEventListener('keydown', function (event) {
+        var next;
+        if (event.key === 'ArrowRight' || event.key === 'End') next = 'notes';
+        else if (event.key === 'ArrowLeft' || event.key === 'Home') next = 'lyrics';
+        else return;
+
+        event.preventDefault();
+        setView(next, true);
+        (next === 'notes' ? tabNotes : tabWords).focus();
+      });
+    });
+  }
 
   // Expanded, Escape belongs to the stage — it leaves full screen rather
   // than closing the panel out from under it.
@@ -888,7 +1123,9 @@
 
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         if (!current) return;
-        if (onControl && onControl.tagName === 'INPUT') return;   // a slider
+        // A slider, or the view tabs, answer for themselves.
+        if (onControl && (onControl.tagName === 'INPUT'
+            || onControl.getAttribute('role') === 'tab')) return;
         event.preventDefault();
         skip(event.key === 'ArrowRight' ? NUDGE : -NUDGE);
       }
@@ -908,6 +1145,16 @@
 
     tab.hidden = false;
     panel.hidden = false;
+
+    // Whichever view was last read. The words are the default, and what
+    // a first-time visitor gets.
+    if (hasNotes) {
+      var savedView = null;
+      try {
+        savedView = window.localStorage.getItem(VIEW_KEY);
+      } catch (e) { /* private browsing */ }
+      setView(savedView === 'notes' ? 'notes' : 'lyrics', false);
+    }
 
     if (canExpand) {
       stage.hidden = false;

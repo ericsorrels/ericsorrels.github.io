@@ -439,6 +439,20 @@ window.SITE_CONTENT = {
     // browser kept. Works exactly like audio_version above.
     lyrics_version: 2,
 
+    /* ---- The liner notes ----
+       The panel's other tab, beside Lyrics. Whichever tab a listener
+       last chose is the one they come back to. The notes themselves
+       are files in the folder  assets/notes/  — there's a note in
+       there explaining how to write them. */
+    notes_button: "Notes",
+    notes_waiting: "Press play on any track and its notes appear here.",
+    notes_loading: "Finding the notes…",
+    notes_none: "No notes for this track",
+
+    // Raise this by one whenever you add or change a notes file, the
+    // same way as lyrics_version just above.
+    notes_version: 1,
+
     tracks_label: "The Album",
     tracks: [
       "The Legend of the Gray Man",
