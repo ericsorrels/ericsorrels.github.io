@@ -1168,15 +1168,29 @@
     });
   }
 
-  // What the handset shows: this song, on this album, by this writer.
-  // The title has come from content.js all along — it is the same
+  // Who to credit for this one. A song with a singer named against it
+  // in content.js gets that name; everything else falls back to the
+  // album's own artist.
+  //
+  // Keyed by title, deliberately, and not by track number. Numbers here
+  // come from position in the list, so adding one song renumbers every
+  // song below it — and a list of singers keyed by number would go on
+  // looking right while crediting all of them to the wrong songs. A
+  // title moves with its song.
+  function creditFor(track) {
+    var named = A.track_artists && A.track_artists[track.title];
+    return (named && String(named).trim()) || A.media_artist || '';
+  }
+
+  // What the handset shows: this song, on this album, by whoever sang
+  // it. The title has come from content.js all along — it is the same
   // string the album's own row is labelled with.
   function nameNowPlaying(track) {
     if (!hasMedia || !window.MediaMetadata || !track) return;
     try {
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: track.title,
-        artist: A.media_artist || '',
+        artist: creditFor(track),
         album: A.media_album || '',
         artwork: sleeveArtwork()
       });
@@ -1721,6 +1735,22 @@
     if (canExpand) {
       stage.hidden = false;
       setExpandButton();
+    }
+
+    // A singer listed against a title that is not on the album is a
+    // typo, and would otherwise do nothing at all — the song would just
+    // go on being credited to the album's artist, with no sign anything
+    // was wrong. Said once, to the console, where no visitor will meet
+    // it but anyone looking for the fault will.
+    if (A.track_artists && window.console && console.warn) {
+      var sung = albumTracks.map(function (t) { return t.title; });
+      Object.keys(A.track_artists).forEach(function (title) {
+        if (sung.indexOf(title) < 0) {
+          console.warn('content.js: track_artists lists "' + title
+            + '", which is not a song on this album. Check the spelling '
+            + 'against the tracks list.');
+        }
+      });
     }
 
     // The handset's own controls answer for the album from here on,

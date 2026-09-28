@@ -493,7 +493,45 @@ window.SITE_CONTENT = {
        list below — with these two lines under it, and the sleeve beside
        them. Nothing here appears on the website itself. */
     media_album: "The Gray Man",
+
+    // Who the phone credits when no singer is named for the song below.
     media_artist: "Eric Sorrels",
+
+    /* ---- Who sings each one ----
+       Type the singer's name between the quotation marks after a song.
+       Leave one empty and that song is credited to the name just above
+       instead. Write it exactly as you want it read:
+
+           "Riptide": "Sarah Vaughn",
+           "Pisces": "Eric Sorrels & Marcus Lee",
+
+       Every song on the album is already listed here, spelled the way
+       it is spelled in the track list further down, so you never have
+       to type a title. If you ever rename a song, rename it in both
+       places — a name here that matches no song is ignored, and the
+       song quietly falls back to the line above. */
+    track_artists: {
+      "The Legend of the Gray Man": "",
+      "Hurricane Chatter (2004)": "",
+      "Hurricane Charli": "",
+      "September, Remember": "",
+      "Worth the Wait": "",
+      "Pisces": "",
+      "Riptide": "",
+      "Eye of the Storm I": "",
+      "Some Things Never Leave You": "",
+      "Catch and Release": "",
+      "This Way": "",
+      "St. Elmo's Fire": "",
+      "Eye of the Storm II": "",
+      "Hurricane Chatter (2022)": "",
+      "The Gray Man": "",
+      "How to Be Young": "",
+      "Is That You?": "",
+      "Eye of the Storm III": "",
+      "I Will Reach For You": "",
+      "The Gray Man_08-23-24 (Voice Memo)": ""
+    },
 
     tracks: [
       "The Legend of the Gray Man",

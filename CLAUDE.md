@@ -815,6 +815,21 @@ lines under the title. They are deliberately their own keys rather than
 borrowed from `hero.byline_name`: what a lock screen calls the artist is
 not always what a page calls the writer.
 
+**`access.track_artists` credits the singer of each song**, and
+`creditFor()` falls back to `media_artist` where a name is left blank —
+which is most of them. It is **keyed by title, not by track number, and
+that is the whole point.** Numbers here come from position in the list,
+so adding one song renumbers every song below it; a list of singers
+keyed by number would go on looking right while crediting all of them to
+the wrong songs. A title moves with its song.
+
+Every title on the album is pre-listed there with an empty value, so
+Eric never has to type one — he fills in names between the quotation
+marks. Renaming a song means renaming it in both places. A key matching
+no song is otherwise a silent no-op, so `start()` warns once to the
+console for each one; visitors never meet it, and anyone hunting the
+fault finds it immediately.
+
 All of it sits behind `hasMedia`, and every `setActionHandler` behind a
 try/catch — a browser that has never heard of an action must not take the
 page down with it.
