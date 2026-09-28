@@ -630,39 +630,74 @@ so nothing written in a note can become markup of its own.
 Two things that look like details and are not. The notes pane fades only
 at its foot — the lyrics' top fade would half-dissolve a first heading,
 which reads as a fault in prose. And `.lyrics__tabs` wraps: at 1280px
-exactly the panel is at its narrowest and the row has 168px to work in,
-where overflow would put the track number underneath the expand button,
-an auto margin having no free space left to place it. **On a phone that
-same row does the opposite** — `flex-wrap: nowrap`, because there is a
-second row's worth of controls in it and a break would push them off the
-bottom of the head.
+exactly the panel is at its narrowest and the row has about 169px to
+work in, where overflow would put the track number underneath the expand
+button, an auto margin having no free space left to place it. That wrap
+is also what lets the transport below take a line of its own up there.
+**On a phone that same row does the opposite** — `flex-wrap: nowrap`,
+because there is a second row's worth of controls in it and a break
+would push them off the bottom of the head.
+
+### The transport in the head
+
+**Previous / play / next sit in the tab row, on every screen the panel
+appears on.** They move the album's own `<audio>` elements — the same
+ones the track rows move — so every play mark on the page agrees
+without being told, exactly as the stage's transport does.
+`playableFrom()` walks the album skipping anything access.js flagged
+`data-missing`, which is how Next crosses a gap the same way the
+end-of-song roll-on does; `firstPlayable()` is that same walk from the
+top. Previous restarts the track past `RESTART_AFTER` (3s) and at the
+first track, where there is nothing behind it. Next disables itself
+when `nextPlayable()` comes back empty, which is the end of the album —
+not the last row, since the last rows may have no files. Both step
+buttons are disabled until something has played. The icons come from
+`mark(path, size)`, so every play mark on the site is one drawing at
+whatever size is asked for.
+
+**None of this is gated in JavaScript** — it was phones-only by CSS
+alone, and desktop was turned on by letting the rules through. Three
+shapes, matching the panel's own three:
+
+| Panel | Buttons |
+|---|---|
+| ≤620px, the sheet | 44px, inline at the right of the tab row |
+| 621–1279px, docked | 28px, inline at the right of the tab row |
+| ≥1280px, in the margin | 28px, **on a line of their own** |
+
+At 1280px the panel is at its narrowest — 219px, leaving about 169px in
+that row — and two words of letterspaced capitals plus three buttons do
+not fit. So up there the transport takes `flex: 0 0 100%` and drops to
+its own line. **Given a line rather than left to find one:** allowed to
+wrap where it liked it sat beside the tabs above about 1700px and below
+them under it, so the play button changed rows as a window was resized.
+Its negative left margin is optical — it brings the first icon's edge
+over the L of LYRICS instead of its button's box, which is 6.5px wider.
+
+**`.stage .lyrics__transport` is `display: none`, and that is
+load-bearing.** The stage does not draw its own copy of the panel; it
+*lifts the panel into itself*, so without that rule these buttons would
+travel in and sit above the stage's own transport. The stage is
+otherwise untouched.
+
+That 1280px override, like the phone ones, must sit **after** the base
+rule in the file. Same specificity, and a media query adds none, so
+source order is the whole of it — placed earlier it silently does
+nothing, which is exactly what happened first time round.
 
 ### The phone sheet
 
-Below 620px the panel covers the track list, so it carries its own way
-of steering the album and two ways of getting out of the way. All three
-are in `lyrics.js`, all three are gated on `onPhone` (`max-width: 620px`)
-**and** `isOpen && !isExpanded` — so nothing here can reach the panel on
-a computer or the stage. `onSheet()` is that question asked once.
+Below 620px the panel covers the track list, so it carries two ways of
+getting out of the way that it has nowhere else. Both are in
+`lyrics.js`, both gated on `onPhone` (`max-width: 620px`) **and**
+`isOpen && !isExpanded` — so neither can reach the panel on a computer
+or the stage. `onSheet()` is that question asked once. (The transport
+above used to be gated the same way, and is not any more.)
 
 **There is no backdrop over the album, deliberately.** The list stays
 scrollable behind the open sheet, and every listener on the page is
 passive so it scrolls at full speed. What decides whether a touch
 belongs to the panel is where it started and how it moved, nothing more.
-
-**Previous / play / next sit in the tab row**, phones only. They move the
-album's own `<audio>` elements — the same ones the track rows move — so
-every play mark on the page agrees without being told, exactly as the
-stage's transport does. `playableFrom()` walks the album skipping
-anything access.js flagged `data-missing`, which is how Next crosses a
-gap the same way the end-of-song roll-on does; `firstPlayable()` is that
-same walk from the top. Previous restarts the track past `RESTART_AFTER`
-(3s) and at the first track, where there is nothing behind it. Next
-disables itself when `nextPlayable()` comes back empty, which is the end
-of the album — not the last row, since the last rows may have no files.
-Both step buttons are disabled until something has played. The buttons
-are 44px targets around a 15px mark, and the icons are `mark(path, size)`
-so the stage's and the phone's are one drawing at two sizes.
 
 **A tap on the page behind puts the sheet away.** Watched from
 `touchstart`, not `click`: on a phone a click arrives after a scroll's

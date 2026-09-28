@@ -2123,21 +2123,31 @@ html.lyrics-settling .lyrics-tab {
 /* Previous, play and next, at the right of the same row as the tabs.
    Phones only: on a computer the track list is in plain sight beside
    the panel and every one of these is already a click away. */
+/* Previous, play and next, at the right of the row that holds the tabs.
+   On every screen the panel appears on — but not on the stage, which
+   has a transport of its own along the bottom and is left exactly as
+   it was. The panel is carried bodily into the stage, so without that
+   rule these would travel in with it and there would be two. */
 .lyrics__transport {
-  display: none;
+  display: inline-flex;
   margin-left: 0.5em;
   align-items: center;
+}
+
+.stage .lyrics__transport {
+  display: none;
 }
 
 .lyrics__step {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 44px square, the size a thumb needs, though the mark inside is
-     15px — the target is deliberately far larger than the drawing. */
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  /* Sized for a pointer here and re-sized for a thumb further down.
+     28px is the expand button's square, so the head's controls are all
+     one size. The mark inside stays 15px at both. */
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   color: var(--paper);
   background: none;
@@ -2189,7 +2199,36 @@ html.lyrics-settling .lyrics-tab {
     overflow: hidden;
   }
 
-  .lyrics__transport { display: inline-flex; }
+  /* A thumb needs more than a pointer does: the drawing stays 15px and
+     the target grows around it. */
+  .lyrics__step {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* At 1280px the panel is at its narrowest — 219px — and this row has
+   about 169px to work in. Two words of letterspaced capitals and three
+   buttons do not fit in that, so up here the transport takes a line of
+   its own.
+
+   Given a line rather than left to find one. Allowed to wrap where it
+   liked it sat beside the tabs above about 1700px and dropped below
+   them under it, so the play button changed rows as a window was
+   resized; a row of controls should stay where it was put. The
+   negative margin is optical: it brings the first icon's edge over the
+   L of LYRICS instead of its button's box, which is 6.5px wider.
+
+   Like the phone rules above, this must sit AFTER the base rule it
+   overrides — same specificity, and a media query adds none, so source
+   order is the whole of it. Placed earlier it silently does nothing. */
+@media (min-width: 1280px) {
+  .lyrics__transport {
+    flex: 0 0 100%;
+    margin-left: -0.41em;
+    margin-top: 0.1em;
+  }
 }
 
 /* The narrowest handset still sold. Three 44px targets and two words of
