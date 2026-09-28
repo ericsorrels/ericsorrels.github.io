@@ -1426,8 +1426,15 @@
     window.setTimeout(function () { swallowClick = false; }, 400);
   }
 
-  if (head) {
-    head.addEventListener('touchstart', function (event) {
+  // Everything that can be taken hold of to pull the sheet down. Open,
+  // the handle sits on the panel's top edge and the head is the rest of
+  // that same edge, so the two are one bar to a thumb and answer a
+  // finger the same way. Shut, the handle is the only one of them on
+  // screen and `onSheet()` keeps it inert — a tap is still what opens.
+  function grip(handle) {
+    if (!handle) return;
+
+    handle.addEventListener('touchstart', function (event) {
       drag = null;
       if (!onSheet() || event.touches.length !== 1) return;
       var touch = event.touches[0];
@@ -1444,7 +1451,7 @@
 
     // Not passive: once this is a downward drag the page must be stopped
     // from scrolling underneath it.
-    head.addEventListener('touchmove', function (event) {
+    handle.addEventListener('touchmove', function (event) {
       if (!drag) return;
       var touch = event.touches[0];
       if (!touch) return;
@@ -1471,7 +1478,7 @@
       drag.lastAt = Date.now();
     }, { passive: false });
 
-    head.addEventListener('touchend', function (event) {
+    handle.addEventListener('touchend', function (event) {
       var held = drag;
       drag = null;
       if (!held || !held.moved) return;
@@ -1500,28 +1507,38 @@
       }
     }, { passive: true });
 
-    head.addEventListener('touchcancel', function () {
+    handle.addEventListener('touchcancel', function () {
       if (drag && drag.moved) endDrag(true);
       drag = null;
     }, { passive: true });
-
-    // Caught on the way down, before the tab or button it started on
-    // has a chance to act on it.
-    head.addEventListener('click', function (event) {
-      if (!swallowClick) return;
-      swallowClick = false;
-      event.preventDefault();
-      event.stopPropagation();
-    }, true);
-
-    // The settle is a one-off: taken off again so it never shortens the
-    // ordinary open and close.
-    panel.addEventListener('transitionend', function (event) {
-      if (event.propertyName === 'transform') {
-        document.documentElement.classList.remove('lyrics-settling');
-      }
-    });
   }
+
+  grip(head);
+  grip(tab);
+
+  // Caught at the document, on the way down, rather than on the two
+  // handles themselves. At the element a touch landed on, a capturing
+  // listener holds no priority — every listener there runs in the order
+  // it was added, and the handle's own open-and-close was added long
+  // before this. From up here the press is stopped before it reaches
+  // either of them.
+  document.addEventListener('click', function (event) {
+    if (!swallowClick) return;
+    var where = event.target;
+    if (!where || !where.closest) return;
+    if (!(head && head.contains(where)) && !tab.contains(where)) return;
+    swallowClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+
+  // The settle is a one-off: taken off again so it never shortens the
+  // ordinary open and close.
+  panel.addEventListener('transitionend', function (event) {
+    if (event.propertyName === 'transform') {
+      document.documentElement.classList.remove('lyrics-settling');
+    }
+  });
 
   // Crossing into or out of the phone's width changes which way in the
   // waiting line should point, and whether the three buttons are there

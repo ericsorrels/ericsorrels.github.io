@@ -588,11 +588,16 @@ anything in `INTERACTIVE` — a play button or seek bar does its own job
 and the panel stays put. It closes through `setOpen(false, true)`, the
 same door and the same saved preference as the handle.
 
-**A swipe down the head puts it away too, following the finger.** The
-drag is published as one custom property, `--lyrics-drag`, which the
-open rules for both the sheet and its handle add to their own
-transforms — so the handle rides the edge down without either of them
-knowing about the other, and the JS never has to know where either sits.
+**A swipe down the top edge puts it away too, following the finger.**
+That edge is two elements — the head, and the Liner Notes handle riding
+its corner — so `grip()` attaches the same five listeners to both and
+they answer a thumb identically. Shut, the handle is the only one of
+them on screen and `onSheet()` keeps it inert: a tap is still what
+opens, and a tap is still what closes. The drag is published as one
+custom property, `--lyrics-drag`, which the open rules for both the
+sheet and its handle add to their own transforms — so the handle rides
+the edge down without either of them knowing about the other, and the
+JS never has to know where either sits.
 `DRAG_GRIP` (8px) is how far a finger travels before the panel takes it,
 which is what leaves a tap on a tab working; a gesture more sideways
 than downward, or upward at all, is let go rather than fought for.
@@ -603,7 +608,16 @@ aimed rather than thrown. Speed is read from the lift, falling back to
 the last two moves, since a flick usually ends exactly on its final
 move and would otherwise measure as standing still. A drag that happened
 swallows the click it would otherwise have fired on whatever it set off
-from, once, on a 400ms fuse.
+from, once, on a 400ms fuse — which on the handle is load-bearing, not
+tidiness: without it the toggle would fire straight after the drag and
+put the panel back exactly where the swipe had just taken it from.
+
+**That swallow is caught at the document, not on the handles.** At the
+element a touch landed on, a capturing listener holds no priority —
+every listener on the target runs in the order it was added, whatever
+its phase, and the handle's own open-and-close was added long before.
+From the document's capture phase the press is stopped before it
+reaches either handle.
 
 `html.lyrics-dragging` takes the transition off under the finger;
 `html.lyrics-settling` gives the snap-back 0.42s rather than the
