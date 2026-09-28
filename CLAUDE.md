@@ -25,24 +25,37 @@ assets/js/
   weather.js        the Pawleys Island panel (index only)
   storm-track.js    the Journey's hurricane chart (index only)
   access.js         the password gate and the album player (access only)
-  lyrics.js         the lyrics panel following the album (access only)
+  lyrics.js         the panel following the album, and every transport
+                    that is not a track row: the stage's, the panel's
+                    head, and the lock screen's (access only)
 assets/audio/NN.mp3    one per track, numbered by position in the list
 assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
 assets/notes/NN.md     liner notes, in a small subset of Markdown
 assets/video/       the teasers, plus gitignored .mov masters
-assets/img/         title artwork, hero photograph, video posters, share card,
-                    the album sleeve, and the two icon files
-                    (see The artwork → The icon, The album sleeve)
+assets/img/         title artwork, hero photograph, video posters, share
+                    card, the album sleeve (four sizes), and the two icon
+                    files — see The artwork → The album sleeve, The icon
 assets/downloads/   the four supporter downloads (still empty — see below)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
-tools/              Claude's working tools, not part of the site
+tools/              Claude's working tools, not part of the site:
+                    preview-server.py, transcode-video.swift,
+                    grab-frame.swift, make-icon.swift, find-letter.swift
 CNAME               the custom domain, required by GitHub Pages
 ```
 
-Each folder under `assets/` carries a plain-language note for Eric
-(`PUT-…-HERE.txt`) explaining what goes in it. Those are published but
-harmless. `READ-ME-FIRST.txt` and `cloudflare/HOW-TO-DEPLOY.txt` are
-gitignored — they hold secrets and stay on Eric's disk.
+The folders Eric puts files into — `audio`, `lyrics`, `notes`, `video`,
+`downloads` — each carry a plain-language note for him (`PUT-…-HERE.txt`)
+explaining what goes in it. `css`, `js` and `img` have none, because
+nothing goes in them by hand. Those notes are published but harmless.
+`READ-ME-FIRST.txt` and `cloudflare/HOW-TO-DEPLOY.txt` are gitignored —
+they hold secrets and stay on Eric's disk.
+
+**`assets/img/hero-ocean.png` is a 2 MB master that nothing references.**
+Only `hero-ocean.jpg` is used, by `style.css`. The PNG is tracked, so it
+is served publicly at its address for no reason — the same waste that
+`album-cover.png` is gitignored to avoid. Left alone because deleting a
+file of Eric's is his call, not something to do in passing. Worth
+offering to remove or gitignore next time the subject comes up.
 
 ---
 
@@ -128,7 +141,7 @@ Three different rules, because three different mechanisms:
 | Changing… | Do this |
 |---|---|
 | `content.js`, any `.js`, `style.css` | Bump `?v=N` in **both** `index.html` and `access.html` |
-| An image | Give the new file a **new name** and update `content.js` |
+| An image | Give the new file a **new name**, then update wherever it is named — see below |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
 | A lyrics file, added or changed | Bump `access.lyrics_version` in `content.js` |
 | A notes file, added or changed | Bump `access.notes_version` in `content.js` |
@@ -138,8 +151,22 @@ Three different rules, because three different mechanisms:
 running. Bump both pages together — they must always match, or one page runs
 new code against the other's cached copy.
 
+**Never write the literal characters `?v=` into prose or a comment in
+`index.html`.** That grep takes the first match in the file, so a comment
+mentioning the tag becomes the answer and reports an empty version. It
+happened once, in a comment about this very rule.
+
+**An image is named in more than one place now**, so "update `content.js`"
+is no longer the whole of it. Video posters and the share card are in
+`content.js`; the album sleeve's `src` and both icon `<link>`s are in the
+HTML; the sleeve's lock-screen sizes are `COVER_STEM` in `lyrics.js`.
+`grep -rn "old-filename" --include="*.js" --include="*.html" --include="*.css" .`
+before believing you have found them all.
+
 The `?v=` tags apply only to the site's own files — never to the Google Fonts
-link (Oswald and Josefin Sans) or anything else external.
+link (Oswald and Josefin Sans) or anything else external. They are also no
+use on a favicon: browsers hold those apart from everything else they
+cache, which is why icons change by filename only.
 
 ---
 
@@ -461,6 +488,12 @@ album still looks deliberate rather than broken.
   volume — a quiet level chosen on a laptop must not follow a listener to a
   phone with nothing on screen to undo it.
 
+**Prev and next are not in this file.** `access.js` owns the rows, the
+roll-on at the end of a song, and the volume. Everything else that moves
+the album — the stage's transport, the panel's, and the lock screen's —
+is in `lyrics.js`, because that is where `current` and the album array
+live. Don't add a second copy here; see The transport in the head.
+
 **Numbers come from position in that list, not from anything written down.**
 So adding or deleting a track renumbers every track below it, and the files
 on disk do not follow: `assets/audio/NN.mp3` and `assets/lyrics/NN.lrc` would
@@ -470,13 +503,23 @@ which numbered files sit below the change and rename them — and move
 song. (Eric removed track 18 in September 2026; every file happened to be
 numbered 17 or lower, so nothing needed renaming that time.)
 
+**Renaming a track is the other half of that.** Titles are the key
+`access.track_artists` is looked up by, so a rename has to happen in both
+places or that song silently loses its singer. Numbers don't move on a
+rename, so the files on disk are fine. (Eric renamed track 19 to
+"I Will Reach For You (Demo)" on 28 September 2026 and did both.)
+
 **To open the vault while testing, don't type the password** — that is Eric's
 to type. Set `sessionStorage` `tgm_early_access` to `open` in the preview and
 reload; that is the same door a returning visitor comes back through.
 
 ---
 
-## Lyrics
+## Lyrics, and the Liner Notes panel
+
+The panel is named **Liner Notes** on the page, because it holds two views
+of whatever is playing. The file, the folder and this section are still
+called lyrics, which is the older name and not worth churning.
 
 `assets/js/lyrics.js` runs the panel that follows the album, loaded **before**
 `access.js` in `access.html` — deliberately, because `access.js` builds the
@@ -548,14 +591,15 @@ is why the album's own row for the track stays in step without being told —
 both are working the one `<audio>` element. Its play button and seek bar
 reuse `.track__play` and `.track__seek`, so they *are* the album's controls.
 
-**The line shown before anything has played comes in two versions** —
-`lyrics_waiting` for the panel, `lyrics_waiting_expanded` for the stage,
-where the track list the first one points at is behind the words. A
-`waiting` flag, true until the first `show()`, is what lets opening and
-closing the stage swap between them without ever overwriting "No lyrics
-for this track". On the stage the status is absolutely centred rather than
-in the flow, which is safe because the status and the words are never both
-on screen.
+**The line shown before anything has played has a version for the stage** —
+`lyrics_waiting_expanded`, because up there the track list the panel's own
+line points at is behind the words. (There are three in all — the panel's,
+the stage's and the phone's; they are set out together under The phone
+sheet.) A `waiting` flag, true until the
+first `show()`, is what lets opening and closing the stage swap between
+them without ever overwriting "No lyrics for this track". On the stage the
+status is absolutely centred rather than in the flow, which is safe
+because the status and the words are never both on screen.
 
 With nothing playing yet the stage's play button **starts the album** at
 its first track that has audio, and says which one in its label. In full
@@ -566,9 +610,10 @@ because a 404 changes which track the button would start. access.js sets
 that flag from its own `error` listener, attached first and so already run
 by the time this one fires.
 
-**`isShowing()` is `isOpen || isExpanded`.** The words follow the song when
-they are being read, which is a different question from whether the drawer
-is open — the panel can be shut and the stage still up.
+**`isVisible()` is `isOpen || isExpanded`** — the panel can be shut and the
+stage still up, and the words follow the song in either shape. That is a
+different question from whether the drawer is open. (`isShowing()` adds one
+more condition on top; see Liner notes below.)
 
 Full screen is asked for on top of the overlay and refused gracefully: the
 request is made inside the click, where a browser will grant it, and a
@@ -940,9 +985,31 @@ element rectangles rather than trusting a glance.
 `offsetParent` is null for fixed-position elements; use computed `display` to
 test visibility.
 
+**A test fixture that stands in for the album must carry access.js's own
+listeners.** A hand-built array of `<audio>` elements has no "starting one
+pauses every other" and no end-of-song roll-on, because those are added in
+`buildTrack()`. Without them two tracks play at once, and a helper that
+reports "what is playing" by finding the first unpaused element answers
+with the wrong one — which reads exactly like Next being broken when it is
+not. That cost a wrong diagnosis once; the fix is two lines in the fixture.
+
+**The built-in browser pane's screenshot coordinates are not CSS pixels.**
+The frame is reported with every screenshot and is usually smaller than the
+viewport, so a coordinate read off the page has to be scaled before it is
+clicked. Clicking by `ref` from `find`/`read_page` sidesteps the whole
+question and survives the page scrolling between measuring and clicking —
+prefer it.
+
+**The pane also cannot do true full screen** (`Permissions check failed`),
+so only the refused path of the stage is testable here. Eric confirmed the
+granted path works in Chrome and Safari; don't chase it.
+
 ---
 
-## Where things stand (23 September 2026)
+## Where things stand (28 September 2026)
+
+Live at `?v=49`. `audio_version: 3`, `lyrics_version: 2`, `notes_version: 1`,
+`bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
 
@@ -960,17 +1027,32 @@ test visibility.
   needless bump makes every listener re-download the whole album.
   `lyrics_version` is bumped for additions too — those files are a few
   kilobytes, so the cost is nothing and new words appear at once.
+- **The site has a favicon now.** Eric declined one twice and then asked
+  for it on 28 September 2026. Settled; the old "don't offer again" note
+  is gone.
+- **The album section has no label.** "THE ALBUM" was replaced by the
+  sleeve on 28 September 2026 and `access.tracks_label` deleted. The
+  picture says it; don't put the words back.
+
+**Done recently, so the shape of the album page is not what older notes
+assume.** All of 24–28 September 2026: the expanded full-screen view, the
+Liner Notes panel with its two tabs, the panel opening when a track
+starts, the phone sheet's transport and its tap- and swipe-to-hide, the
+same transport on desktop, the favicon and Apple touch icon, the album
+sleeve heading the section, the lock screen through the Media Session,
+and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
 - **All four download buttons on the access page lead nowhere.** The Listening
   Guide, Digital Lyric Book, About Pawleys Island and full-album zip are named
   in `content.js` but `assets/downloads/` holds only its instructions file, so
-  a supporter clicking any of them gets a 404 — checked live, 23 September
-  2026. **Eric knows and is making the files; don't raise it again.** If they
-  are still missing much later, the alternative is to have a button hide
-  itself when its file is absent — download buttons are always drawn, so
-  unlike the video and buy-access links, emptying a label won't do it.
+  a supporter clicking any of them gets a 404 — all four re-checked live on
+  28 September 2026, still missing. **Eric knows and is making the files;
+  don't raise it again.** If they are still missing much later, the
+  alternative is to have a button hide itself when its file is absent —
+  download buttons are always drawn, so unlike the video and buy-access
+  links, emptying a label won't do it.
 - **Three tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
   Man · 18 Eye of the Storm III. They read "Soon" and are skipped. (Eric
   added 04, 08 and 14 and replaced 02, 12 and 13 on 24 September 2026,
