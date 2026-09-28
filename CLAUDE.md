@@ -30,7 +30,8 @@ assets/audio/NN.mp3    one per track, numbered by position in the list
 assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
 assets/notes/NN.md     liner notes, in a small subset of Markdown
 assets/video/       the teasers, plus gitignored .mov masters
-assets/img/         title artwork, hero photograph, video posters, share card
+assets/img/         title artwork, hero photograph, video posters, share card,
+                    and the two icon files (see The artwork → The icon)
 assets/downloads/   the four supporter downloads (still empty — see below)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
 tools/              Claude's working tools, not part of the site
@@ -269,6 +270,54 @@ remeasuring.
 
 The hero photograph is portrait, so `background-position: center 62%` pins the
 wave crest to 62% of hero height on any screen width.
+
+### The icon
+
+`assets/img/favicon-32.png` and `apple-touch-icon-180.png`, linked from the
+head of both pages. They are the **G of GRAY lifted out of the title
+artwork** and set on weathered paper mixed from the site's own palette —
+`--paper` mottled toward `--paper-dim` and `--paper-shadow`, edges darkened
+the way a handled sheet goes, paper-fibre grain over it. Duotone, like
+everything else. Eric asked for this on 28 September 2026, having twice
+declined a favicon before; that earlier note is gone and this is settled.
+
+Built by `tools/make-icon.swift` — the G is a painted, halftoned letter, so
+it cannot be set as type and the tool is the only way back to it:
+
+```
+swiftc -swift-version 5 -O tools/make-icon.swift -o "$SCRATCH/make-icon"
+"$SCRATCH/make-icon" assets/img/gray-man-title.png out.png <size> [texture] [inset] [weight]
+```
+
+The letter is **found, not cropped by hand**: the tool takes the tight
+bounding box of the ink inside a search rect. `tools/find-letter.swift`
+prints where every line of type and every letter sits, which is how that
+rect was set and how to re-point it if the artwork is ever re-exported.
+Current reading, top-origin: THE `y 1202…1459`, GRAY `1493…2037`, MAN
+`2078…2658`; the G is `x 657…1125, y 1493…2037`, with the R starting at
+`x 1150`.
+
+**Do not add a vertical flip when reading the artwork's pixels.** A bitmap
+context's first row of memory is the top of the picture, so drawing
+straight in gives a buffer whose y runs down the image — which is what
+every reader in both tools assumes. A flip there inverts the axis, which
+silently points the search rect at the wrong line of type *and* hands back
+an upside-down G. Both happened.
+
+**The two sizes are tuned differently on purpose.** At 180px the full
+texture reads, so it gets `texture 1.0, inset 0.16, weight 1.0`. At 32px
+the grain turns to mush and thin strokes break up, so the favicon gets
+`texture 0.35, inset 0.10, weight 1.25` — less texture, tighter crop,
+heavier strokes. Judge any change with `tools/`-built proofs at true size,
+never at a comfortable magnification.
+
+**Replacing either file means a new filename**, per the cache rule for
+images, and updating the two `<link>` lines in both pages. A version tag on
+the address does not shift a favicon reliably — browsers hold those apart
+from everything else. For the same reason, don't write the literal
+characters `?v=` into prose in `index.html`: the documented way to find the
+current number is `grep -o '?v=[0-9]*' index.html | head -1`, and a comment
+containing it becomes the first match.
 
 ---
 
@@ -791,7 +840,6 @@ test visibility.
   instructions, so every track's Notes tab reads "No notes for this track"
   — correct, and what a half-filled album should look like. Eric writes
   them one `.md` file at a time as he goes.
-- **No favicon**, on either page. Eric has declined twice; don't offer again.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
   That is a setting on Gumroad's side, not something in this repo.
