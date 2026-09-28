@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=41" />
+  <link rel="stylesheet" href="assets/css/style.css?v=42" />
 </head>
 <body>
 
@@ -74,7 +74,7 @@
 
   <section class="lyrics" id="lyricsPanel" hidden
            aria-labelledby="lyricsTabWords lyricsTitle">
-    <header class="lyrics__head">
+    <header class="lyrics__head" id="lyricsHead">
       <!-- Two views of the same track. Which one a listener last chose
            is remembered, the way the panel's own open/closed is. -->
       <div class="lyrics__tabs" role="tablist">
@@ -85,6 +85,18 @@
                 role="tab" aria-selected="false" aria-controls="notesScroll"
                 tabindex="-1" data-content="access.notes_button">Notes</button>
         <span class="lyrics__num" id="lyricsNum"></span>
+
+        <!-- Phones only. Down there the track list is behind the sheet,
+             so the album needs steering from inside it; on a computer
+             the rows are in plain sight and this is left off entirely.
+             The buttons move the album's own <audio> elements, the same
+             ones the rows move — see assets/js/lyrics.js. Their icons
+             and labels are set there too. -->
+        <div class="lyrics__transport" id="lyricsTransport">
+          <button class="lyrics__step" id="lyricsPrev" type="button" disabled></button>
+          <button class="lyrics__step" id="lyricsPlay" type="button"></button>
+          <button class="lyrics__step" id="lyricsNext" type="button" disabled></button>
+        </div>
       </div>
 
       <h2 class="lyrics__title" id="lyricsTitle" hidden></h2>
@@ -178,12 +190,12 @@
 
   </main>
 
-  <script src="content.js?v=41"></script>
-  <script src="assets/js/main.js?v=41"></script>
+  <script src="content.js?v=42"></script>
+  <script src="assets/js/main.js?v=42"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=41"></script>
-  <script src="assets/js/access.js?v=41"></script>
+  <script src="assets/js/lyrics.js?v=42"></script>
+  <script src="assets/js/access.js?v=42"></script>
 </body>
 </html>

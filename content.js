@@ -429,6 +429,10 @@ window.SITE_CONTENT = {
     // except the play button along the bottom.
     lyrics_waiting_expanded: "Press play to begin.",
 
+    // And the same moment on a phone, where the panel covers the track
+    // list but carries its own play button at the top.
+    lyrics_waiting_phone: "Press play to begin the album.",
+
     lyrics_loading: "Finding the words…",
     lyrics_none: "No lyrics for this track",
 
@@ -438,6 +442,14 @@ window.SITE_CONTENT = {
     // there's no room for it on a phone.
     lyrics_expand: "Full screen",
     lyrics_collapse: "Leave full screen",
+
+    // The three round buttons at the top of the panel on a phone. Nobody
+    // sees these words — they are what a screen reader says aloud, and
+    // what shows if the icons ever fail to draw.
+    panel_previous: "Previous track",
+    panel_next: "Next track",
+    panel_play: "Play",
+    panel_pause: "Pause",
 
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their

@@ -11,16 +11,42 @@ on refresh without a fight.
 
     python3 tools/preview-server.py          # http://localhost:8420
     python3 tools/preview-server.py 9000     # another port
+    python3 tools/preview-server.py --phone  # also reachable from a handset
+
+Without --phone it answers only this machine, which is what a preview
+should do. With it, it answers anything on the same Wi-Fi and prints the
+address to type into a phone — the only way to try the touch gestures on
+the album page, since a desktop browser fakes them badly. It is still a
+preview: turn it off when you're done, and don't run it on Wi-Fi you
+don't know.
 """
 
 import http.server
 import os
 import re
+import socket
 import socketserver
 import sys
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8420
+ARGS = sys.argv[1:]
+OPEN_TO_WIFI = "--phone" in ARGS
+PORTS = [a for a in ARGS if not a.startswith("-")]
+PORT = int(PORTS[0]) if PORTS else 8420
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def wifi_address():
+    """This machine's address on the local network, as a phone sees it."""
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Nothing is sent: this only asks the routing table which of our
+        # own addresses would be used to reach the wider network.
+        probe.connect(("192.0.2.1", 9))
+        return probe.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        probe.close()
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -100,9 +126,18 @@ class Server(socketserver.ThreadingTCPServer):
 
 
 if __name__ == "__main__":
-    with Server(("127.0.0.1", PORT), Handler) as server:
+    host = "0.0.0.0" if OPEN_TO_WIFI else "127.0.0.1"
+    with Server((host, PORT), Handler) as server:
         print("The Gray Man — preview at http://localhost:%d" % PORT)
-        print("Serving %s\nStop it with Control-C." % ROOT)
+        if OPEN_TO_WIFI:
+            found = wifi_address()
+            if found:
+                print("\nOn a phone on the same Wi-Fi, open:")
+                print("    http://%s:%d/access.html" % (found, PORT))
+            else:
+                print("\nOpen to the Wi-Fi, but this Mac's address could not be"
+                      "\nfound. Look under System Settings > Wi-Fi > Details.")
+        print("\nServing %s\nStop it with Control-C." % ROOT)
         try:
             server.serve_forever()
         except KeyboardInterrupt:

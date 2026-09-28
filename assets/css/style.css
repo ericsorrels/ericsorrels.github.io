@@ -1823,6 +1823,12 @@ img {
 :root {
   --lyrics-edge: clamp(0.75rem, 2.4vw, 2.2rem);   /* matches .volume's inset */
   --lyrics-h: 42vh;
+  /* How far down a finger has carried the open sheet. Set by lyrics.js
+     during a swipe and nowhere else, so it is 0 at all other times and
+     on every screen wider than a phone. Both the panel and its handle
+     add it to their own open transforms, which is what lets the handle
+     ride the edge down without either of them knowing about the other. */
+  --lyrics-drag: 0px;
 }
 
 @media (max-width: 620px) {
@@ -1887,7 +1893,7 @@ img {
 /* Open, the tab rides the top edge of the panel, joined to it: it sits
    one pixel low so its own dark fill covers the panel's top border. */
 html.lyrics-open .lyrics-tab {
-  transform: translateY(calc(var(--lyrics-edge) - var(--lyrics-h) + 1px));
+  transform: translateY(calc(var(--lyrics-edge) - var(--lyrics-h) + 1px + var(--lyrics-drag)));
   color: var(--paper);
   background: var(--ink);
   border-color: rgba(237, 232, 221, 0.16);
@@ -1916,10 +1922,25 @@ html.lyrics-open .lyrics-tab {
 }
 
 html.lyrics-open .lyrics {
-  transform: none;
+  transform: translateY(var(--lyrics-drag));
   visibility: visible;
   transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1),
               visibility 0s linear 0s;
+}
+
+/* Under the finger there is nothing to animate — the panel is already
+   exactly where the touch is. Let go, and it takes the shorter way home
+   than the drawer's own long slide: a snap-back that took 0.8s would
+   read as the panel having got stuck rather than having been released.
+   The opening and closing slides keep their unhurried pace. */
+html.lyrics-dragging .lyrics,
+html.lyrics-dragging .lyrics-tab {
+  transition: none;
+}
+
+html.lyrics-settling .lyrics,
+html.lyrics-settling .lyrics-tab {
+  transition: transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 /* Docked along the bottom, the panel would otherwise sit under the last
@@ -1953,8 +1974,11 @@ html.lyrics-open .lyrics {
     transform: translateY(calc(100% + var(--lyrics-edge) + 2px));
   }
 
+  /* The drag term is always 0px this wide — swiping is a phone gesture —
+     but it is carried here too so the two open rules stay the same
+     shape, and a change to one is never silently lost in the other. */
   html.lyrics-open .lyrics-tab {
-    transform: translateY(calc(1px - var(--lyrics-h)));
+    transform: translateY(calc(1px - var(--lyrics-h) + var(--lyrics-drag)));
   }
 }
 
@@ -2073,15 +2097,87 @@ html.lyrics-open .lyrics {
   color: var(--gray-mid);
 }
 
-/* On a phone these are 12px of text to hit with a thumb, so they take
-   the same 44px the drawer's own handle does. The head gives back most
-   of the height by tightening its top padding. Must sit after the rules
-   above, not up with the panel's other phone rules: same specificity,
-   so source order is what decides. */
+/* Previous, play and next, at the right of the same row as the tabs.
+   Phones only: on a computer the track list is in plain sight beside
+   the panel and every one of these is already a click away. */
+.lyrics__transport {
+  display: none;
+  margin-left: 0.5em;
+  align-items: center;
+}
+
+.lyrics__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px square, the size a thumb needs, though the mark inside is
+     15px — the target is deliberately far larger than the drawing. */
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--paper);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.lyrics__step svg { display: block; }
+
+.lyrics__step:disabled {
+  color: var(--gray-mid);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.lyrics__step:focus-visible {
+  outline: 1px solid rgba(237, 232, 221, 0.6);
+  outline-offset: -4px;
+}
+
+/* On a phone the tabs are 12px of text to hit with a thumb, so they
+   take the same 44px the drawer's own handle does. The head gives back
+   most of the height by tightening its top padding. Must sit after the
+   rules above, not up with the panel's other phone rules: same
+   specificity, so source order is what decides. */
 @media (max-width: 620px) {
-  .lyrics__head { padding-top: 0.5em; }
+  /* The expand button is gone down here, so the room it was keeping in
+     the corner goes to the transport instead. */
+  .lyrics__head { padding: 0.5em 0.9em 0.95em; }
+
   .lyrics__tab { padding: 1.1rem 0; }
   .lyrics__tab::after { bottom: 0.82rem; }
+
+  /* One row, always. Wrapping is the 1280px panel's answer to being
+     narrow; here there is a second row's worth of controls in it, and a
+     row that broke would push them off the bottom of the head. Instead
+     everything that can give, gives: the gaps close, and the track
+     number goes before the buttons are allowed to shrink. */
+  .lyrics__tabs {
+    flex-wrap: nowrap;
+    gap: 0 0.9em;
+    padding-right: 0;
+  }
+
+  .lyrics__num {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .lyrics__transport { display: inline-flex; }
+}
+
+/* The narrowest handset still sold. Three 44px targets and two words of
+   letterspaced capitals do not both fit in 320px, so the number — which
+   the title on the line below already implies — stands down, and the
+   last of the gaps goes with it. */
+@media (max-width: 359px) {
+  .lyrics__head { padding-left: 0.6em; padding-right: 0.6em; }
+  .lyrics__tabs { gap: 0 0.6em; }
+  .lyrics__num { display: none; }
+  .lyrics__transport { margin-left: auto; }
 }
 
 .lyrics__title {

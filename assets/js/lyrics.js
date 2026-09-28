@@ -46,6 +46,16 @@
   var notesBody = document.getElementById('notesBody');
   var hasNotes = !!(tabWords && tabNotes && notesScroll && notesStatus && notesBody);
 
+  // The three buttons at the top of the panel on a phone, where the
+  // track list is behind the sheet and the album needs steering from
+  // inside it.
+  var head = document.getElementById('lyricsHead');
+  var transport = document.getElementById('lyricsTransport');
+  var prevButton = document.getElementById('lyricsPrev');
+  var playButton = document.getElementById('lyricsPlay');
+  var nextButton = document.getElementById('lyricsNext');
+  var hasTransport = !!(transport && prevButton && playButton && nextButton);
+
   // The expanded view, and the parts of the page it borrows.
   var expandButton = document.getElementById('lyricsExpand');
   var stage = document.getElementById('lyricsStage');
@@ -78,11 +88,30 @@
   // What the arrow keys move the song by while expanded.
   var NUDGE = 5;
 
+  // How far into a track Previous still means "back one" rather than
+  // "start this again" — the bargain every other player makes.
+  var RESTART_AFTER = 3;
+
+  // What separates a tap from a scroll, and a drag from a tap.
+  var TAP_SLOP = 10;        // px the finger may wander and still be a tap
+  var TAP_TIME = 300;       // ms it may rest before it is a press instead
+  var DRAG_GRIP = 8;        // px of travel before the panel takes the finger
+  var DRAG_SHARE = 0.3;     // how much of the panel must go down to close it
+  // Px per millisecond downward that closes it however short the travel.
+  // High enough to mean a throw and nothing else: a considered drag runs
+  // at around 0.2–0.8, so a lower bar here closes the panel on gestures
+  // that were being aimed rather than thrown.
+  var FLICK = 1.1;
+
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var wideEnough = window.matchMedia('(min-width: 1280px)');
   // Expanding is a desktop affair; on a phone the panel is already
   // most of the screen, and there is no room to spare for a second one.
   var roomToExpand = window.matchMedia('(min-width: 768px)');
+  // The phone sheet: full width, no volume slider, no way to the track
+  // list without shutting the panel. All three touch affordances below
+  // — the transport, tap-to-hide and swipe-to-hide — live only here.
+  var onPhone = window.matchMedia('(max-width: 620px)');
 
   var started = false;
   var isOpen = false;
@@ -322,19 +351,31 @@
     statusEl.hidden = !text;
   }
 
-  // The line shown before anything has played reads differently on the
-  // stage, where the track list it would otherwise send you to is behind
-  // the words. Once a track has played this line is gone for good, so
-  // opening and closing the stage after that leaves the status alone.
+  // The line shown before anything has played comes in three versions,
+  // because it has to point at a different way in each time. In the
+  // panel on a computer it sends you to the track list beside it. On the
+  // stage, and on a phone, that list is behind the words — but both of
+  // those carry a play button of their own, so the line names that
+  // instead. Returns null when the two views should each use their own
+  // wording, which is the computer case.
+  function waitingLine() {
+    if (isExpanded) return A.lyrics_waiting_expanded || 'Press play to begin.';
+    if (onPhone.matches && hasTransport) {
+      return A.lyrics_waiting_phone || 'Press play to begin the album.';
+    }
+    return null;
+  }
+
+  // Once a track has played this line is gone for good, so opening and
+  // closing the stage after that leaves the status alone.
   function refreshWaiting() {
     if (!waiting) return;
-    setStatus(isExpanded
-      ? (A.lyrics_waiting_expanded || 'Press play to begin.')
-      : (A.lyrics_waiting || 'Press play on any track and its words appear here.'));
+    var shared = waitingLine();
+    setStatus(shared
+      || A.lyrics_waiting || 'Press play on any track and its words appear here.');
     if (hasNotes) {
-      setNotesStatus(isExpanded
-        ? (A.lyrics_waiting_expanded || 'Press play to begin.')
-        : (A.notes_waiting || 'Press play on any track and its notes appear here.'));
+      setNotesStatus(shared
+        || A.notes_waiting || 'Press play on any track and its notes appear here.');
     }
   }
 
@@ -890,13 +931,20 @@
     'stroke="currentColor" stroke-width="1.6" stroke-linecap="square">' +
     '<path d="M3 9h6V3M21 9h-6V3M3 15h6v6M21 15h-6v6"/></svg>';
 
-  // The album's own marks, so the stage's button is that button, larger.
-  var PLAY_ICON =
-    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">' +
-    '<path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
-  var PAUSE_ICON =
-    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">' +
-    '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>';
+  // The album's own marks. Written as paths drawn at whatever size is
+  // asked for, so the stage's button and the phone's are the one button
+  // at two sizes rather than two sets of the same drawing.
+  function mark(path, size) {
+    return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" ' +
+      'aria-hidden="true"><path d="' + path + '" fill="currentColor"/></svg>';
+  }
+
+  var PLAY_PATH = 'M8 5v14l11-7z';
+  var PAUSE_PATH = 'M7 5h4v14H7zM13 5h4v14h-4z';
+  // A bar with a triangle facing it: the mark every player uses, so
+  // nobody has to learn what it means.
+  var PREV_PATH = 'M6 5h2.2v14H6zM19 5v14L9.6 12z';
+  var NEXT_PATH = 'M15.8 5H18v14h-2.2zM5 5v14l9.4-7z';
 
   var borrowed = [];       // the way back for everything carried onto the stage
   var wasFullscreen = false;
@@ -918,37 +966,112 @@
     stageSeek.style.setProperty('--played', (fraction * 100).toFixed(2) + '%');
   }
 
-  // With nothing playing yet, the stage's button starts the album at its
-  // first track that has audio. In full screen the track list is out of
-  // sight entirely, so this is the only way in.
-  function firstPlayable() {
-    for (var i = 0; i < album.length; i++) {
+  /* ---- Which track is next, and which was last ----------------------
+     All of it reads the album's own <audio> elements and the `missing`
+     flag access.js puts on the ones with no file yet, so a gap in the
+     album is stepped over here exactly as it is by the roll-on at the
+     end of a song. */
+
+  function playableFrom(start, step) {
+    for (var i = start; i >= 0 && i < album.length; i += step) {
       if (!album[i].audio.dataset.missing) return album[i];
     }
     return null;
   }
 
+  // With nothing playing yet, the play button starts the album at its
+  // first track that has audio. On the stage and on a phone the track
+  // list is out of sight, so this is the only way in.
+  function firstPlayable() {
+    return playableFrom(0, 1);
+  }
+
+  function positionOf(track) {
+    for (var i = 0; i < album.length; i++) {
+      if (album[i] === track) return i;
+    }
+    return -1;
+  }
+
+  function nextPlayable() {
+    var at = positionOf(current);
+    return at < 0 ? null : playableFrom(at + 1, 1);
+  }
+
+  function previousPlayable() {
+    var at = positionOf(current);
+    return at < 0 ? null : playableFrom(at - 1, -1);
+  }
+
+  // Starting a track is the album's own business: set it to the top and
+  // play it, the way access.js does when a song ends. Its play event
+  // carries the panel and the words along with it.
+  function startTrack(track) {
+    if (!track) return;
+    track.audio.currentTime = 0;
+    track.audio.play();
+  }
+
+  // A few seconds in, Previous means this one again; before that it
+  // steps back. At the first track there is nothing behind it, so it
+  // means this one again there too.
+  function goPrevious() {
+    if (!current) return;
+    if (current.audio.currentTime > RESTART_AFTER) {
+      startTrack(current);
+      return;
+    }
+    startTrack(previousPlayable() || current);
+  }
+
+  function goNext() {
+    startTrack(nextPlayable());
+  }
+
   // Everything that only changes when the track does.
   function drawTransport() {
-    if (!canExpand) return;
-
     var audio = current && current.audio;
     var playing = !!audio && !audio.paused && !audio.ended;
     var length = audio ? audio.duration : NaN;
     var opener = current ? null : firstPlayable();
+    var stopped = audio ? !!audio.dataset.missing : !opener;
 
-    stagePlay.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
-    stagePlay.disabled = audio ? !!audio.dataset.missing : !opener;
-    stagePlay.setAttribute('aria-label', current
-      ? (playing ? 'Pause ' : 'Play ') + current.title
-      : (opener ? 'Play ' + opener.title : 'Play'));
+    if (canExpand) {
+      stagePlay.innerHTML = mark(playing ? PAUSE_PATH : PLAY_PATH, 16);
+      stagePlay.disabled = stopped;
+      stagePlay.setAttribute('aria-label', current
+        ? (playing ? 'Pause ' : 'Play ') + current.title
+        : (opener ? 'Play ' + opener.title : 'Play'));
 
-    stageSeek.disabled = !length || !isFinite(length);
-    stageSeek.setAttribute('aria-label', current
-      ? 'Scrub through ' + current.title
-      : 'Scrub through the track');
+      stageSeek.disabled = !length || !isFinite(length);
+      stageSeek.setAttribute('aria-label', current
+        ? 'Scrub through ' + current.title
+        : 'Scrub through the track');
 
-    stageLength.textContent = clock(length);
+      stageLength.textContent = clock(length);
+    }
+
+    // The phone's three buttons. Painted from the same reading of the
+    // same <audio> element as the stage's, which is what keeps every
+    // play mark on the page saying the same thing — wherever the song
+    // was actually started or stopped.
+    if (hasTransport) {
+      playButton.innerHTML = mark(playing ? PAUSE_PATH : PLAY_PATH, 15);
+      playButton.disabled = stopped;
+      playButton.setAttribute('aria-label', playing
+        ? (A.panel_pause || 'Pause')
+        : (A.panel_play || 'Play'));
+
+      prevButton.innerHTML = mark(PREV_PATH, 15);
+      prevButton.setAttribute('aria-label', A.panel_previous || 'Previous track');
+      prevButton.disabled = !current;
+
+      nextButton.innerHTML = mark(NEXT_PATH, 15);
+      nextButton.setAttribute('aria-label', A.panel_next || 'Next track');
+      // Nothing left with a file in it: the end of the album.
+      nextButton.disabled = !current || !nextPlayable();
+    }
+
     tickTransport();
   }
 
@@ -1180,6 +1303,240 @@
   }
 
   /* ------------------------------------------------------------------
+     The phone sheet
+
+     Down here the panel covers the track list, so it has to carry its
+     own way of steering the album and its own ways of getting out of
+     the way: a tap on the page behind it, or a swipe down its top edge.
+
+     None of this is fenced off from the rest of the page. There is no
+     backdrop over the album — the list stays scrollable underneath, and
+     every listener on the page is passive so it keeps scrolling at full
+     speed. What decides whether a touch belongs to the panel is where
+     it started and how it moved, nothing more.
+     ------------------------------------------------------------------ */
+
+  // Is the phone sheet the shape the panel is in just now?
+  function onSheet() {
+    return onPhone.matches && isOpen && !isExpanded;
+  }
+
+  if (hasTransport) {
+    prevButton.addEventListener('click', goPrevious);
+    nextButton.addEventListener('click', goNext);
+    // The same function the stage's button uses: with nothing playing
+    // yet it starts the album at its first track that has audio.
+    playButton.addEventListener('click', playPause);
+  }
+
+  /* ---- A tap on the page behind puts the panel away ------------------
+     Not a click listener: on a phone a click arrives after a scroll's
+     momentum has settled, and a flick down the album would have shut
+     the panel. A touch is watched from the start so a scroll can be
+     told from a tap by how far the finger went and how long it took. */
+
+  var tapFrom = null;
+
+  // Anything that does its own job when touched. A tap that lands on
+  // one of these belongs to it, and the panel stays where it is.
+  var INTERACTIVE = 'a, button, input, select, textarea, label, summary,' +
+    ' [role="button"], [role="tab"], [tabindex]';
+
+  function forgetTap() {
+    tapFrom = null;
+  }
+
+  document.addEventListener('touchstart', function (event) {
+    tapFrom = null;
+    if (!onSheet() || event.touches.length !== 1) return;
+
+    var target = event.target;
+    // The panel and its handle answer for themselves — the swipe below
+    // is the panel's own gesture, and the handle is the toggle.
+    if (!target || !target.closest) return;
+    if (panel.contains(target) || tab.contains(target)) return;
+    if (target.closest(INTERACTIVE)) return;
+
+    var touch = event.touches[0];
+    tapFrom = { x: touch.clientX, y: touch.clientY, at: Date.now() };
+  }, { passive: true });
+
+  // A finger that travels is scrolling the album, whatever it does next.
+  document.addEventListener('touchmove', function (event) {
+    if (!tapFrom) return;
+    var touch = event.touches[0];
+    if (!touch) return;
+    if (Math.abs(touch.clientX - tapFrom.x) > TAP_SLOP
+        || Math.abs(touch.clientY - tapFrom.y) > TAP_SLOP) {
+      forgetTap();
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchcancel', forgetTap, { passive: true });
+
+  document.addEventListener('touchend', function (event) {
+    var from = tapFrom;
+    tapFrom = null;
+    if (!from || !onSheet()) return;
+
+    var touch = event.changedTouches && event.changedTouches[0];
+    if (!touch) return;
+    if (Date.now() - from.at > TAP_TIME) return;          // a rest, not a tap
+    if (Math.abs(touch.clientX - from.x) > TAP_SLOP) return;
+    if (Math.abs(touch.clientY - from.y) > TAP_SLOP) return;
+
+    // The same door the handle uses, remembered the same way.
+    setOpen(false, true);
+  }, { passive: true });
+
+  /* ---- A swipe down the top edge puts it away too --------------------
+     The panel follows the finger by way of one custom property that the
+     open rules for both the sheet and its handle add to their own
+     transforms — so the handle rides the edge down without this code
+     having to know anything about where either of them sits. */
+
+  var drag = null;
+  var swallowClick = false;
+
+  function setDrag(pixels) {
+    document.documentElement.style.setProperty('--lyrics-drag', pixels + 'px');
+  }
+
+  function endDrag(settle) {
+    document.documentElement.classList.remove('lyrics-dragging');
+    if (settle) document.documentElement.classList.add('lyrics-settling');
+    setDrag(0);
+    drag = null;
+  }
+
+  // Downward pixels per millisecond between two samples of the finger.
+  // Zero when there is nothing to compare against, so the caller can
+  // fall back to an earlier pair.
+  function rateBetween(fromY, fromAt, toY, toAt) {
+    if (fromY == null || fromAt == null) return 0;
+    var ms = toAt - fromAt;
+    if (ms <= 0) return 0;
+    return (toY - fromY) / ms;
+  }
+
+  // A finger that dragged must not also count as a press on whatever it
+  // set off from. Cleared on its own in case no click follows at all.
+  function armClickSwallow() {
+    swallowClick = true;
+    window.setTimeout(function () { swallowClick = false; }, 400);
+  }
+
+  if (head) {
+    head.addEventListener('touchstart', function (event) {
+      drag = null;
+      if (!onSheet() || event.touches.length !== 1) return;
+      var touch = event.touches[0];
+      drag = {
+        x: touch.clientX,
+        y: touch.clientY,
+        lastY: touch.clientY,
+        lastAt: Date.now(),
+        prevY: null,        // the sample before that, for reading a flick
+        prevAt: null,
+        moved: false
+      };
+    }, { passive: true });
+
+    // Not passive: once this is a downward drag the page must be stopped
+    // from scrolling underneath it.
+    head.addEventListener('touchmove', function (event) {
+      if (!drag) return;
+      var touch = event.touches[0];
+      if (!touch) return;
+
+      var down = touch.clientY - drag.y;
+      var across = touch.clientX - drag.x;
+
+      if (!drag.moved) {
+        // Sideways or upward is not this gesture. Letting go of it here
+        // rather than fighting for it is what leaves a tap on a tab, and
+        // a scroll of the page, working exactly as they did.
+        if (Math.abs(across) > Math.abs(down)) { drag = null; return; }
+        if (down < DRAG_GRIP) return;
+        drag.moved = true;
+        document.documentElement.classList.remove('lyrics-settling');
+        document.documentElement.classList.add('lyrics-dragging');
+      }
+
+      event.preventDefault();
+      setDrag(Math.max(0, down));
+      drag.prevY = drag.lastY;
+      drag.prevAt = drag.lastAt;
+      drag.lastY = touch.clientY;
+      drag.lastAt = Date.now();
+    }, { passive: false });
+
+    head.addEventListener('touchend', function (event) {
+      var held = drag;
+      drag = null;
+      if (!held || !held.moved) return;
+
+      armClickSwallow();
+
+      var touch = event.changedTouches && event.changedTouches[0];
+      var endY = touch ? touch.clientY : held.lastY;
+      var down = Math.max(0, endY - held.y);
+
+      // How fast it was still travelling when it let go. Read from the
+      // lift itself where the finger moved between its last touchmove
+      // and leaving the glass — and from the two moves before that
+      // where it did not, which is the usual way a flick ends. Without
+      // the second reading a fast, short flick measures as standing
+      // still and the panel would stay up.
+      var speed = rateBetween(held.lastY, held.lastAt, endY, Date.now())
+        || rateBetween(held.prevY, held.prevAt, held.lastY, held.lastAt);
+
+      var far = down > panel.offsetHeight * DRAG_SHARE;
+      if (far || speed > FLICK) {
+        endDrag(false);         // the closing slide is the panel's own
+        setOpen(false, true);
+      } else {
+        endDrag(true);          // and this one eases it back up
+      }
+    }, { passive: true });
+
+    head.addEventListener('touchcancel', function () {
+      if (drag && drag.moved) endDrag(true);
+      drag = null;
+    }, { passive: true });
+
+    // Caught on the way down, before the tab or button it started on
+    // has a chance to act on it.
+    head.addEventListener('click', function (event) {
+      if (!swallowClick) return;
+      swallowClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
+    // The settle is a one-off: taken off again so it never shortens the
+    // ordinary open and close.
+    panel.addEventListener('transitionend', function (event) {
+      if (event.propertyName === 'transform') {
+        document.documentElement.classList.remove('lyrics-settling');
+      }
+    });
+  }
+
+  // Crossing into or out of the phone's width changes which way in the
+  // waiting line should point, and whether the three buttons are there
+  // to be drawn at all. A drag caught mid-air by a turn of the handset
+  // is simply dropped.
+  function onWidth() {
+    if (drag) { endDrag(false); }
+    refreshWaiting();
+    drawTransport();
+  }
+
+  if (onPhone.addEventListener) onPhone.addEventListener('change', onWidth);
+  else if (onPhone.addListener) onPhone.addListener(onWidth);
+
+  /* ------------------------------------------------------------------
      Start up
      ------------------------------------------------------------------ */
 
@@ -1206,8 +1563,14 @@
     if (canExpand) {
       stage.hidden = false;
       setExpandButton();
-      drawTransport();
     }
+
+    // Both transports at once: the stage's, and the phone's three
+    // buttons, which have to be drawn before the panel is ever opened.
+    drawTransport();
+
+    // And which way in the waiting line points, now the width is known.
+    refreshWaiting();
 
     // First visit: open where it costs nothing — beside the album on a
     // wide screen — and closed where it would sit over the page.
@@ -1229,6 +1592,12 @@
     window.addEventListener('resize', function () {
       matchBackdrop();
       remeasure();          // the reading line is a share of the height
+      // Asked here as well as on the media query's own change event.
+      // The two agree, and the query is the more precise of them — but
+      // it is one event at one moment, and a reload landing in the
+      // middle of a resize can leave the page on the wrong side of it.
+      // A resize always follows, and asking twice costs a redraw.
+      onWidth();
     });
 
     // Asked at the end of the slide rather than the start of it: until

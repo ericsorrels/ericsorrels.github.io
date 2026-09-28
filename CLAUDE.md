@@ -547,7 +547,88 @@ at its foot — the lyrics' top fade would half-dissolve a first heading,
 which reads as a fault in prose. And `.lyrics__tabs` wraps: at 1280px
 exactly the panel is at its narrowest and the row has 168px to work in,
 where overflow would put the track number underneath the expand button,
-an auto margin having no free space left to place it.
+an auto margin having no free space left to place it. **On a phone that
+same row does the opposite** — `flex-wrap: nowrap`, because there is a
+second row's worth of controls in it and a break would push them off the
+bottom of the head.
+
+### The phone sheet
+
+Below 620px the panel covers the track list, so it carries its own way
+of steering the album and two ways of getting out of the way. All three
+are in `lyrics.js`, all three are gated on `onPhone` (`max-width: 620px`)
+**and** `isOpen && !isExpanded` — so nothing here can reach the panel on
+a computer or the stage. `onSheet()` is that question asked once.
+
+**There is no backdrop over the album, deliberately.** The list stays
+scrollable behind the open sheet, and every listener on the page is
+passive so it scrolls at full speed. What decides whether a touch
+belongs to the panel is where it started and how it moved, nothing more.
+
+**Previous / play / next sit in the tab row**, phones only. They move the
+album's own `<audio>` elements — the same ones the track rows move — so
+every play mark on the page agrees without being told, exactly as the
+stage's transport does. `playableFrom()` walks the album skipping
+anything access.js flagged `data-missing`, which is how Next crosses a
+gap the same way the end-of-song roll-on does; `firstPlayable()` is that
+same walk from the top. Previous restarts the track past `RESTART_AFTER`
+(3s) and at the first track, where there is nothing behind it. Next
+disables itself when `nextPlayable()` comes back empty, which is the end
+of the album — not the last row, since the last rows may have no files.
+Both step buttons are disabled until something has played. The buttons
+are 44px targets around a 15px mark, and the icons are `mark(path, size)`
+so the stage's and the phone's are one drawing at two sizes.
+
+**A tap on the page behind puts the sheet away.** Watched from
+`touchstart`, not `click`: on a phone a click arrives after a scroll's
+momentum settles, so a flick down the album would have closed the panel.
+A touch counts as a tap only under `TAP_SLOP` (10px) and `TAP_TIME`
+(300ms), and only when it did not land on the panel, the handle, or
+anything in `INTERACTIVE` — a play button or seek bar does its own job
+and the panel stays put. It closes through `setOpen(false, true)`, the
+same door and the same saved preference as the handle.
+
+**A swipe down the head puts it away too, following the finger.** The
+drag is published as one custom property, `--lyrics-drag`, which the
+open rules for both the sheet and its handle add to their own
+transforms — so the handle rides the edge down without either of them
+knowing about the other, and the JS never has to know where either sits.
+`DRAG_GRIP` (8px) is how far a finger travels before the panel takes it,
+which is what leaves a tap on a tab working; a gesture more sideways
+than downward, or upward at all, is let go rather than fought for.
+On release it closes past `DRAG_SHARE` (30% of the panel) **or** above
+`FLICK` — 1.1 px/ms, set high on purpose, because a considered drag runs
+at 0.2–0.8 and a lower bar closed the panel on gestures that were being
+aimed rather than thrown. Speed is read from the lift, falling back to
+the last two moves, since a flick usually ends exactly on its final
+move and would otherwise measure as standing still. A drag that happened
+swallows the click it would otherwise have fired on whatever it set off
+from, once, on a 400ms fuse.
+
+`html.lyrics-dragging` takes the transition off under the finger;
+`html.lyrics-settling` gives the snap-back 0.42s rather than the
+drawer's own 0.8s. That is the one place the site's slow motion is
+shortened, and it earns it: direct manipulation that crawls home reads
+as having stuck rather than having been let go. The opening and closing
+slides keep their unhurried pace.
+
+**The waiting line now has three versions**, because it points at a
+different way in each time: `lyrics_waiting` in the panel beside the
+list, `lyrics_waiting_expanded` on the stage, and `lyrics_waiting_phone`
+on the sheet — the last two because the list is behind the words there,
+and both of those carry a play button instead. `waitingLine()` picks;
+returning null means the two views each use their own wording, which is
+the computer case. It is re-asked on the media query's `change` **and**
+on `resize`, which is not belt and braces: a reload landing mid-resize
+left the page on the wrong side of the query with only the first.
+
+**Testing this needs a real handset.** A desktop browser's touch
+emulation fakes these badly — it never reproduces momentum scrolling or
+the gap between a finger's last move and its lift, which is precisely
+what the flick reading depends on. `python3 tools/preview-server.py
+--phone` binds to the Wi-Fi instead of just this machine and prints the
+address to type into a phone. Without the flag it stays on localhost,
+which is what a preview should do.
 
 **Timing new lyrics:** `tools/lyric-timer.html`, which is **gitignored and
 lives only on Eric's disk** — it runs by double-clicking and never needs to be
@@ -615,7 +696,9 @@ curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
 
 ## Environment notes
 
-- **Local preview:** `python3 tools/preview-server.py` (port 8420). Use it
+- **Local preview:** `python3 tools/preview-server.py` (port 8420), or
+  `--phone` to also answer the Wi-Fi and print the address for a handset —
+  the only way to test the album page's touch gestures honestly. Use it
   rather than `python3 -m http.server`, which cannot send part of a file:
   without ranges, dragging a track's seek bar throws the song back to the
   start, so anything to do with seeking — the lyrics keeping up, most of all
