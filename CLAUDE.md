@@ -729,6 +729,61 @@ what the flick reading depends on. `python3 tools/preview-server.py
 address to type into a phone. Without the flag it stays on localhost,
 which is what a preview should do.
 
+### The lock screen — the transport nobody can see
+
+The Media Session: the lock screen, Control Center, a car stereo over
+Bluetooth, the squeeze of an AirPod stem. The browser treats these as one
+thing, and so does this file — as a **fourth transport**, alongside the
+stage's, the phone sheet's and the album's own rows. Like them it moves
+`current.audio` and nothing else, and is painted from the same reading of
+it, which is why none of its logic is new.
+
+**It lives in `lyrics.js`, not `access.js`, and that is deliberate.**
+Everything it needs — `current`, `album`, `goPrevious`, `goNext`,
+`firstPlayable`, `RESTART_AFTER` — is already in that file's closure.
+Putting it in `access.js` would mean exporting all of that across the
+two, which is more code and more coupling than moving eighty lines to
+where the state already is. `previoustrack` **is** `goPrevious`, so the
+three-second restart rule is the same rule on a lock screen as under a
+thumb, because it is the same function. The cost: this rides on
+`lyrics.js` loading. It always does on `access.html`.
+
+**`playPause()` was split into `startPlaying()` and `stopPlaying()`.** A
+button on the page toggles — it is showing you which of the two it will
+do. A phone sends `play` and `pause` as separate orders, and a toggle
+there would stop a song that a stray `play` arrived for. `playPause()`
+now calls the other two, so there is one copy of the work.
+
+**`seekbackward` and `seekforward` are set to `null` on purpose.** Offer
+to jump ten seconds and iOS gives the listener two jump buttons; decline,
+and it gives them skip-track buttons instead, which is what an album
+wants. `nexttrack` is also handed `null` at the end of the album, which
+greys it out there the same way the panel's own Next greys out —
+`drawTransport()` does both in the same breath.
+
+**`setPositionState` is told when the truth changes, not per frame.** The
+phone runs its own clock from a position and a playback rate, so it needs
+a new reading on a seek, a pause, a new track — and nothing in between.
+Measured: zero extra calls across 2.5s of plain playback. It throws if
+the position runs past the duration, so the position is clamped and a
+missing or infinite duration clears the state instead.
+
+**The artwork is `COVER_STEM` plus `COVER_SIZES`** — 192, 384 and 512,
+built from the gitignored master with the same `sips` line as the sleeve.
+A phone picks the size it wants (Chrome takes the 192, so 19 KB rather
+than the page's 216 KB copy). Replacing the cover means new filenames for
+all four pictures, per the cache rule, so `COVER_STEM` changes here and
+the `src` changes in `access.html`.
+
+`access.media_album` and `access.media_artist` in `content.js` are the two
+lines under the title. They are deliberately their own keys rather than
+borrowed from `hero.byline_name`: what a lock screen calls the artist is
+not always what a page calls the writer.
+
+All of it sits behind `hasMedia`, and every `setActionHandler` behind a
+try/catch — a browser that has never heard of an action must not take the
+page down with it.
+
 **Timing new lyrics:** `tools/lyric-timer.html`, which is **gitignored and
 lives only on Eric's disk** — it runs by double-clicking and never needs to be
 online. Load a song and its words, tap Space per line, download the `.lrc`.

@@ -516,6 +516,7 @@
     numEl.textContent = track.number;
     titleEl.textContent = track.title;
     titleEl.hidden = false;
+    nameNowPlaying(track);  // and the same title on the phone's own screen
 
     loadToken++;              // anything still in the air belongs to the last track
     loadView();
@@ -727,6 +728,9 @@
         if (!isOnShow(audio)) return;
         sync(true);
         tickTransport();
+        // The one moment the phone's own clock is wrong: it has been
+        // counting on from where the song used to be.
+        reportPosition();
       });
     });
 
@@ -1072,6 +1076,14 @@
       nextButton.disabled = !current || !nextPlayable();
     }
 
+    // And the transport nobody can see. Handing back null at the end of
+    // the album greys the button out on the lock screen, the same way
+    // the panel's own Next greys out above.
+    if (hasMedia) {
+      handle('nexttrack', (current && nextPlayable()) ? goNext : null);
+      reportPlayback();
+    }
+
     tickTransport();
   }
 
@@ -1088,14 +1100,28 @@
     stageElapsed.textContent = clock(audio ? audio.currentTime : 0);
   }
 
-  function playPause() {
+  // Split in two because the page's buttons and the phone's mean
+  // different things by a press. A button on the page toggles — it is
+  // showing you which of the two it will do. The lock screen, a car
+  // stereo and an AirPod send `play` and `pause` as separate orders,
+  // and a toggle there would stop a song that a stray `play` arrived
+  // for. Same work, told apart.
+  function startPlaying() {
     if (!current) {
       var opener = firstPlayable();
       if (opener) opener.audio.play();    // its own play event does the rest
       return;
     }
     if (current.audio.paused) current.audio.play();
-    else current.audio.pause();
+  }
+
+  function stopPlaying() {
+    if (current && !current.audio.paused) current.audio.pause();
+  }
+
+  function playPause() {
+    if (current && !current.audio.paused) stopPlaying();
+    else startPlaying();
   }
 
   function skip(seconds) {
@@ -1107,6 +1133,121 @@
     scrolledAt = 0;                        // a deliberate move: follow it at once
     sync(true);
     tickTransport();
+  }
+
+  /* ---- The transport the listener cannot see -------------------------
+     The lock screen, the Control Center, a car stereo over Bluetooth,
+     the squeeze of an AirPod stem. To the browser these are one thing:
+     the Media Session. To this file they are a fourth transport — the
+     stage has one, the phone sheet has one, the album's own rows are
+     one — and like the others they move `current.audio` and nothing
+     else, and are painted from the same reading of it. Which is why
+     none of the logic below is new: `goPrevious` and `goNext` are the
+     panel's own buttons, three-second rule and all.
+
+     Everything here is optional. Where there is no mediaSession, or a
+     browser refuses a particular action, the page is exactly what it
+     was. */
+
+  var hasMedia = !!(window.navigator && navigator.mediaSession);
+
+  // The sleeve at the sizes a phone asks for. One stem and a list of
+  // widths: replacing the cover means new filenames for all of them —
+  // the cache rule for pictures — so this changes in one place, and
+  // the <img> in access.html in the other.
+  var COVER_STEM = 'assets/img/album-cover';
+  var COVER_SIZES = [192, 384, 512];
+
+  function sleeveArtwork() {
+    return COVER_SIZES.map(function (side) {
+      return {
+        src: COVER_STEM + '-' + side + '.jpg',
+        sizes: side + 'x' + side,
+        type: 'image/jpeg'
+      };
+    });
+  }
+
+  // What the handset shows: this song, on this album, by this writer.
+  // The title has come from content.js all along — it is the same
+  // string the album's own row is labelled with.
+  function nameNowPlaying(track) {
+    if (!hasMedia || !window.MediaMetadata || !track) return;
+    try {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: track.title,
+        artist: A.media_artist || '',
+        album: A.media_album || '',
+        artwork: sleeveArtwork()
+      });
+    } catch (e) { /* an older take on the same idea; the rest still works */ }
+  }
+
+  // Where the song has got to. The phone runs its own clock from this
+  // and a playback rate, so it wants telling when the truth changes —
+  // a seek, a pause, a new track — rather than sixty times a second.
+  function reportPosition() {
+    if (!hasMedia || !navigator.mediaSession.setPositionState) return;
+    var audio = current && current.audio;
+    var length = audio ? audio.duration : 0;
+    try {
+      if (!audio || !isFinite(length) || length <= 0) {
+        navigator.mediaSession.setPositionState();     // nothing to show yet
+        return;
+      }
+      navigator.mediaSession.setPositionState({
+        duration: length,
+        playbackRate: audio.playbackRate || 1,
+        // Clamped: a position past the end is the one thing this throws on.
+        position: Math.min(Math.max(0, audio.currentTime), length)
+      });
+    } catch (e) { /* a browser that disagrees about the numbers */ }
+  }
+
+  function reportPlayback() {
+    if (!hasMedia) return;
+    var audio = current && current.audio;
+    navigator.mediaSession.playbackState =
+      !audio ? 'none' : (audio.paused ? 'paused' : 'playing');
+    reportPosition();
+  }
+
+  function handle(action, handler) {
+    try {
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (e) { /* this browser has never heard of that one */ }
+  }
+
+  function wireMediaSession() {
+    if (!hasMedia) return;
+
+    handle('play', startPlaying);
+    handle('pause', stopPlaying);
+
+    // The panel's own two buttons, unchanged — so the three-second
+    // rule on Previous is the same rule on the lock screen as it is
+    // under a thumb, because it is the same function.
+    handle('previoustrack', goPrevious);
+    handle('nexttrack', goNext);
+
+    handle('seekto', function (details) {
+      var audio = current && current.audio;
+      if (!audio || !details || typeof details.seekTime !== 'number') return;
+      var length = audio.duration;
+      var to = Math.max(0, isFinite(length) ? Math.min(details.seekTime, length) : details.seekTime);
+      if (details.fastSeek && audio.fastSeek) audio.fastSeek(to);
+      else audio.currentTime = to;
+      scrolledAt = 0;                      // a deliberate move: follow it at once
+      sync(true);
+      tickTransport();
+      reportPosition();
+    });
+
+    // Turned down on purpose. Offer to jump ten seconds and iOS gives
+    // the listener two jump buttons; decline, and it gives them the
+    // skip-track buttons instead, which is what an album wants.
+    handle('seekbackward', null);
+    handle('seekforward', null);
   }
 
   /* ---- Carrying the panel on and off --------------------------------- */
@@ -1581,6 +1722,10 @@
       stage.hidden = false;
       setExpandButton();
     }
+
+    // The handset's own controls answer for the album from here on,
+    // whether or not anything on the page is on screen.
+    wireMediaSession();
 
     // Both transports at once: the stage's, and the phone's three
     // buttons, which have to be drawn before the panel is ever opened.

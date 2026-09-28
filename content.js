@@ -486,6 +486,15 @@ window.SITE_CONTENT = {
        is just noise. Write the title plainly. */
     cover_alt: "The album cover: a wave breaking on a foggy Carolina beach, a pier behind it in the mist, with the hand-painted title The Gray Man across the sky. Written by Eric Sorrels. A Musical in Three Hurricanes.",
 
+    /* ---- What a phone shows while a track plays ----
+       Start a song and the handset takes it over: the lock screen, the
+       Control Center, a car stereo over Bluetooth, the squeeze of an
+       AirPod. All of them show the song's title — which comes from the
+       list below — with these two lines under it, and the sleeve beside
+       them. Nothing here appears on the website itself. */
+    media_album: "The Gray Man",
+    media_artist: "Eric Sorrels",
+
     tracks: [
       "The Legend of the Gray Man",
       "Hurricane Chatter (2004)",
