@@ -31,7 +31,8 @@ assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
 assets/notes/NN.md     liner notes, in a small subset of Markdown
 assets/video/       the teasers, plus gitignored .mov masters
 assets/img/         title artwork, hero photograph, video posters, share card,
-                    and the two icon files (see The artwork → The icon)
+                    the album sleeve, and the two icon files
+                    (see The artwork → The icon, The album sleeve)
 assets/downloads/   the four supporter downloads (still empty — see below)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
 tools/              Claude's working tools, not part of the site
@@ -270,6 +271,41 @@ remeasuring.
 
 The hero photograph is portrait, so `background-position: center 62%` pins the
 wave crest to 62% of hero height on any screen width.
+
+### The album sleeve
+
+`assets/img/album-cover.jpg` heads the album section of `access.html`,
+**in place of the section label that used to say "THE ALBUM"** — the words
+on the sleeve say it better, so `access.tracks_label` is gone from
+`content.js` entirely. Centred, `min(100%, 400px)`, and it inherits the
+3.5em of air the label had beneath it, so the track list is untouched.
+No border: the sleeve carries a paper edge of its own and a frame around
+a frame is one too many. The `width`/`height` attributes in the markup
+are the file's real pixels, which is what stops the track list jumping as
+it loads.
+
+**Eric supplies a 2000px, ~5 MB PNG; the site gets a 900px JPEG.** The
+page shows it at 400px, so the master is about 25× more than anyone needs
+and would land on phones alongside twenty audio files. `album-cover.png`
+is therefore **gitignored**, the same bargain as the video masters:
+
+```
+sips -s format jpeg -s formatOptions 82 --resampleWidth 900 \
+  assets/img/album-cover.png --out assets/img/album-cover.jpg
+```
+
+That lands ~216 KB and holds the brush texture, the paper grain and the
+spray. Check a detailed area against the master rather than a flat one.
+Replacing the sleeve means a **new filename** per the cache rule for
+images, and updating the `src` in `access.html`.
+
+**`data-content-alt` does not run the asterisk convention.** `main.js`
+applies `format()` — which turns `*stars*` into the show-title
+treatment — only where it writes HTML. The alt path calls
+`setAttribute('alt', …)` with the raw string, so stars written there are
+read out loud as stars. `access.cover_alt` says so in its own comment.
+(`hero.title` is an array of plain words, so the two existing alt slots
+were never affected.)
 
 ### The icon
 

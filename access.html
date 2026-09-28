@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=44" />
+  <link rel="stylesheet" href="assets/css/style.css?v=45" />
 </head>
 <body>
 
@@ -178,7 +178,23 @@
 
     <section class="section section--ink section--from-paper texture-grain">
       <div class="section__inner section__inner--wide">
-        <p class="section-label" data-content="access.tracks_label">The Album</p>
+        <!-- The album's cover, standing in for the label that used to
+             head this section. The words on the sleeve say what it is
+             better than "THE ALBUM" did.
+
+             The width and height attributes are the picture's real
+             pixels: they tell the browser the shape before the file
+             arrives, so the track list below doesn't jump when it
+             lands. Its alt text — read aloud by a screen reader, and
+             shown if the file ever goes missing — is in content.js.
+
+             To change the cover: put the new one in assets/img/ under
+             a NEW NAME, which is the cache rule for pictures, and ask
+             Claude to point this at it. -->
+        <img class="album-cover" src="assets/img/album-cover.jpg"
+             width="900" height="900" loading="lazy" decoding="async"
+             alt="" data-content-alt="access.cover_alt" />
+
         <div id="trackList" class="track-list"></div>
       </div>
     </section>
@@ -195,12 +211,12 @@
 
   </main>
 
-  <script src="content.js?v=44"></script>
-  <script src="assets/js/main.js?v=44"></script>
+  <script src="content.js?v=45"></script>
+  <script src="assets/js/main.js?v=45"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=44"></script>
-  <script src="assets/js/access.js?v=44"></script>
+  <script src="assets/js/lyrics.js?v=45"></script>
+  <script src="assets/js/access.js?v=45"></script>
 </body>
 </html>

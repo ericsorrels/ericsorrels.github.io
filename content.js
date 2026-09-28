@@ -470,7 +470,22 @@ window.SITE_CONTENT = {
     // same way as lyrics_version just above.
     notes_version: 1,
 
-    tracks_label: "The Album",
+    /* ---- The album's cover ----
+       The picture above the track list. Nobody reads these words: they
+       are what a screen reader says aloud to someone who cannot see the
+       sleeve, and what shows in its place if the file ever goes astray.
+       So describe the picture, don't advertise it.
+
+       The picture itself is  assets/img/album-cover.jpg  — to change
+       it, put the new one in that folder under a NEW name and ask
+       Claude to point the page at it.
+
+       One difference from the rest of this file: *stars* do nothing
+       here. Everywhere else they set the show's name in capitals, but
+       this line is read out rather than drawn, and a star read aloud
+       is just noise. Write the title plainly. */
+    cover_alt: "The album cover: a wave breaking on a foggy Carolina beach, a pier behind it in the mist, with the hand-painted title The Gray Man across the sky. Written by Eric Sorrels. A Musical in Three Hurricanes.",
+
     tracks: [
       "The Legend of the Gray Man",
       "Hurricane Chatter (2004)",
