@@ -572,8 +572,8 @@ window.SITE_CONTENT = {
     downloads_label: "Downloads",
     downloads: [
       { label: "Listening Guide", file: "assets/downloads/listening-guide.pdf" },
-      { label: "Digital Lyric Book", file: "assets/downloads/digital-lyric-book.pdf" },
-      { label: "About Pawleys Island|and The Gray Man", file: "assets/downloads/about-pawleys-island.pdf" },
+      { label: "Lyric Booklet", file: "assets/downloads/digital-lyric-book.pdf" },
+      { label: "About the World", file: "assets/downloads/about-pawleys-island.pdf" },
     ],
 
     back_link: "Back to the main site",

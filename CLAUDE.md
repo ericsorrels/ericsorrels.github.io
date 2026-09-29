@@ -307,12 +307,19 @@ than in the closing one where they started — moved 29 September 2026.
 holding the link clear of the buttons, and the link is now alone in its
 section with only the section's own padding around it.
 
-**Three across on a desktop, and two things had to give for it.** The
-column tracks were `minmax(240px, 1fr)`, which fits only two in the 720px
-album column — 220px fits three. And the About Pawleys Island label's `|`
-moved from after "and" to before it, because at 229px "ABOUT PAWLEYS
-ISLAND AND" wraps, stranding "AND" on a line of its own and making every
-button in the row 94px tall instead of 73. Same words, different break.
+**Three across on a desktop.** The column tracks were `minmax(240px, 1fr)`,
+which fits only two in the 720px album column; 220px fits three.
+
+**The labels have to stay short**, and this is the constraint to check
+before changing one. Each column is 229px, leaving about 197px of it for
+text, which holds roughly 15 letters of tracked capitals. A label longer
+than that wraps, and because grid rows are as tall as their tallest item,
+one long label makes *every* button in the row taller. That is what
+happened to "About Pawleys Island and The Gray Man": its `|` had to move
+from after "and" to before it just to keep the row at 73px rather than 94.
+The three were shortened to "Listening Guide", "Lyric Booklet" and "About
+the World" on 29 September 2026, and all three now hold one line at 53px
+with no `|` needed at all.
 
 Below that the grid falls to two columns, where three buttons leave one
 over; `.downloads > :last-child:nth-child(odd)` then gives it the whole
@@ -1049,7 +1056,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=54`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=55`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1086,7 +1093,7 @@ and a named vocalist for every track. Each has its own section above.
 **Unfinished, in rough order of how much they matter.**
 
 - **All three download buttons on the access page lead nowhere.** Listening
-  Guide, Digital Lyric Book and About Pawleys Island are named in
+  Guide, Lyric Booklet and About the World are named in
   `content.js` but `assets/downloads/` holds only its instructions file, so
   a supporter clicking any of them gets a 404. **Eric knows and is making
   the files; don't raise it again.** If they are still missing much later,
@@ -1096,7 +1103,13 @@ and a named vocalist for every track. Each has its own section above.
   was dropped on 29 September 2026. "Listening Guide" was briefly renamed
   "Liner Notes" the same day and put straight back — that name already
   belongs to the lyrics panel's handle, and one page should not have two
-  different things under it.)
+  different things under it.) **The three file names still read
+  `listening-guide.pdf`, `digital-lyric-book.pdf` and
+  `about-pawleys-island.pdf`**, which is no longer what two of the buttons
+  say. Left deliberately: Eric may already be writing files under those
+  names, and a button's label is a cheap thing to change where the name of
+  a file he is making is not. Worth offering to line them up once the files
+  exist.
 - **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
   Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
   replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3

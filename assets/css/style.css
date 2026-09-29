@@ -2780,7 +2780,9 @@ html.stage-open .stage .lyrics {
   display: grid;
   /* 220px, not the 240px this started at, and the difference is the whole
      point: the album column is 720px, and 240 leaves room for only two
-     across where 220 fits all three on one line. */
+     across where 220 fits all three on one line. Labels have to stay
+     short enough to hold one line in a 229px column — about 15 letters
+     of tracked capitals — or the whole row grows to the tallest of them. */
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1em;
   margin-top: 1em;
