@@ -39,3 +39,29 @@ tools/lyric-timer.html
 # the access password and the weather key.
 READ-ME-FIRST.txt
 cloudflare/HOW-TO-DEPLOY.txt
+
+# ---------------------------------------------------------------------
+# The album itself. THIS IS THE IMPORTANT ONE.
+#
+# These files used to live here and be published with the site, which
+# meant anyone who knew the address could download the whole album
+# without ever meeting the password — and so could anyone reading this
+# public repository. On 29 September 2026 they were taken out of the
+# repo and out of every commit in its history, and moved into private
+# storage at Cloudflare that only the vault relay can read.
+#
+# They are still in these folders on Eric's own computer, which is
+# where he works and what the local preview server reads. They are
+# simply never committed again. Putting one back in the repo would
+# publish it to the whole world and undo the lot.
+#
+# To add or replace a track or a lyric: put the file in the folder as
+# usual, and ask Claude to put it in the vault as well. See CLAUDE.md,
+# "The vault".
+# ---------------------------------------------------------------------
+assets/audio/*.mp3
+assets/lyrics/*.lrc
+assets/lyrics/*.txt
+assets/notes/*.md
+assets/downloads/*
+!assets/downloads/PUT-DOWNLOAD-FILES-HERE.txt
