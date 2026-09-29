@@ -38,6 +38,7 @@ assets/img/         title artwork, hero photograph, video posters, share
 assets/downloads/   the supporter downloads — GITIGNORED (still empty)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
 cloudflare/vault-worker.js     the album's keeper; holds no secrets — see The vault
+cloudflare/vault-schema.sql    the guest list's columns; no addresses, no secrets
 tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
                     grab-frame.swift, make-icon.swift, find-letter.swift
@@ -484,13 +485,55 @@ downloadable by anyone with the address, password or not, and also
 straight from the public repo. That is what this closes.
 
 **Nothing secret is in this repo.** The worker's source is committed on
-purpose; it holds no password. Two secrets live at Cloudflare and
+purpose; it holds no password. The secrets live at Cloudflare and
 nowhere else:
 
 | Secret | What it is |
 |---|---|
 | `VAULT_PASSWORD` | the password handed out with an invitation |
 | `SESSION_SECRET` | a long random string that signs session cookies |
+| `RESEND_API_KEY` | lets the worker hand an email to Resend to deliver |
+
+And two stores arrive as bindings: `VAULT`, the R2 bucket of album
+files, and `MEMBERS`, a D1 database — see The guest list below.
+
+#### Moving from one password to emailed codes — where this stands
+
+Begun 29 September 2026, in the stages Eric set out. **Stages 1 and 2
+are done; the password is still the only way in until Stage 3.**
+
+- **Done — the guest list.** A D1 database `grayman-members`, bound as
+  `MEMBERS`, one row per approved address. Its shape is in
+  `cloudflare/vault-schema.sql`: `email` (trimmed, lowercased, and
+  `COLLATE NOCASE` as a second guard), `source` (`manual` or
+  `gumroad`), `added_at`, `last_login`. **D1 rather than KV** because
+  the admin page must list everyone in order, and counting wrong code
+  attempts needs an exact answer immediately, which KV's eventual
+  consistency cannot give.
+- **Done — sending mail.** Resend, whose DNS was already in place on
+  the domain. `sendEmail()`, `normalizeEmail()` and `findMember()` are
+  in the worker, along with `GET /vault-api/send-test?to=…`, which
+  proves all three in one visit from a browser. Confirmed working
+  29 September 2026.
+- **Next — Stage 3:** replace the password box with an email box and a
+  6-digit code. Then 4, the admin page behind Cloudflare Access; 5,
+  Gumroad; 6, testing and `VAULT-GUIDE.md`.
+
+**`send-test` is temporary and comes out in Stage 4**, when the admin
+page takes the job over. Two things guard it and neither is a new
+secret: a valid vault session, and the address being on the guest list
+already — so it can never mail a stranger.
+
+**The emails' wording lives in `cloudflare/vault-worker.js`, not
+`content.js`.** That is the third deliberate exception to the
+one-rule: this code runs at Cloudflare and has no way to read
+`content.js`. Anything read on the *page* still belongs there.
+
+**Comments in `cloudflare/vault-schema.sql` must be the `/* … */`
+kind.** The D1 console runs a paste as a single line, so a `--` comment
+swallows the rest of the file and D1 answers "Requests without any
+query are not supported". That happened; it cost a round trip. Block
+comments survive being flattened.
 
 **To change the password**, edit `VAULT_PASSWORD` in the Cloudflare
 dashboard — Workers & Pages → `grayman-vault` → Settings → Variables and
