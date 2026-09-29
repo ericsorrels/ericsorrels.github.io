@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=55" />
+  <link rel="stylesheet" href="assets/css/style.css?v=56" />
 </head>
 <body>
 
@@ -51,6 +51,17 @@
     <p id="gateError" class="gate__error" hidden data-content="access.gate_error">
       That password isn't right &mdash; please check your invitation and try again.
     </p>
+
+    <!-- The way in for a visitor who has no password. Stays hidden until
+         a shop address is set in content.js → music.early_access.url —
+         the same address the button on the main page uses, so there is
+         only one to keep current. Its words are its own, in
+         content.js → access.gate_no_invite / gate_buy. -->
+    <div class="gate__invite" id="gateInvite" hidden>
+      <p class="gate__invite-line" data-content="access.gate_no_invite">No invitation?</p>
+      <a class="gate__buy" id="gateBuy" href="#" target="_blank" rel="noopener noreferrer"
+         data-content="access.gate_buy">Purchase Full Digital Access</a>
+    </div>
 
     <a class="gate__back" href="index.html" data-content="access.back_link">Back to the main site</a>
   </div>
@@ -216,12 +227,12 @@
 
   </main>
 
-  <script src="content.js?v=55"></script>
-  <script src="assets/js/main.js?v=55"></script>
+  <script src="content.js?v=56"></script>
+  <script src="assets/js/main.js?v=56"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=55"></script>
-  <script src="assets/js/access.js?v=55"></script>
+  <script src="assets/js/lyrics.js?v=56"></script>
+  <script src="assets/js/access.js?v=56"></script>
 </body>
 </html>

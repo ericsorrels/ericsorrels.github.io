@@ -494,6 +494,32 @@ publicly for five days before anyone noticed. `READ-ME-FIRST.txt` and
 `cloudflare/HOW-TO-DEPLOY.txt` are gitignored for that reason — they stay on
 Eric's disk. Check any new documentation file for secrets before adding it.
 
+### The locked door
+
+Under the password form, between it and the back link, the gate offers
+**"No invitation?" and a Purchase Full Digital Access button** — added
+29 September 2026, so someone who arrives without a password has somewhere
+to go other than away. It shows on the wrong-password screen too, which is
+when it is most use.
+
+**The shop address is not written twice.** `#gateBuy` takes its `href` from
+`music.early_access.url` — the same address the main page's button uses —
+so there is one place to change it and no way for the two to drift apart.
+Only the words are the gate's own (`access.gate_no_invite`,
+`access.gate_buy`), because "Purchase Early Digital Access" beside a
+password box is answering a different question from the one it answers
+under the album on the main page. The whole block is `hidden` until that
+address exists, the same rule the main page's button follows, so the site
+never shows a way to buy that leads nowhere. It is wired in `main.js`
+beside the main page's button, guarded on the element existing, since that
+file runs on both pages.
+
+**It cannot reuse `.cta__button`.** That one is paper on ink, for a dark
+section; the gate is paper, so it would be invisible. `.gate__buy` is
+outlined like the Enter button beside it but in `--gray-mid` rather than
+full ink, so the two read as first and second choice instead of competing
+— Enter is still the primary thing to do on that screen.
+
 The album is 20 tracks, expecting `assets/audio/01.mp3` … `20.mp3`, matched
 line-for-line against the `tracks:` list in `content.js`. Tracks with no file
 read "Soon" and disable themselves; play-through skips over them. Bonus tracks
@@ -1056,7 +1082,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=55`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=56`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1124,7 +1150,9 @@ and a named vocalist for every track. Each has its own section above.
   them one `.md` file at a time as he goes.
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
-  That is a setting on Gumroad's side, not something in this repo.
+  That is a setting on Gumroad's side, not something in this repo. Since
+  29 September 2026 the gate at least *points* at the shop (see The locked
+  door below); it still cannot let anyone through.
 
 Always syntax-check `content.js` after editing it — one missing comma blanks
 every word on the site. Evaluating it and printing the track list back is

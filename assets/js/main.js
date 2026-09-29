@@ -245,6 +245,20 @@
       cta.hidden = false;
     }
 
+    // The same offer on the access page's gate, for someone who arrived
+    // without a password. It borrows the shop address from the button
+    // above rather than holding its own, so there is only one to keep
+    // current — but its words are separate, because "Purchase Early
+    // Digital Access" beside a password box is answering a different
+    // question from the one it answers on the main page. Hidden until
+    // that address exists, by the same rule.
+    var gateInvite = document.getElementById('gateInvite');
+    var gateBuy = document.getElementById('gateBuy');
+    if (gateInvite && gateBuy && early && early.url) {
+      gateBuy.href = early.url;
+      gateInvite.hidden = false;
+    }
+
     // Contact — one column per block. Blank lines are left off entirely,
     // so a block with only an address doesn't leave gaps behind.
     var contactBox = document.querySelector('[data-content-list="contact.blocks"]');

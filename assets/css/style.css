@@ -1418,6 +1418,51 @@ img {
   margin: 2em 0 0;
 }
 
+/* The way in for a visitor with no password. Set apart from the form
+   above it, because it answers a different question from "what is the
+   password" — and kept quieter than Enter, which is still the primary
+   thing to do on this screen. */
+.gate__invite {
+  margin-top: 4.5em;
+  text-align: center;
+}
+
+.gate__invite-line {
+  font-family: var(--font-body);
+  font-size: clamp(0.66rem, 0.95vw, 0.74rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  margin: 0 0 1.4em;
+}
+
+/* Outlined like Enter, but in the middle gray rather than full ink, so
+   the two read as first and second choice instead of competing. On the
+   paper of the gate, not the ink of a section — which is why this can't
+   reuse .cta__button from the main page: that one is paper on ink, and
+   paper on paper is invisible. */
+.gate__buy {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--gray-mid);
+  padding: 1em 2.4em;
+  text-decoration: none;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.gate__buy:hover,
+.gate__buy:focus-visible {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
 .gate__back {
   font-family: var(--font-body);
   font-size: 0.58rem;

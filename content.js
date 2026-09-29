@@ -388,6 +388,14 @@ window.SITE_CONTENT = {
     gate_button: "Enter",
     gate_error: "That password isn't right — please check your invitation and try again.",
 
+    // The way in for someone who arrived without a password. The shop
+    // address is NOT repeated here — this button uses the same one as
+    // the button on the main page, at  music.early_access.url  above,
+    // so there is only ever one address to change. While that is left
+    // empty ("") neither button appears at all.
+    gate_no_invite: "No invitation?",
+    gate_buy: "Purchase Full Digital Access",
+
     /* ---- Once inside ----------------------------------------------------- */
     label: "Early Digital Access",
     heading: "The Concept Album",
