@@ -9,6 +9,7 @@
 //   POST /vault-api/login     a password in, a signed session cookie back
 //   POST /vault-api/logout    throws the cookie away
 //   GET  /vault-api/session   "am I still signed in?" — yes or no, nothing more
+//   GET  /vault-api/send-test?to=…   mails a test message — see Sending mail
 //   GET  /vault-api/audio/01.mp3      a file, but only with a good cookie
 //        /vault-api/lyrics/01.lrc
 //        /vault-api/notes/01.md
@@ -19,12 +20,16 @@
 // reason to tell a stranger that.
 //
 // NOTHING SECRET IS WRITTEN IN THIS FILE. It is committed to a public
-// repository on purpose. The two secrets live in Cloudflare:
+// repository on purpose. The secrets live in Cloudflare:
 //
 //   VAULT_PASSWORD   the password Eric gives out with an invitation
 //   SESSION_SECRET   a long random string, used to sign session cookies
+//   RESEND_API_KEY   lets this worker hand an email to Resend to deliver
 //
-// and the bucket arrives as the binding  VAULT.
+// and two stores arrive as bindings:
+//
+//   VAULT     the private R2 bucket holding the album's files
+//   MEMBERS   the D1 database listing who is allowed in — see The guest list
 
 export default {
   async fetch(request, env) {
@@ -37,6 +42,7 @@ export default {
     if (route === 'login') return handleLogin(request, env);
     if (route === 'logout') return handleLogout(request, env);
     if (route === 'session') return handleSession(request, env);
+    if (route === 'send-test') return handleSendTest(request, env, url);
 
     return handleFile(request, env, route);
   },
@@ -197,6 +203,196 @@ function cookieValue(header, name) {
 }
 
 /* ---------------------------------------------------------------------
+   The guest list
+
+   A D1 database — an ordinary table of rows and columns — arriving as
+   the binding MEMBERS. One row per person allowed in: their address,
+   where they came from ('manual' or 'gumroad'), when they were added,
+   and when they last signed in. Its shape is in cloudflare/vault-schema.sql.
+
+   Every address is put through normalizeEmail() before it is looked up
+   or stored, so the list can never end up holding two rows for one
+   person because of a capital letter or a stray space.
+   --------------------------------------------------------------------- */
+
+function normalizeEmail(raw) {
+  if (typeof raw !== 'string') return null;
+
+  const email = raw.trim().toLowerCase();
+
+  // Long enough to be an address, short enough to be a real one.
+  if (email.length < 6 || email.length > 254) return null;
+
+  // Deliberately loose. This is not trying to judge whether an address
+  // exists — only to refuse something that plainly is not one, so that
+  // nonsense never reaches the database or the mail relay. Whether an
+  // address is real is answered by whether the code arrives.
+  //
+  // What it does refuse is telling: spaces and line breaks, commas and
+  // semicolons, angle brackets and quotation marks. Those are the
+  // characters that turn one address into a list of them, or smuggle a
+  // second instruction into a mail header. An APOSTROPHE is deliberately
+  // allowed — o'brien@… is a real address and a common name, and the
+  // database is spoken to with bound values, so there is nothing for a
+  // quotation mark to break into.
+  if (!/^[^\s@,;:<>"]+@[^\s@.,;:<>"]+(\.[^\s@.,;:<>"]+)+$/.test(email)) {
+    return null;
+  }
+
+  return email;
+}
+
+async function findMember(env, email) {
+  if (!env.MEMBERS) return null;
+
+  return await env.MEMBERS.prepare(
+    'SELECT email, source, added_at, last_login FROM members WHERE email = ?'
+  )
+    .bind(email)
+    .first();
+}
+
+/* ---------------------------------------------------------------------
+   Sending mail
+
+   Handed to Resend, which does the delivering. The key is a Worker
+   secret and is never written down here, never logged, and never sent
+   anywhere except to Resend itself.
+
+   The FROM address is at graymanmusical.com, which is the domain Resend
+   has been given permission to send as. Replies are pointed at Eric's
+   own inbox instead, because hello@graymanmusical.com only forwards —
+   there is nobody sitting in it.
+
+   The wording of these emails is HERE rather than in content.js, which
+   is the one deliberate exception to the everything-lives-in-content.js
+   rule. This file runs at Cloudflare, not in a visitor's browser; it
+   has no way to read content.js and never will. Anything a visitor
+   reads on the PAGE still belongs in content.js.
+   --------------------------------------------------------------------- */
+
+const MAIL_FROM = 'The Gray Man <hello@graymanmusical.com>';
+const MAIL_REPLY_TO = 'hello@ericsorrels.com';
+
+async function sendEmail(env, { to, subject, text }) {
+  if (!env.RESEND_API_KEY) {
+    return { ok: false, why: 'No RESEND_API_KEY is set on this worker.' };
+  }
+
+  let reply;
+  try {
+    reply = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: MAIL_FROM,
+        to: [to],
+        reply_to: MAIL_REPLY_TO,
+        subject,
+        text,
+      }),
+    });
+  } catch (e) {
+    return { ok: false, why: 'Could not reach the mail relay at all.' };
+  }
+
+  if (!reply.ok) {
+    // Resend's own complaint, kept short and passed along, because it
+    // says useful things like "domain is not verified". It never
+    // contains the key.
+    let said = '';
+    try {
+      said = (await reply.text()).slice(0, 300);
+    } catch (e) {
+      said = '(no detail given)';
+    }
+    return { ok: false, why: `Resend answered ${reply.status}: ${said}` };
+  }
+
+  const data = await reply.json().catch(() => ({}));
+  return { ok: true, id: data.id || null };
+}
+
+/* ---------------------------------------------------------------------
+   The test message
+
+   Proves three things in one visit: that the guest list can be read,
+   that the mail key works, and that a message actually arrives.
+
+   TWO THINGS GUARD IT, and neither is a new secret:
+     - the visitor must already hold a valid vault session, so a
+       stranger gets the same 404 as they would for a track;
+     - the address must already be ON the guest list, so this can never
+       be used to send mail to someone who did not ask for it.
+
+   It answers in plain words rather than JSON, because it is read by a
+   person in a browser window. It goes away in Stage 4, when the admin
+   page takes the job over behind Cloudflare Access.
+   --------------------------------------------------------------------- */
+
+async function handleSendTest(request, env, url) {
+  if (request.method !== 'GET') return notFound();
+
+  const who = await readSession(request, env);
+  if (!who) return notFound();
+
+  const email = normalizeEmail(url.searchParams.get('to') || '');
+  if (!email) {
+    return plain(
+      'Add an address to the end, like  ?to=you@example.com  — and it has\n' +
+        'to be one already on the guest list.',
+      400
+    );
+  }
+
+  if (!env.MEMBERS) {
+    return plain(
+      'The guest list is not connected to this worker.\n\n' +
+        'Cloudflare dashboard → Workers & Pages → grayman-vault → Bindings,\n' +
+        'and add the D1 database grayman-members as  MEMBERS .',
+      500
+    );
+  }
+
+  const member = await findMember(env, email);
+  if (!member) {
+    return plain(
+      `${email} is not on the guest list, so nothing was sent.\n\n` +
+        'That is the guard working as intended: this can only ever mail\n' +
+        'somebody already approved. Add them in the D1 console first.',
+      404
+    );
+  }
+
+  const sent = await sendEmail(env, {
+    to: member.email,
+    subject: 'A test signal from The Gray Man',
+    text:
+      'This is a test, and nothing is asked of you.\n\n' +
+      'If it reached you, the vault can reach you — which is all it\n' +
+      'needed to know before it starts sending sign-in codes.\n\n' +
+      'You can close this and forget it.\n\n' +
+      '— The Gray Man\n' +
+      'https://graymanmusical.com\n',
+  });
+
+  if (!sent.ok) {
+    return plain(`The message was NOT sent.\n\n${sent.why}\n`, 502);
+  }
+
+  return plain(
+    `Sent to ${member.email}.\n\n` +
+      `Resend's reference for it: ${sent.id || '(none given)'}\n\n` +
+      'It should arrive within a few seconds. If it does not, look in\n' +
+      "spam, then at the Emails page in Resend — it records every\n" +
+      'message and what became of it.\n'
+  );
+}
+
+/* ---------------------------------------------------------------------
    Handing over a file
    --------------------------------------------------------------------- */
 
@@ -292,6 +488,18 @@ function notFound() {
   return new Response('Not found', {
     status: 404,
     headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+// A plain-words answer, for the routes a person reads in a browser
+// window rather than a script reads as JSON.
+function plain(message, status) {
+  return new Response(message, {
+    status: status || 200,
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'no-store',
+    },
   });
 }
 
