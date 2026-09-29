@@ -10,7 +10,8 @@
 //   POST /vault-api/verify-code   the code back, a signed session cookie out
 //   POST /vault-api/logout    throws the cookie away
 //   GET  /vault-api/session   "am I still signed in?" — yes or no, nothing more
-//   GET  /vault-api/send-test?to=…   mails a test message — see Sending mail
+//   GET  /vault-api/admin     the guest list, for Eric only — see The admin page
+//        /vault-api/admin/list · /add · /remove · /test-code
 //   GET  /vault-api/audio/01.mp3      a file, but only with a good cookie
 //        /vault-api/lyrics/01.lrc
 //        /vault-api/notes/01.md
@@ -27,6 +28,7 @@
 //                    the stored hashes of codes in flight, so changing it
 //                    signs everybody out and voids any code not yet used.
 //   RESEND_API_KEY   lets this worker hand an email to Resend to deliver
+//   ADMIN_EMAIL      the one address allowed to open the admin page
 //
 // There is no VAULT_PASSWORD any more. The shared password was removed
 // on 29 September 2026 in favour of a code emailed to an address on the
@@ -54,7 +56,11 @@ export default {
     if (route === 'verify-code') return handleVerifyCode(request, env);
     if (route === 'logout') return handleLogout(request, env);
     if (route === 'session') return handleSession(request, env);
-    if (route === 'send-test') return handleSendTest(request, env, url);
+
+    if (route === 'admin') return handleAdminPage(request, env);
+    if (route.startsWith('admin/')) {
+      return handleAdminApi(request, env, route.slice('admin/'.length));
+    }
 
     return handleFile(request, env, route);
   },
@@ -362,8 +368,34 @@ function handleLogout(request, env) {
 
 async function handleSession(request, env) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return notFound();
+
   const who = await readSession(request, env);
-  return json({ ok: !!who }, who ? 200 : 401);
+  if (!who) return json({ ok: false }, 401);
+
+  // Still on the list? A session is good for thirty days, so without
+  // this, taking somebody off the guest list would only stop them being
+  // sent NEW codes — they would go on walking in until their cookie ran
+  // out. The page asks this on every load, so a removal takes hold the
+  // next time they open it.
+  //
+  // Asked here and not on every file: this runs once per page load,
+  // where a check on each track would sit in the middle of seeking.
+  // The gap that leaves is small and worth naming — somebody removed
+  // while the page is already open keeps playing until they reload. To
+  // end every session everywhere at once, change SESSION_SECRET.
+  //
+  // It fails OPEN, like the brake does. If D1 cannot be reached, a
+  // listener is left alone rather than thrown out of an album they paid
+  // for because a database had a bad minute.
+  try {
+    if (env.MEMBERS && !(await findMember(env, who))) {
+      return json({ ok: false }, 401);
+    }
+  } catch (e) {
+    /* leave them be */
+  }
+
+  return json({ ok: true }, 200);
 }
 
 /* ---------------------------------------------------------------------
@@ -553,80 +585,381 @@ async function sendEmail(env, { to, subject, text }) {
 }
 
 /* ---------------------------------------------------------------------
-   The test message
+   The admin page
 
-   Proves three things in one visit: that the guest list can be read,
-   that the mail key works, and that a message actually arrives.
+   Eric's own view of the guest list: who is on it, where each came
+   from, when they last signed in; a box to paste a batch of addresses
+   into; a way to remove one; and a button that posts him a real code.
 
-   TWO THINGS GUARD IT, and neither is a new secret:
-     - the visitor must already hold a valid vault session, so a
-       stranger gets the same 404 as they would for a track;
-     - the address must already be ON the guest list, so this can never
-       be used to send mail to someone who did not ask for it.
+   TWO LOCKS, ON PURPOSE, AND THEY ARE INDEPENDENT.
 
-   It answers in plain words rather than JSON, because it is read by a
-   person in a browser window. It goes away in Stage 4, when the admin
-   page takes the job over behind Cloudflare Access.
+   The first is Cloudflare Access, set up in the dashboard against
+   graymanmusical.com/vault-api/admin* — it stops a request at the edge
+   before this worker is even asked. The second is right here:
+   requireAdmin() insists on a valid vault session whose subject is
+   ADMIN_EMAIL, which means signing in with a code like anybody else.
+
+   Why both. Access is configuration, and configuration can be edited,
+   expire, or be set up against the wrong path — and if it ever lapsed,
+   the first lock would silently be gone with nothing to say so. The
+   second lock is in this file, cannot be switched off from a dashboard,
+   and relies on nothing but a signature this worker made itself.
+
+   NOTE WHAT IS NOT TRUSTED. Access announces who it let through in a
+   Cf-Access-Authenticated-User-Email header, and it is tempting to read
+   it. Nothing here does. A header is only as good as the thing in front
+   of it: with Access off, or on a path it does not cover, anyone could
+   send that header themselves and be believed. The session cookie
+   cannot be forged, because verifying it needs SESSION_SECRET.
+
+   The page's wording is hardcoded rather than in content.js. It is a
+   tool of Eric's, like tools/lyric-timer.html — no visitor ever sees
+   it, and it has to work with no site around it.
    --------------------------------------------------------------------- */
 
-async function handleSendTest(request, env, url) {
-  if (request.method !== 'GET') return notFound();
+async function requireAdmin(request, env) {
+  if (!env.ADMIN_EMAIL || !env.MEMBERS) return null;
 
   const who = await readSession(request, env);
-  if (!who) return notFound();
+  if (!who) return null;
 
-  const email = normalizeEmail(url.searchParams.get('to') || '');
-  if (!email) {
-    return plain(
-      'Add an address to the end, like  ?to=you@example.com  — and it has\n' +
-        'to be one already on the guest list.',
-      400
-    );
+  const allowed = normalizeEmail(env.ADMIN_EMAIL);
+  return allowed && who === allowed ? who : null;
+}
+
+async function handleAdminPage(request, env) {
+  if (request.method !== 'GET') return notFound();
+
+  // Not a 403 and not a login prompt: the same blank 404 a stranger gets
+  // for anything else here. There is no reason to tell anyone this page
+  // exists.
+  if (!(await requireAdmin(request, env))) return notFound();
+
+  return new Response(ADMIN_PAGE, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+      // It draws on nothing and talks to nowhere but itself.
+      'content-security-policy':
+        "default-src 'none'; style-src 'unsafe-inline'; " +
+        "script-src 'unsafe-inline'; connect-src 'self'",
+    },
+  });
+}
+
+async function handleAdminApi(request, env, action) {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return notFound();
+
+  if (action === 'list' && request.method === 'GET') {
+    const found = await env.MEMBERS.prepare(
+      'SELECT email, source, added_at, last_login FROM members ' +
+        'ORDER BY added_at DESC, email ASC'
+    ).all();
+
+    return json({ ok: true, you: admin, members: found.results || [] }, 200);
   }
 
-  if (!env.MEMBERS) {
-    return plain(
-      'The guest list is not connected to this worker.\n\n' +
-        'Cloudflare dashboard → Workers & Pages → grayman-vault → Bindings,\n' +
-        'and add the D1 database grayman-members as  MEMBERS .',
-      500
-    );
+  if (action === 'add' && request.method === 'POST') {
+    const body = await readJson(request);
+    return json(await addMembers(env, body.emails), 200);
   }
 
-  const member = await findMember(env, email);
-  if (!member) {
-    return plain(
-      `${email} is not on the guest list, so nothing was sent.\n\n` +
-        'That is the guard working as intended: this can only ever mail\n' +
-        'somebody already approved. Add them in the D1 console first.',
-      404
-    );
+  if (action === 'remove' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+
+    // Their own address would lock Eric out of this page.
+    if (email === admin) {
+      return json({ ok: false, why: 'That is you — removing it would lock you out.' }, 400);
+    }
+
+    await env.MEMBERS.batch([
+      env.MEMBERS.prepare('DELETE FROM members WHERE email = ?').bind(email),
+      env.MEMBERS.prepare('DELETE FROM codes WHERE email = ?').bind(email),
+    ]);
+
+    return json({ ok: true, removed: email }, 200);
   }
 
-  const sent = await sendEmail(env, {
-    to: member.email,
-    subject: 'A test signal from The Gray Man',
-    text:
-      'This is a test, and nothing is asked of you.\n\n' +
-      'If it reached you, the vault can reach you — which is all it\n' +
-      'needed to know before it starts sending sign-in codes.\n\n' +
-      'You can close this and forget it.\n\n' +
-      '— The Gray Man\n' +
-      'https://graymanmusical.com\n',
+  if (action === 'test-code' && request.method === 'POST') {
+    // A real code by the real route, so this tests the thing itself
+    // rather than a rehearsal of it.
+    await postCode(env, admin);
+    return json({ ok: true, sent: admin }, 200);
+  }
+
+  return notFound();
+}
+
+/* Pulls every address out of whatever was pasted in — one per line, a
+   row of commas, a column out of a spreadsheet, or "Name <a@b.com>"
+   straight from a mail client. Anything with an @ in it is a candidate;
+   everything else in the text is passed over without comment, because
+   a pasted list is full of names and headings and none of that is an
+   error worth reporting.
+
+   Already-known addresses are left exactly as they are — their source,
+   the day they were added and their last sign-in all survive, which is
+   what makes pasting the same list twice harmless. */
+async function addMembers(env, text) {
+  const raw = typeof text === 'string' ? text : '';
+  // Nothing is required after the @, deliberately: "someone@" with the
+  // domain missed off is picked up so it can be reported back as not an
+  // address, rather than passed over in silence like the names and
+  // headings around it. A token has to have something BEFORE the @
+  // though, or every @handle in a pasted note becomes a complaint.
+  const found = raw.match(/[^\s<>,;"]+@[^\s<>,;"]*/g) || [];
+
+  const good = [];
+  const rejected = [];
+  const seen = new Set();
+
+  for (const candidate of found) {
+    const email = normalizeEmail(candidate.replace(/[.,;]+$/, ''));
+    if (!email) {
+      if (rejected.length < 20) rejected.push(candidate);
+      continue;
+    }
+    if (seen.has(email)) continue;
+    seen.add(email);
+    good.push(email);
+  }
+
+  if (!good.length) return { ok: true, added: 0, already: 0, rejected };
+
+  const before = await countMembers(env);
+  const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+
+  await env.MEMBERS.batch(
+    good.map((email) =>
+      env.MEMBERS.prepare(
+        'INSERT INTO members (email, source, added_at) VALUES (?, ?, ?) ' +
+          'ON CONFLICT(email) DO NOTHING'
+      ).bind(email, 'manual', now)
+    )
+  );
+
+  const added = (await countMembers(env)) - before;
+
+  return {
+    ok: true,
+    added,
+    already: good.length - added,
+    rejected,
+  };
+}
+
+async function countMembers(env) {
+  const row = await env.MEMBERS.prepare('SELECT count(*) AS n FROM members').first();
+  return row ? row.n : 0;
+}
+
+// The page itself. Plain on purpose — it is a workbench, not a part of
+// the show — but it borrows the site's paper and ink so it does not feel
+// like somebody else's software. No fonts, no libraries, nothing loaded
+// from anywhere: it has to work on its own.
+const ADMIN_PAGE = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>The guest list — The Gray Man</title>
+<style>
+  :root { --paper:#EDE8DD; --ink:#1B1A17; --soft:#35322C; --faint:#5C584E; --gray:#8B8579; --edge:#D3CCB8; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2.5rem 1.25rem 6rem; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  main { max-width: 56rem; margin: 0 auto; }
+  h1 { font-size:1.05rem; letter-spacing:.28em; text-transform:uppercase; font-weight:600; margin:0 0 .4rem; }
+  .who { color:var(--faint); font-size:.85rem; margin:0 0 2.5rem; }
+  h2 { font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--faint);
+       font-weight:600; margin:2.75rem 0 .9rem; }
+  textarea { width:100%; min-height:7.5rem; padding:.8rem; background:#fff; color:var(--ink);
+             border:1px solid var(--edge); border-radius:2px; font:inherit; font-size:.95rem; resize:vertical; }
+  button { font:inherit; font-size:.68rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
+           color:var(--ink); background:transparent; border:1px solid var(--ink);
+           padding:.75rem 1.5rem; cursor:pointer; border-radius:2px; }
+  button:hover:not(:disabled) { background:var(--ink); color:var(--paper); }
+  button:disabled { color:var(--gray); border-color:var(--gray); cursor:default; }
+  .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-top:1rem; }
+  .said { font-size:.9rem; color:var(--soft); margin:1rem 0 0; min-height:1.4rem; }
+  .said b { color: var(--ink); }
+  table { width:100%; border-collapse:collapse; margin-top:.5rem; font-size:.9rem; }
+  th { text-align:left; font-size:.62rem; letter-spacing:.18em; text-transform:uppercase;
+       color:var(--faint); font-weight:600; padding:.6rem .7rem; border-bottom:1px solid var(--edge); }
+  td { padding:.65rem .7rem; border-bottom:1px solid rgba(211,204,184,.6); vertical-align:middle; }
+  /* Dates and their headings never break: "Sep 20," over "2026" reads as
+     two facts rather than one. Only the address column is allowed to
+     wrap, because some addresses genuinely are that long. */
+  th, td.when { white-space:nowrap; }
+  td.addr { font-weight:500; word-break:break-all; white-space:normal; }
+  .tag { font-size:.6rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+         border:1px solid var(--edge); border-radius:2px; padding:.16rem .5rem; white-space:nowrap; }
+  .never { color:var(--gray); }
+  .x { border:none; color:var(--gray); font-size:.62rem; padding:.35rem .5rem; letter-spacing:.14em; }
+  .x:hover:not(:disabled) { background:transparent; color:var(--ink); text-decoration:underline; }
+  .note { font-size:.82rem; color:var(--faint); margin:.6rem 0 0; }
+  @media (max-width:620px) { .hide-narrow { display:none; } body { padding-top:1.5rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>The guest list</h1>
+  <p class="who" id="who">&nbsp;</p>
+
+  <h2>Add people</h2>
+  <textarea id="paste" placeholder="Paste addresses here — one per line, separated by commas, or copied out of an email. Anything that isn't an address is ignored."></textarea>
+  <div class="row">
+    <button id="addBtn">Add these</button>
+    <span class="said" id="addSaid"></span>
+  </div>
+
+  <h2>On the list — <span id="count">…</span></h2>
+  <table>
+    <thead><tr>
+      <th>Email</th><th>Source</th><th class="hide-narrow">Added</th><th>Last signed in</th><th></th>
+    </tr></thead>
+    <tbody id="rows"><tr><td colspan="5" class="never">Reading the list…</td></tr></tbody>
+  </table>
+  <p class="note">Removing somebody stops any new code being sent to them. If they are
+    signed in already, that session lasts until it runs out — to end every session at
+    once, change SESSION_SECRET in the Cloudflare dashboard.</p>
+
+  <h2>Check the post</h2>
+  <div class="row">
+    <button id="testBtn">Send myself a code</button>
+    <span class="said" id="testSaid"></span>
+  </div>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  function ask(path, body) {
+    return fetch('/vault-api/admin/' + path, {
+      method: body ? 'POST' : 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+      .catch(function () { return null; });
+  }
+
+  function safe(text) {
+    var d = document.createElement('div');
+    d.textContent = text == null ? '' : String(text);
+    return d.innerHTML;
+  }
+
+  function day(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d)) return String(iso);
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function busy(button, on, word) {
+    button.disabled = on;
+    if (on) { button.dataset.said = button.textContent; button.textContent = word; }
+    else if (button.dataset.said) { button.textContent = button.dataset.said; }
+  }
+
+  var you = '';
+
+  function draw(list) {
+    $('count').textContent = list.length === 1 ? '1 person' : list.length + ' people';
+    if (!list.length) {
+      $('rows').innerHTML = '<tr><td colspan="5" class="never">Nobody yet.</td></tr>';
+      return;
+    }
+    $('rows').innerHTML = list.map(function (m) {
+      var seen = day(m.last_login);
+      // Your own row gets no Remove button. The worker refuses to delete
+      // it anyway — it would lock you out of this page — so offering the
+      // button would only be a way of being told no.
+      var last = (m.email === you)
+        ? '<span class="never">you</span>'
+        : '<button class="x" data-email="' + safe(m.email) + '">Remove</button>';
+      return '<tr><td class="addr">' + safe(m.email) + '</td>' +
+        '<td><span class="tag">' + safe(m.source) + '</span></td>' +
+        '<td class="when hide-narrow">' + safe(day(m.added_at) || '') + '</td>' +
+        '<td class="when">' + (seen ? safe(seen) : '<span class="never">never</span>') + '</td>' +
+        '<td style="text-align:right">' + last + '</td></tr>';
+    }).join('');
+  }
+
+  function load() {
+    return ask('list').then(function (r) {
+      if (!r || !r.ok) {
+        $('rows').innerHTML = '<tr><td colspan="5" class="never">The list could not be read.</td></tr>';
+        return;
+      }
+      you = r.you;
+      $('who').textContent = 'Signed in as ' + r.you;
+      draw(r.members);
+    });
+  }
+
+  $('addBtn').addEventListener('click', function () {
+    var text = $('paste').value;
+    if (!text.trim()) { $('addSaid').textContent = 'Nothing pasted yet.'; return; }
+    busy($('addBtn'), true, 'Adding…');
+    $('addSaid').textContent = '';
+    ask('add', { emails: text }).then(function (r) {
+      busy($('addBtn'), false);
+      if (!r || !r.ok) { $('addSaid').textContent = 'That did not work.'; return; }
+      var said = [];
+      said.push('<b>' + r.added + '</b> added');
+      if (r.already) said.push(r.already + ' already there');
+      if (r.rejected && r.rejected.length) {
+        said.push(r.rejected.length + ' not an address: ' + safe(r.rejected.join(', ')));
+      }
+      if (!r.added && !r.already && !(r.rejected || []).length) {
+        said = ['No addresses found in that.'];
+      }
+      $('addSaid').innerHTML = said.join(' · ');
+      if (r.added) $('paste').value = '';
+      load();
+    });
   });
 
-  if (!sent.ok) {
-    return plain(`The message was NOT sent.\n\n${sent.why}\n`, 502);
-  }
+  $('rows').addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-email]');
+    if (!button) return;
+    var email = button.dataset.email;
+    if (!window.confirm('Remove ' + email + ' from the guest list?')) return;
+    busy(button, true, '…');
+    ask('remove', { email: email }).then(function (r) {
+      if (!r || !r.ok) {
+        busy(button, false);
+        window.alert(r && r.why ? r.why : 'That did not work.');
+        return;
+      }
+      load();
+    });
+  });
 
-  return plain(
-    `Sent to ${member.email}.\n\n` +
-      `Resend's reference for it: ${sent.id || '(none given)'}\n\n` +
-      'It should arrive within a few seconds. If it does not, look in\n' +
-      "spam, then at the Emails page in Resend — it records every\n" +
-      'message and what became of it.\n'
-  );
-}
+  $('testBtn').addEventListener('click', function () {
+    busy($('testBtn'), true, 'Sending…');
+    $('testSaid').textContent = '';
+    ask('test-code', {}).then(function (r) {
+      busy($('testBtn'), false);
+      $('testSaid').textContent = (r && r.ok)
+        ? 'On its way to ' + r.sent + '. It is a real code, good for ten minutes.'
+        : 'That did not work.';
+    });
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>`;
 
 /* ---------------------------------------------------------------------
    Handing over a file

@@ -500,6 +500,7 @@ nowhere else:
 |---|---|
 | `SESSION_SECRET` | a long random string. It signs session cookies **and** the stored hashes of codes in flight, so changing it signs everybody out and voids any unused code |
 | `RESEND_API_KEY` | lets the worker hand an email to Resend to deliver |
+| `ADMIN_EMAIL` | the one address allowed to open the admin page |
 
 There was a third, `VAULT_PASSWORD`, until 29 September 2026. Nothing
 reads it now.
@@ -522,25 +523,22 @@ Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
   consistency cannot give.
 - **Done — sending mail.** Resend, whose DNS was already in place on
   the domain. `sendEmail()`, `normalizeEmail()` and `findMember()` are
-  in the worker, along with `GET /vault-api/send-test?to=…`, which
-  proves all three in one visit from a browser. Confirmed working
-  29 September 2026.
+  in the worker. Confirmed working 29 September 2026. (A temporary
+  `send-test` route proved it and was removed in Stage 4, the admin
+  page having taken the job.)
 - **Done — the gate.** Email in, six digits back, `?v=58`. The
   password is gone from the worker, from the page and from
   `content.js`. Two more tables, `codes` and `throttle`.
-- **Two dashboard steps belong to this stage and are Eric's to do** —
-  check they happened before trusting any of the above. Rotating
-  `SESSION_SECRET`, which ends every session issued under the old
-  password, and deleting the `VAULT_PASSWORD` secret, which nothing
-  reads any more. Until the rotation, anyone who signed in with the
-  password is still inside on a 30-day cookie.
-- **Next — Stage 4:** the admin page behind Cloudflare Access. Then 5,
-  Gumroad; 6, testing and `VAULT-GUIDE.md`.
-
-**`send-test` is temporary and comes out in Stage 4**, when the admin
-page takes the job over. Two things guard it and neither is a new
-secret: a valid vault session, and the address being on the guest list
-already — so it can never mail a stranger.
+- **Done — the admin page**, at `/vault-api/admin`. See The admin page
+  below.
+- **Dashboard steps that belong to these stages and are Eric's to do** —
+  check they happened rather than assuming. Rotating `SESSION_SECRET`,
+  which ends every session issued under the old password; deleting the
+  `VAULT_PASSWORD` secret, which nothing reads; adding `ADMIN_EMAIL`;
+  and setting up the Cloudflare Access application. Until the rotation,
+  anyone who signed in with the password is still inside on a 30-day
+  cookie.
+- **Next — Stage 5:** Gumroad. Then 6, testing and `VAULT-GUIDE.md`.
 
 **The emails' wording lives in `cloudflare/vault-worker.js`, not
 `content.js`.** That is the third deliberate exception to the
@@ -604,6 +602,57 @@ the gate does say plainly.** It is about what was typed, not about who
 is on the list, so it gives nothing away — and without it somebody who
 fat-fingered their own address would wait forever for an email that was
 never coming.
+
+### The admin page
+
+`/vault-api/admin`, added 29 September 2026. Eric's view of the guest
+list: who is on it, where each came from, when they last signed in, a
+box to paste a batch of addresses into, a Remove beside each row, and a
+button that posts him a real code by the real route.
+
+**Two locks, and they are independent.** Cloudflare Access on
+`graymanmusical.com/vault-api/admin*` stops a request at the edge; and
+`requireAdmin()` insists on a valid vault session whose subject is
+`ADMIN_EMAIL`. Access is configuration and configuration can be edited,
+expire, or be aimed at the wrong path — and if it lapsed, the first
+lock would be gone with nothing to say so. The second is in the file,
+cannot be switched off from a dashboard, and rests on a signature the
+worker made itself. Signing in to `access.html` first is therefore part
+of reaching the admin page, not a quirk.
+
+**The `Cf-Access-Authenticated-User-Email` header is deliberately not
+read.** Access sets it, and it is tempting. But a header is only as
+good as what stands in front of it: with Access off, or on a path it
+does not cover, anyone could send that header themselves and be
+believed. The cookie cannot be forged without `SESSION_SECRET`.
+
+**Its wording is hardcoded, not in `content.js`** — a tool of Eric's,
+like `tools/lyric-timer.html`. No visitor sees it and it must work with
+no site around it, so it loads no fonts and no libraries.
+
+**Pasting a list takes almost any shape.** Anything with an `@` in it
+is pulled out — one per line, commas, a spreadsheet column,
+`Name <a@b.com>` out of a mail client — and the names and headings
+around it are passed over without comment. Something with an `@` that
+*isn't* an address is reported back rather than dropped silently,
+including `someone@` with the domain missed off; that is why the
+extractor allows nothing after the `@`. Addresses already on the list
+keep their `source`, `added_at` and `last_login`, so pasting the same
+list twice is harmless.
+
+**Removing somebody now actually removes them.** `handleSession()`
+checks on every page load that the subject is still on the list, since
+a session lasts thirty days and otherwise a removed person would go on
+walking in until their cookie ran out. It is asked there and **not** on
+every file, where it would sit in the middle of seeking — so someone
+removed while the page is already open keeps playing until they reload.
+Rotating `SESSION_SECRET` is the instant, everybody-at-once lever. Like
+the brake, it **fails open**: if D1 cannot be reached, a listener is
+left alone rather than thrown out of an album they paid for.
+
+**Eric's own row has no Remove button**, because the worker refuses to
+delete `ADMIN_EMAIL` — it would lock him out of the page — and offering
+a button only to say no is worse than not offering it.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.
@@ -1208,6 +1257,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://graymanmusical.com/api/weather
   visual on the live page — reachability is not the same as rendering.
 - `~/Downloads` is blocked by macOS privacy protection; `~/Desktop` works. Ask
   Eric to put files on the Desktop.
+- **Always `LANG=en_US.UTF-8 pbcopy`, never bare `pbcopy`.** This shell has
+  no locale set, so macOS labels the clipboard Mac Roman while the bytes
+  on it are UTF-8. Every em dash then arrives somewhere else as `‚Äî` —
+  which is how one reached a real email's subject line, sent to a real
+  address, on 29 September 2026. **A round trip through `pbpaste` will
+  not show this**, because it misreads the label the same way and the two
+  errors cancel; check with `osascript -e 'the clipboard as text'`, which
+  reads it as any other app would.
 - **GitHub Desktop is usually open and watching this folder.** Now and then it
   holds the git index as it refreshes, and a commit fails with
   `index.lock … Operation timed out`. Nothing is broken and nothing is lost —
