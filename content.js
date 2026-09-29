@@ -516,7 +516,7 @@ window.SITE_CONTENT = {
       "Hurricane Charli": "Ella Frederickson, Keagan Kermode, & Charlie Brady",
       "September, Remember": "Christopher Tramantana",
       "Worth the Wait": "Greg Toft & Ella Frederickson",
-      "Pisces": "Keagan Kermode, Greg Toft, & Ella Frederickson",
+      "Pisces": "Keagan Kermode, Charlie Brady, & Ella Frederickson",
       "Riptide": "Michael Maliakel, Ella Frederickson, & Eric Sorrels",
       "Eye of the Storm I": "Eric Sorrels",
       "Some Things Never Leave You": "Greg Toft, Ella Frederickson, & Keagan Kermode",

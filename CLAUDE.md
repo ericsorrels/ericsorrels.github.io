@@ -1023,7 +1023,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=51`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=52`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
