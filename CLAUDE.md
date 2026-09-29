@@ -299,6 +299,18 @@ remeasuring.
 The hero photograph is portrait, so `background-position: center 62%` pins the
 wave crest to 62% of hero height on any screen width.
 
+### The downloads
+
+They sit **above the album cover**, at the head of the same section, rather
+than in the closing one where they started — moved 29 September 2026. The
+grid is two columns in the 720px album column, so an odd one out would be
+left stranded beside a gap; `.downloads > :last-child:nth-child(odd)` gives
+it the whole row instead. That is written as a rule about position rather
+than a count, so three buttons read as deliberate and four would still be a
+tidy 2×2. `.vault__back` lost its 5em top margin in the same move — that
+margin was holding the link clear of the buttons, and the link is now alone
+in its section with only the section's own padding around it.
+
 ### The album sleeve
 
 `assets/img/album-cover.jpg` heads the album section of `access.html`,
@@ -1023,7 +1035,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=52`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=53`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1059,15 +1071,19 @@ and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
-- **All four download buttons on the access page lead nowhere.** The Listening
-  Guide, Digital Lyric Book, About Pawleys Island and full-album zip are named
-  in `content.js` but `assets/downloads/` holds only its instructions file, so
-  a supporter clicking any of them gets a 404 — all four re-checked live on
-  28 September 2026, still missing. **Eric knows and is making the files;
-  don't raise it again.** If they are still missing much later, the
-  alternative is to have a button hide itself when its file is absent —
+- **All three download buttons on the access page lead nowhere.** Liner
+  Notes, Digital Lyric Book and About Pawleys Island are named in
+  `content.js` but `assets/downloads/` holds only its instructions file, so
+  a supporter clicking any of them gets a 404. **Eric knows and is making
+  the files; don't raise it again.** If they are still missing much later,
+  the alternative is to have a button hide itself when its file is absent —
   download buttons are always drawn, so unlike the video and buy-access
-  links, emptying a label won't do it.
+  links, emptying a label won't do it. (There were four: the full-album zip
+  was dropped on 29 September 2026, and "Listening Guide" became "Liner
+  Notes" the same day, its file renamed to `liner-notes.pdf` to match.
+  **That name is now shared with the lyrics panel's handle** — one is a PDF
+  to keep, the other the drawer on screen. Nothing breaks, but don't assume
+  a mention of "Liner Notes" means the panel.)
 - **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
   Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
   replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3

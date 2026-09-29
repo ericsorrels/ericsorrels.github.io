@@ -2781,6 +2781,20 @@ html.stage-open .stage .lyrics {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1em;
   margin-top: 1em;
+  /* The album cover sits directly below these now, and it carries no
+     top margin of its own. Wider than the site's usual 3.5em because
+     this is the gap between two whole blocks, not between a label and
+     the thing it labels. */
+  margin-bottom: 4.5em;
+}
+
+/* An odd one out takes the whole row rather than sitting stranded beside
+   a gap. The column is 720px, which fits exactly two of these, so three
+   buttons would otherwise read as a mistake. Written as a rule about
+   position, not a count, so it still holds if a button is added or
+   taken away: four stay a tidy 2×2, five go 2-2-wide. */
+.downloads > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .download-btn {
@@ -2809,7 +2823,11 @@ html.stage-open .stage .lyrics {
 
 .vault__back {
   display: inline-block;
-  margin-top: 5em;
+  /* No top margin: this 5em used to hold the link clear of the download
+     buttons above it, and those now sit above the album cover instead.
+     The link is the only thing left in its section, so the section's own
+     padding is all the air it needs. */
+  margin-top: 0;
   font-family: var(--font-body);
   font-size: 0.58rem;
   font-weight: 500;
