@@ -28,15 +28,16 @@ assets/js/
   lyrics.js         the panel following the album, and every transport
                     that is not a track row: the stage's, the panel's
                     head, and the lock screen's (access only)
-assets/audio/NN.mp3    one per track, numbered by position in the list
-assets/lyrics/NN.lrc   timed words; NN.txt is the untimed fallback
-assets/notes/NN.md     liner notes, in a small subset of Markdown
+assets/audio/NN.mp3    one per track — GITIGNORED, on Eric's disk only
+assets/lyrics/NN.lrc   timed words — GITIGNORED; NN.txt likewise
+assets/notes/NN.md     liner notes, Markdown — GITIGNORED
 assets/video/       the teasers, plus gitignored .mov masters
 assets/img/         title artwork, hero photograph, video posters, share
                     card, the album sleeve (four sizes), and the two icon
                     files — see The artwork → The album sleeve, The icon
-assets/downloads/   the four supporter downloads (still empty — see below)
+assets/downloads/   the supporter downloads — GITIGNORED (still empty)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
+cloudflare/vault-worker.js     the album's keeper; holds no secrets — see The vault
 tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
                     grab-frame.swift, make-icon.swift, find-letter.swift
@@ -533,6 +534,30 @@ each list.
 the files — their browser has to receive them to play them. This shuts
 out strangers, search engines and GitHub; it does not stop a subscriber
 keeping the mp3s.
+
+**The files are gone from this repo and from its history**, removed with
+`git filter-repo` on 29 September 2026 and force-pushed. 74 commits were
+rewritten; four vanished entirely because they held nothing but audio and
+lyrics (*Add the first three album tracks*, *Catch and Release*,
+*Hurricane Charli*, *Songs and Lyrics for Access Page*). 71 MB and 24
+audio blobs went — 24 rather than 18, because tracks 02, 12 and 13 had
+superseded earlier versions still sitting in history. The files remain in
+`assets/audio/` and `assets/lyrics/` on Eric's own disk, **gitignored**,
+which is what the preview server reads.
+
+**One thing this did not close.** GitHub keeps commits fetchable by their
+exact ID after a force-push, so
+`raw.githubusercontent.com/…/c675393…/assets/audio/01.mp3` still answers
+200. Only GitHub Support can purge that. The repo has 0 forks and no
+Wayback snapshot, so nobody plausibly holds those IDs — but it is not
+zero, and it should not be described as if the files were erased.
+
+**Cloudflare's edge cache outlived the deletion too**, which is worth
+remembering for any future removal. `.mp3` is cached by extension, so the
+site went on serving `assets/audio/01.mp3` for minutes after GitHub Pages
+had stopped — `cf-cache-status: EXPIRED` was the tell, while `.lrc`
+(not a cached extension) 404'd at once. Purging the Cloudflare cache is
+part of removing a published file, not an optional extra.
 
 **Previewing locally.** `tools/preview-server.py` answers `/vault-api/`
 itself, from the folders under `assets/`, and says everyone is signed in
