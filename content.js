@@ -454,7 +454,7 @@ window.SITE_CONTENT = {
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their
     // browser kept. Works exactly like audio_version above.
-    lyrics_version: 2,
+    lyrics_version: 3,
 
     /* ---- What you've written about the song ----
        The panel's other tab, beside Lyrics. Whichever tab a listener
@@ -512,7 +512,7 @@ window.SITE_CONTENT = {
        song quietly falls back to the line above. */
     track_artists: {
       "The Legend of the Gray Man": "Greg Toft, Ella Frederickson, & Keagan Kermode",
-      "Hurricane Chatter (2004)": "Brock Ward",
+      "Weather Chatter (2004)": "Brock Ward",
       "Hurricane Charli": "Ella Frederickson, Keagan Kermode, & Charlie Brady",
       "September, Remember": "Christopher Tramantana",
       "Worth the Wait": "Greg Toft & Ella Frederickson",
@@ -524,7 +524,7 @@ window.SITE_CONTENT = {
       "This Way": "Ella Frederickson & Keagan Kermode",
       "St. Elmo's Fire": "Eric Sorrels",
       "Eye of the Storm II": "Eric Sorrels",
-      "Hurricane Chatter (2022)": "Brock Ward",
+      "Weather Chatter (2022)": "Brock Ward",
       "The Gray Man": "Ella Frederickson",
       "How to Be Young": "Colin Donnell",
       "Is That You?": "Greg Toft & Ella Frederickson",
@@ -535,7 +535,7 @@ window.SITE_CONTENT = {
 
     tracks: [
       "The Legend of the Gray Man",
-      "Hurricane Chatter (2004)",
+      "Weather Chatter (2004)",
       "Hurricane Charli",
       "September, Remember",
       "Worth the Wait",
@@ -547,7 +547,7 @@ window.SITE_CONTENT = {
       "This Way",
       "St. Elmo's Fire",
       "Eye of the Storm II",
-      "Hurricane Chatter (2022)",
+      "Weather Chatter (2022)",
       "The Gray Man",
       "How to Be Young",
       "Is That You?",

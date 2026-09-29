@@ -507,7 +507,9 @@ numbered 17 or lower, so nothing needed renaming that time.)
 `access.track_artists` is looked up by, so a rename has to happen in both
 places or that song silently loses its singer. Numbers don't move on a
 rename, so the files on disk are fine. (Eric renamed track 19 to
-"I Will Reach For You (Demo)" on 28 September 2026 and did both.)
+"I Will Reach For You (Demo)" on 28 September 2026, and both "Hurricane
+Chatter" tracks — 02 and 14 — to "Weather Chatter" on 29 September. He
+did both places each time.)
 
 **To open the vault while testing, don't type the password** — that is Eric's
 to type. Set `sessionStorage` `tgm_early_access` to `open` in the preview and
@@ -1008,7 +1010,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=49`. `audio_version: 3`, `lyrics_version: 2`, `notes_version: 1`,
+Live at `?v=50`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1053,12 +1055,14 @@ and a named vocalist for every track. Each has its own section above.
   alternative is to have a button hide itself when its file is absent —
   download buttons are always drawn, so unlike the video and buy-access
   links, emptying a label won't do it.
-- **Three tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
-  Man · 18 Eye of the Storm III. They read "Soon" and are skipped. (Eric
-  added 04, 08 and 14 and replaced 02, 12 and 13 on 24 September 2026,
-  bumping `audio_version` to 3 — the whole album now runs at 127 kbps.)
-- **Six tracks have audio but no words:** 02, 04, 08, 12, 13 and 14. Their
-  panel says there are no lyrics, which is correct but not final.
+- **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
+  Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
+  replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3
+  — the whole album now runs at 127 kbps. He added 18 on 29 September;
+  `audio_version` was deliberately *not* bumped, per the rule below.)
+- **Three tracks have audio but no words:** 08, 13 and 18. Their panel says
+  there are no lyrics, which is correct but not final. (02, 04, 12 and 14
+  were written on 29 September 2026, `lyrics_version` to 3.)
 - **No track has liner notes yet.** `assets/notes/` holds only its
   instructions, so every track's Notes tab reads "No notes for this track"
   — correct, and what a half-filled album should look like. Eric writes
