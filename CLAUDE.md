@@ -302,14 +302,28 @@ wave crest to 62% of hero height on any screen width.
 ### The downloads
 
 They sit **above the album cover**, at the head of the same section, rather
-than in the closing one where they started — moved 29 September 2026. The
-grid is two columns in the 720px album column, so an odd one out would be
-left stranded beside a gap; `.downloads > :last-child:nth-child(odd)` gives
-it the whole row instead. That is written as a rule about position rather
-than a count, so three buttons read as deliberate and four would still be a
-tidy 2×2. `.vault__back` lost its 5em top margin in the same move — that
-margin was holding the link clear of the buttons, and the link is now alone
-in its section with only the section's own padding around it.
+than in the closing one where they started — moved 29 September 2026.
+`.vault__back` lost its 5em top margin in the same move: that margin was
+holding the link clear of the buttons, and the link is now alone in its
+section with only the section's own padding around it.
+
+**Three across on a desktop, and two things had to give for it.** The
+column tracks were `minmax(240px, 1fr)`, which fits only two in the 720px
+album column — 220px fits three. And the About Pawleys Island label's `|`
+moved from after "and" to before it, because at 229px "ABOUT PAWLEYS
+ISLAND AND" wraps, stranding "AND" on a line of its own and making every
+button in the row 94px tall instead of 73. Same words, different break.
+
+Below that the grid falls to two columns, where three buttons leave one
+over; `.downloads > :last-child:nth-child(odd)` then gives it the whole
+row rather than leaving it beside a gap. **That rule is confined to the
+two-column band by a media query, and the band's top end is 841px rather
+than the 824px the arithmetic gives.** `vw` counts the scrollbar and the
+element does not, so a browser reserving 15px for one reaches three
+columns about 18px later. Erring high costs a slightly late switch; erring
+low leaves a real browser with the stranded button this is here to
+prevent. Measured across 1440 / 900 / 842 / 824 / 700 / 560 / 500 / 375 —
+842 is exactly where the third column arrives.
 
 ### The album sleeve
 
@@ -1035,7 +1049,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=53`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=54`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1071,19 +1085,18 @@ and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
-- **All three download buttons on the access page lead nowhere.** Liner
-  Notes, Digital Lyric Book and About Pawleys Island are named in
+- **All three download buttons on the access page lead nowhere.** Listening
+  Guide, Digital Lyric Book and About Pawleys Island are named in
   `content.js` but `assets/downloads/` holds only its instructions file, so
   a supporter clicking any of them gets a 404. **Eric knows and is making
   the files; don't raise it again.** If they are still missing much later,
   the alternative is to have a button hide itself when its file is absent —
   download buttons are always drawn, so unlike the video and buy-access
   links, emptying a label won't do it. (There were four: the full-album zip
-  was dropped on 29 September 2026, and "Listening Guide" became "Liner
-  Notes" the same day, its file renamed to `liner-notes.pdf` to match.
-  **That name is now shared with the lyrics panel's handle** — one is a PDF
-  to keep, the other the drawer on screen. Nothing breaks, but don't assume
-  a mention of "Liner Notes" means the panel.)
+  was dropped on 29 September 2026. "Listening Guide" was briefly renamed
+  "Liner Notes" the same day and put straight back — that name already
+  belongs to the lyrics panel's handle, and one page should not have two
+  different things under it.)
 - **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
   Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
   replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3

@@ -571,9 +571,9 @@ window.SITE_CONTENT = {
     // so you can control where a long button title breaks.
     downloads_label: "Downloads",
     downloads: [
-      { label: "Liner Notes", file: "assets/downloads/liner-notes.pdf" },
+      { label: "Listening Guide", file: "assets/downloads/listening-guide.pdf" },
       { label: "Digital Lyric Book", file: "assets/downloads/digital-lyric-book.pdf" },
-      { label: "About Pawleys Island and|The Gray Man", file: "assets/downloads/about-pawleys-island.pdf" },
+      { label: "About Pawleys Island|and The Gray Man", file: "assets/downloads/about-pawleys-island.pdf" },
     ],
 
     back_link: "Back to the main site",

@@ -2778,7 +2778,10 @@ html.stage-open .stage .lyrics {
 
 .downloads {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  /* 220px, not the 240px this started at, and the difference is the whole
+     point: the album column is 720px, and 240 leaves room for only two
+     across where 220 fits all three on one line. */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1em;
   margin-top: 1em;
   /* The album cover sits directly below these now, and it carries no
@@ -2789,12 +2792,27 @@ html.stage-open .stage .lyrics {
 }
 
 /* An odd one out takes the whole row rather than sitting stranded beside
-   a gap. The column is 720px, which fits exactly two of these, so three
-   buttons would otherwise read as a mistake. Written as a rule about
-   position, not a count, so it still holds if a button is added or
-   taken away: four stay a tidy 2×2, five go 2-2-wide. */
-.downloads > :last-child:nth-child(odd) {
-  grid-column: 1 / -1;
+   a gap — but only at the widths where the grid is actually two columns.
+   Wide enough and all three fit on one line, where this rule would drag
+   the last one back onto a line of its own, which is the opposite of
+   what it is for.
+
+   Where that band is, so it can be worked out again if any of it moves:
+   `.section` is padded 8vw each side and `.section__inner--wide` caps at
+   720px, so the grid is min(720, viewport − a scrollbar − 0.16 × viewport).
+   Three 220px columns plus two 16px gaps need 692 of that, two need 456.
+
+   The scrollbar is why the top end is 841 and not the 824 the arithmetic
+   alone gives: `vw` counts the scrollbar and the element does not, so a
+   browser that reserves 15px for one reaches three columns ~18px later
+   than one with overlay scrollbars. **Erring high is deliberate.** Too
+   high and a wide window keeps the two-column look a little longer than
+   it must; too low and a real browser is left with a button stranded
+   beside a gap, which is the thing this rule exists to prevent. */
+@media (min-width: 543px) and (max-width: 841px) {
+  .downloads > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 .download-btn {
