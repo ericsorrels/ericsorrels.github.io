@@ -22,6 +22,7 @@ don't know.
 """
 
 import http.server
+import json
 import os
 import re
 import socket
@@ -49,6 +50,34 @@ def wifi_address():
         probe.close()
 
 
+# The album's files are not part of the website any more. They live in
+# private storage at Cloudflare and are handed out by a small program
+# there — see cloudflare/vault-worker.js — at addresses beginning
+# /vault-api/. None of that exists on this machine, so a local preview
+# would show an album of silent tracks with no words.
+#
+# So, for the preview only, /vault-api/audio/01.mp3 is answered from
+# assets/audio/01.mp3 on disk, and the same for lyrics, notes and
+# downloads. There is no password here and none is asked for: this
+# server listens on localhost, the files are already sitting on Eric's
+# own computer, and a lock between him and his own folder would protect
+# nothing. Nothing in this file is published — it is a tool, not part
+# of the site.
+VAULT_PREFIX = "/vault-api/"
+VAULT_FOLDERS = ("audio/", "lyrics/", "notes/", "downloads/")
+
+# Two switches for testing the password screen, which a preview would
+# otherwise never show, since it lets everyone straight through.
+#   TGM_PREVIEW=locked   the relay says "not signed in", so the gate
+#                        appears and a password can be typed at it
+#                        ("open sesame" is accepted, anything else is not)
+#   TGM_PREVIEW=offline  the relay refuses to answer at all, which is
+#                        what a dropped connection looks like
+# Unset, everything is open — which is what a preview should be.
+PREVIEW_MODE = os.environ.get("TGM_PREVIEW", "").strip().lower()
+PREVIEW_PASSWORD = "open sesame"
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=ROOT, **kwargs)
@@ -56,6 +85,58 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def translate_path(self, path):
+        """Map the relay's addresses onto the folders under assets/."""
+        clean = path.split("?", 1)[0].split("#", 1)[0]
+        if clean.startswith(VAULT_PREFIX):
+            rest = clean[len(VAULT_PREFIX):]
+            if any(rest.startswith(folder) for folder in VAULT_FOLDERS):
+                path = "/assets/" + rest
+        return super().translate_path(path)
+
+    def do_POST(self):
+        """Signing in, answered locally so the gate opens in a preview."""
+        if self.path.split("?", 1)[0] != VAULT_PREFIX + "login":
+            return self.send_error(404)
+
+        if PREVIEW_MODE == "offline":
+            return self.hang_up()
+
+        if PREVIEW_MODE == "locked":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                sent = json.loads(self.rfile.read(length) or b"{}")
+            except ValueError:
+                sent = {}
+            if sent.get("password") != PREVIEW_PASSWORD:
+                return self.answer(401, b'{"ok":false}')
+
+        self.answer(200, b'{"ok":true}')
+
+    def do_GET(self):
+        if self.path.split("?", 1)[0] == VAULT_PREFIX + "session":
+            if PREVIEW_MODE == "offline":
+                return self.hang_up()
+            if PREVIEW_MODE == "locked":
+                return self.answer(401, b'{"ok":false}')
+            return self.answer(200, b'{"ok":true}')
+        super().do_GET()
+
+    def answer(self, status, body):
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def hang_up(self):
+        """Close without answering — what an unreachable relay looks like."""
+        try:
+            self.close_connection = True
+            self.connection.close()
+        except OSError:
+            pass
 
     def send_head(self):
         """Serve a byte range when one is asked for; otherwise as usual."""

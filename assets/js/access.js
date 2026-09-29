@@ -1,10 +1,14 @@
 // THE GRAY MAN — Early Digital Access page.
 //
-// 1. The gate: checks the visitor's password against a scrambled
-//    fingerprint (SHA-256). The real password never appears in this
-//    file. To change the password, ask Claude for a new fingerprint.
+// 1. The gate: hands the password to the relay at Cloudflare and lets
+//    it decide. Nothing here can tell a right password from a wrong
+//    one, which is why there is nothing here worth picking apart.
 // 2. The vault: builds the album track players and download buttons
-//    from the lists in content.js.
+//    from the lists in content.js, pointing every file at the relay.
+//
+// The album's audio, words and downloads are not served by this site.
+// They sit in private storage that only the relay can read. See
+// cloudflare/vault-worker.js.
 
 (function () {
   'use strict';
@@ -13,107 +17,76 @@
   var A = C.access || {};
 
   /* ------------------------------------------------------------------
-     Password fingerprint (SHA-256 of the password).
+     The vault relay
+
+     The password is not checked here any more, and the album's files
+     are no longer part of this website at all. Both live behind a small
+     program running at Cloudflare — cloudflare/vault-worker.js — which
+     keeps the files in private storage and hands one over only to a
+     browser carrying a valid session.
+
+     That session is a cookie the relay sets for itself. This file never
+     sees it: it is marked HttpOnly, so no script on the page can read
+     it, which is the whole point. All the page can do is ask "am I
+     signed in?" and be told yes or no.
      ------------------------------------------------------------------ */
-  var PASSWORD_FINGERPRINT =
-    'd16adb04d252cfeee428d034dcc4d7c963c62478df37df39812ca5f4a0c34c5a';
 
-  var STORAGE_KEY = 'tgm_early_access';
+  var VAULT = '/vault-api/';
 
-  // Preferred path: the browser's built-in crypto tools.
-  function sha256Subtle(text) {
-    var data = new TextEncoder().encode(text);
-    return window.crypto.subtle.digest('SHA-256', data).then(function (buffer) {
-      return Array.prototype.map.call(new Uint8Array(buffer), function (b) {
-        return (b < 16 ? '0' : '') + b.toString(16);
-      }).join('');
+  // Where a vault file lives now — "audio/01.mp3" rather than
+  // "assets/audio/01.mp3", those being the folder names inside the
+  // private bucket.
+  function vaultUrl(path) {
+    return VAULT + String(path).replace(/^\/+/, '');
+  }
+
+  // A hint, not an answer: whether this browser has signed in before.
+  // It spares a returning listener the sight of the password screen
+  // flashing past while the relay is being asked. The relay is still
+  // what decides, so this cannot let anybody in.
+  var SEEN_KEY = 'tgm_vault_seen';
+
+  function remember(seen) {
+    try {
+      if (seen) window.localStorage.setItem(SEEN_KEY, '1');
+      else window.localStorage.removeItem(SEEN_KEY);
+    } catch (e) { /* private browsing can block storage; no matter */ }
+  }
+
+  function seenBefore() {
+    try {
+      return window.localStorage.getItem(SEEN_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Resolves true, false, or null — null meaning the relay could not be
+  // reached at all, which is a different thing from being turned away
+  // and is said differently on screen.
+  function askSession() {
+    return fetch(vaultUrl('session'), {
+      credentials: 'same-origin',
+      cache: 'no-store'
+    }).then(function (reply) {
+      return reply.ok;
+    }).catch(function () {
+      return null;
     });
   }
 
-  // Fallback for browsers/hosts without crypto.subtle.
-  // Public-domain SHA-256 implementation (ASCII input).
-  function sha256Fallback(ascii) {
-    function rightRotate(value, amount) {
-      return (value >>> amount) | (value << (32 - amount));
-    }
-
-    var maxWord = Math.pow(2, 32);
-    var result = '';
-    var words = [];
-    var asciiBitLength = ascii.length * 8;
-
-    var hash = [];
-    var k = [];
-    var primeCounter = 0;
-    var isComposite = {};
-    for (var candidate = 2; primeCounter < 64; candidate++) {
-      if (!isComposite[candidate]) {
-        for (var i = 0; i < 313; i += candidate) {
-          isComposite[i] = candidate;
-        }
-        hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
-        k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
-      }
-    }
-
-    ascii += '\x80';
-    while (ascii.length % 64 - 56) ascii += '\x00';
-    for (i = 0; i < ascii.length; i++) {
-      var j = ascii.charCodeAt(i);
-      if (j >> 8) return '';
-      words[i >> 2] |= j << ((3 - i) % 4) * 8;
-    }
-    words[words.length] = (asciiBitLength / maxWord) | 0;
-    words[words.length] = asciiBitLength;
-
-    for (j = 0; j < words.length;) {
-      var w = words.slice(j, j += 16);
-      var oldHash = hash;
-      hash = hash.slice(0, 8);
-
-      for (i = 0; i < 64; i++) {
-        var w15 = w[i - 15];
-        var w2 = w[i - 2];
-
-        var a = hash[0];
-        var e = hash[4];
-        var temp1 = hash[7]
-          + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
-          + ((e & hash[5]) ^ (~e & hash[6]))
-          + k[i]
-          + (w[i] = (i < 16) ? w[i] : (
-              w[i - 16]
-              + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-              + w[i - 7]
-              + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-            ) | 0
-          );
-        var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
-          + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-
-        hash = [(temp1 + temp2) | 0].concat(hash);
-        hash[4] = (hash[4] + temp1) | 0;
-      }
-
-      for (i = 0; i < 8; i++) {
-        hash[i] = (hash[i] + oldHash[i]) | 0;
-      }
-    }
-
-    for (i = 0; i < 8; i++) {
-      for (j = 3; j + 1; j--) {
-        var b = (hash[i] >> (j * 8)) & 255;
-        result += ((b < 16) ? '0' : '') + b.toString(16);
-      }
-    }
-    return result;
-  }
-
-  function fingerprint(text) {
-    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
-      return sha256Subtle(text);
-    }
-    return Promise.resolve(sha256Fallback(text));
+  function sendPassword(password) {
+    return fetch(vaultUrl('login'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password })
+    }).then(function (reply) {
+      return reply.ok;
+    }).catch(function () {
+      return null;
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -261,7 +234,7 @@
     audio.preload = 'metadata';
     // The version tag makes a replaced track count as a new address, so
     // browsers fetch it instead of replaying the copy they already hold.
-    audio.src = 'assets/audio/' + number + '.mp3'
+    audio.src = vaultUrl('audio/' + number + '.mp3')
       + (A.audio_version ? '?v=' + encodeURIComponent(A.audio_version) : '');
 
     var play = document.createElement('button');
@@ -432,7 +405,7 @@
       A.downloads.forEach(function (item) {
         var link = document.createElement('a');
         link.className = 'download-btn';
-        link.href = item.file;
+        link.href = vaultUrl(item.file);
         link.setAttribute('download', '');
 
         // A | in the label means "start a new line here".
@@ -460,34 +433,57 @@
      remembered visitor is let straight back in.)
      ------------------------------------------------------------------ */
 
-  var remembered = false;
-  try {
-    remembered = window.sessionStorage.getItem(STORAGE_KEY) === 'open';
-  } catch (e) { /* private-browsing modes can block storage; ignore */ }
-
-  if (remembered) {
-    unlock();
-  } else if (input) {
-    input.focus();
+  // The gate's own line, or the one for a relay that didn't answer.
+  // Those are different troubles and a listener deserves to know which.
+  function showError(key) {
+    if (!error) return;
+    var line = A[key];
+    if (line) error.textContent = line;
+    error.hidden = false;
   }
 
+  // The cookie decides, not this browser's memory of anything, and it
+  // lasts thirty days. seenBefore() governs only whether the password
+  // screen is shown while the question is still in the air.
+  if (seenBefore() && gate) gate.hidden = true;
+
+  askSession().then(function (signedIn) {
+    if (signedIn) {
+      remember(true);
+      unlock();
+      return;
+    }
+
+    remember(false);
+    if (gate) gate.hidden = false;
+    if (signedIn === null) showError('gate_offline');
+    if (input) input.focus();
+  });
+
   if (form) {
+    var busy = false;
+
     form.addEventListener('submit', function (event) {
       event.preventDefault();
-      var attempt = input.value;
-      fingerprint(attempt).then(function (hex) {
-        if (hex === PASSWORD_FINGERPRINT) {
-          try {
-            window.sessionStorage.setItem(STORAGE_KEY, 'open');
-          } catch (e) { /* ignore */ }
-          error.hidden = true;
-          input.value = '';
+      if (busy) return;
+
+      var attempt = input ? input.value : '';
+      if (!attempt) return;
+
+      busy = true;
+      sendPassword(attempt).then(function (ok) {
+        busy = false;
+        if (input) input.value = '';
+
+        if (ok) {
+          if (error) error.hidden = true;
+          remember(true);
           unlock();
-        } else {
-          error.hidden = false;
-          input.value = '';
-          input.focus();
+          return;
         }
+
+        showError(ok === null ? 'gate_offline' : 'gate_error');
+        if (input) input.focus();
       });
     });
   }

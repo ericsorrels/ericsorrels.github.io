@@ -462,37 +462,85 @@ published — so tell Eric to move it out once the web copy exists.
 
 ## Early access page (`access.html`)
 
-Password-gated, unlinked from the main site, and `noindex`. The password is
-stored **only as a SHA-256 hash** — `PASSWORD_FINGERPRINT` near the top of
-`assets/js/access.js`. The password itself is written nowhere in this repo,
-deliberately. Ask Eric for the value; never commit it.
-
-**To change the password** — Eric asks, and it takes about two minutes:
-
-```
-printf '%s' 'TheNewPassword' | shasum -a 256
-```
-
-Paste that hash over `PASSWORD_FINGERPRINT`, then **bump `?v=` in both
-`index.html` and `access.html`**. Skipping the bump is the whole trap: browsers
-go on running the cached `access.js` with the old fingerprint, and the password
-appears not to have changed at all.
-
-Unlock state lives in `sessionStorage`, not `localStorage`, so it's forgotten
-when the browser window closes. Nobody holds a lingering pass — change the
-password and everyone is asked for the new one on their next visit.
-
-**This is a courtesy gate, not security, and Eric knows it.** The repo is
-public and GitHub Pages serves every file, so anything under `assets/` is
-downloadable by anyone who knows the address, password or not. Changing the
-password closes the gate to people holding the old one; it does not make the
-album unreachable, and it does not remove anything from git history.
+Unlinked from the main site and `noindex`. **The album is not part of this
+website.** Its audio, words, notes and downloads live in a private
+Cloudflare R2 bucket, `grayman-vault`, which has no public address of its
+own, and the only way to them is a Worker — `cloudflare/vault-worker.js` —
+on the route `graymanmusical.com/vault-api/*`. See The vault below.
 
 **Anything committed becomes a public URL at `graymanmusical.com/<path>`.**
 A guide written for Eric with the password in it was committed and served
 publicly for five days before anyone noticed. `READ-ME-FIRST.txt` and
 `cloudflare/HOW-TO-DEPLOY.txt` are gitignored for that reason — they stay on
 Eric's disk. Check any new documentation file for secrets before adding it.
+
+### The vault
+
+Set up 29 September 2026, replacing a gate that only ever ran in the
+browser. Before it, `access.js` held a SHA-256 of the password and the
+files sat in `assets/` on a public GitHub Pages site — so the album was
+downloadable by anyone with the address, password or not, and also
+straight from the public repo. That is what this closes.
+
+**Nothing secret is in this repo.** The worker's source is committed on
+purpose; it holds no password. Two secrets live at Cloudflare and
+nowhere else:
+
+| Secret | What it is |
+|---|---|
+| `VAULT_PASSWORD` | the password handed out with an invitation |
+| `SESSION_SECRET` | a long random string that signs session cookies |
+
+**To change the password**, edit `VAULT_PASSWORD` in the Cloudflare
+dashboard — Workers & Pages → `grayman-vault` → Settings → Variables and
+Secrets. Nothing in the repo changes and **no `?v=` bump is needed**,
+because no part of the site knows the password any more. Sessions already
+issued keep working; changing `SESSION_SECRET` instead signs everybody
+out at once, which is the lever for a leaked session.
+
+**How a visitor gets in.** The page POSTs the typed password to
+`/vault-api/login`. The worker checks it and sets `tgm_vault`, a cookie
+that is **HttpOnly** (no script can read it, including the site's own),
+**Secure**, `SameSite=Lax`, and good for 30 days. It carries who it is
+for and when it expires, signed with `SESSION_SECRET` — so nothing is
+stored at Cloudflare's end and an edited cookie simply stops verifying.
+On load the page asks `/vault-api/session` rather than trusting anything
+it remembers. `tgm_vault_seen` in `localStorage` is only a hint that
+stops the password screen flashing past a returning listener; it cannot
+let anyone in.
+
+**Everything is a 404, never a 403.** A refusal would confirm a file is
+there. A track that exists and one that never did answer identically.
+
+**Addresses.** `assets/audio/01.mp3` became `/vault-api/audio/01.mp3`;
+the same for `lyrics/`, `notes/` and `downloads/`, which are the four
+folder names inside the bucket. `content.js` download entries are now
+written `downloads/name.pdf` — the `/vault-api/` is added by `access.js`.
+`safeKey()` in the worker allows those four prefixes and nothing else,
+which is also what stops `..` walking out of the vault.
+
+**`Cache-Control: private` on every file is load-bearing.** Cloudflare
+caches `.mp3` by default on extension. Without `private`, its edge could
+hold a track and hand it to somebody carrying no cookie at all — which
+would undo the whole thing.
+
+**Adding or replacing a track now takes two steps, not one.** The file
+goes in `assets/audio/` as before *and* into the bucket, or the track
+reads "Soon". Same for lyrics and notes. `content.js` says so beside
+each list.
+
+**Still true, and Eric knows it:** a listener who has signed in can save
+the files — their browser has to receive them to play them. This shuts
+out strangers, search engines and GitHub; it does not stop a subscriber
+keeping the mp3s.
+
+**Previewing locally.** `tools/preview-server.py` answers `/vault-api/`
+itself, from the folders under `assets/`, and says everyone is signed in
+— there is no password between Eric and his own disk. Two switches exist
+for testing the password screen, which a preview would otherwise never
+show: `TGM_PREVIEW=locked` (the gate appears; "open sesame" is accepted)
+and `TGM_PREVIEW=offline` (the relay never answers, so the page shows
+`gate_offline`). Both are testing aids in a tool that is never published.
 
 ### The locked door
 
@@ -583,9 +631,10 @@ rename, so the files on disk are fine. (Eric renamed track 19 to
 Chatter" tracks — 02 and 14 — to "Weather Chatter" on 29 September. He
 did both places each time.)
 
-**To open the vault while testing, don't type the password** — that is Eric's
-to type. Set `sessionStorage` `tgm_early_access` to `open` in the preview and
-reload; that is the same door a returning visitor comes back through.
+**To open the vault while testing, don't type the password** — that is
+Eric's to type, and this environment has no copy of it. The local preview
+server lets everyone through anyway, so nothing is needed. Against the live
+site there is no way in without the password, which is the point.
 
 ---
 
@@ -1082,7 +1131,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=56`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=57`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**

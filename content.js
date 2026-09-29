@@ -388,6 +388,11 @@ window.SITE_CONTENT = {
     gate_button: "Enter",
     gate_error: "That password isn't right — please check your invitation and try again.",
 
+    // Shown when the album's keeper can't be reached at all — a dropped
+    // connection, rather than a wrong password. Different trouble, so
+    // it gets a different line.
+    gate_offline: "The vault is out of reach just now. Try again in a moment.",
+
     // The way in for someone who arrived without a password. The shop
     // address is NOT repeated here — this button uses the same one as
     // the button on the main page, at  music.early_access.url  above,
@@ -406,6 +411,11 @@ window.SITE_CONTENT = {
     // One line per track, in album order. The matching audio files go in
     // the folder  assets/audio/  numbered to match this list:
     // 01.mp3 is the first line, 02.mp3 the second, and so on to 21.mp3.
+    //
+    // That folder is now only on your own computer — the album itself
+    // lives in private storage, away from the website. So a new or
+    // replaced track has to be put into the vault as well as into that
+    // folder, or it will read "Soon". Ask Claude and it will do it.
     //
     // Just replace the words inside each set of quotation marks with the
     // real song title. To add a track, copy a whole line — including the
@@ -428,7 +438,9 @@ window.SITE_CONTENT = {
     /* ---- The words ----
        The panel's first tab, and the one a listener sees first. The
        words themselves are files in the folder  assets/lyrics/  —
-       there's a note in there explaining how to add them. */
+       there's a note in there explaining how to add them. Like the
+       audio, that folder stays on your computer and the words are
+       kept in the vault, so a new one has to go to both. */
     lyrics_button: "Lyrics",
     lyrics_waiting: "Press play on any track and its words appear here.",
 
@@ -468,7 +480,8 @@ window.SITE_CONTENT = {
        The panel's other tab, beside Lyrics. Whichever tab a listener
        last chose is the one they come back to. The notes themselves
        are files in the folder  assets/notes/  — there's a note in
-       there explaining how to write them. */
+       there explaining how to write them. Same as the words: that
+       folder is yours, and the vault keeps the published copy. */
     notes_button: "Notes",
     notes_waiting: "Press play on any track and its notes appear here.",
     notes_loading: "Finding the notes…",
@@ -572,16 +585,18 @@ window.SITE_CONTENT = {
     bonus_label: "Bonus Tracks",
 
     /* ---- The download buttons -------------------------------------------- */
-    // Each button needs its matching file placed in  assets/downloads/
-    // with exactly the file name shown after "file:".
+    // Each button needs its matching file placed in the vault's
+    // "downloads" folder with exactly the file name shown after
+    // "file:". These are no longer part of the website — ask Claude to
+    // put a new one in the vault for you.
     //
     // A vertical bar  |  inside a label starts a new line at that point,
     // so you can control where a long button title breaks.
     downloads_label: "Downloads",
     downloads: [
-      { label: "Listening Guide", file: "assets/downloads/listening-guide.pdf" },
-      { label: "Lyric Booklet", file: "assets/downloads/digital-lyric-book.pdf" },
-      { label: "About the World", file: "assets/downloads/about-pawleys-island.pdf" },
+      { label: "Listening Guide", file: "downloads/listening-guide.pdf" },
+      { label: "Lyric Booklet", file: "downloads/digital-lyric-book.pdf" },
+      { label: "About the World", file: "downloads/about-pawleys-island.pdf" },
     ],
 
     back_link: "Back to the main site",

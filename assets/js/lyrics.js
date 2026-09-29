@@ -221,15 +221,29 @@
      Finding the words
      ------------------------------------------------------------------ */
 
+  // The words and the notes come from the relay at Cloudflare, not from
+  // this site — see the note at the top of access.js. The cookie that
+  // opens them travels on its own; fetch() sends it for a same-origin
+  // address, which /vault-api/ is.
+  var VAULT = '/vault-api/';
+
   function lyricsUrl(number, extension) {
-    return 'assets/lyrics/' + number + '.' + extension
+    return VAULT + 'lyrics/' + number + '.' + extension
       + (A.lyrics_version ? '?v=' + encodeURIComponent(A.lyrics_version) : '');
   }
 
   // Resolves to the file's text, or null when there is no such file.
   function fetchText(url) {
-    return fetch(url).then(function (response) {
+    // credentials and cache are spelled out rather than left to the
+    // defaults: the session cookie has to ride along, and a cached copy
+    // of a "you are not signed in" answer would outlive the signing in.
+    return fetch(url, {
+      credentials: 'same-origin',
+      cache: 'no-store'
+    }).then(function (response) {
       return response.ok ? response.text() : null;
+    }).catch(function () {
+      return null;
     });
   }
 
@@ -327,7 +341,7 @@
   }
 
   function notesUrl(number) {
-    return 'assets/notes/' + number + '.md'
+    return VAULT + 'notes/' + number + '.md'
       + (A.notes_version ? '?v=' + encodeURIComponent(A.notes_version) : '');
   }
 
