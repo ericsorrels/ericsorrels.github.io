@@ -487,6 +487,19 @@ album still looks deliberate rather than broken.
   hidden entirely at ≤620px, where a saved level is ignored in favour of full
   volume — a quiet level chosen on a laptop must not follow a listener to a
   phone with nothing on screen to undo it.
+- **The singer is named under each title** — `.track__credit`, read from
+  `access.track_artists` by the same rule the lock screen uses, so a song is
+  never credited one way in the list and another way on a phone. It sits
+  *inside* `.track__title` rather than beside it, which is what leaves the
+  row's fixed flex columns alone (see the load-bearing rules). It is set in
+  sentence case, not the site's usual tracked capitals: these are people's
+  names, and twenty rows of them set that wide out-measure the titles they
+  belong to. `--gray-mid`, and the colour is declared rather than inherited
+  so `.track--playing` lifting the title to white leaves the credit quiet.
+  **`creditFor()` is a deliberate second copy** of the one in `lyrics.js`:
+  `lyrics.js` already depends on `access.js` for the album, and reaching
+  back the other way for a three-line lookup would tie the two files
+  together in both directions. Change one, change the other.
 
 **Prev and next are not in this file.** `access.js` owns the rows, the
 roll-on at the end of a song, and the volume. Everything else that moves
@@ -1010,7 +1023,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=50`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Live at `?v=51`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**

@@ -1559,6 +1559,24 @@ img {
   color: var(--paper);
 }
 
+/* Who sang it, on a line of its own under the title. Not the site's
+   usual tracked capitals: these are people's names, and twenty rows of
+   them set that wide would out-measure the song titles they belong to.
+   Sentence case and the middle gray keep the order of reading honest —
+   title first, singer second. */
+.track__credit {
+  display: block;
+  margin-top: 0.45em;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1.45;
+  /* Set here rather than inherited: .track--playing lifts the title to
+     white, and the credit is meant to stay quiet when it does. */
+  color: var(--gray-mid);
+}
+
 .track__timeline {
   flex: 0 0 clamp(70px, 14%, 130px);
   display: flex;

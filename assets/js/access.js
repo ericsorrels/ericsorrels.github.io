@@ -239,6 +239,19 @@
   // for anything that follows the album — the lyrics panel does.
   var album = [];
 
+  // Who sang it, for the line under the title. Deliberately the same
+  // rule lyrics.js uses for the lock screen — a named singer, or
+  // media_artist where a name was left blank — so a song is never
+  // credited one way in the list and another way on a phone. The two
+  // are separate three-line copies on purpose: lyrics.js already leans
+  // on access.js for the album, and having access.js reach back into
+  // lyrics.js for this would tie the two together in both directions
+  // for the sake of a lookup. If you change one, change the other.
+  function creditFor(title) {
+    var named = A.track_artists && A.track_artists[title];
+    return (named && String(named).trim()) || A.media_artist || '';
+  }
+
   function buildTrack(title, index) {
     var row = document.createElement('div');
     row.className = 'track';
@@ -264,6 +277,16 @@
     var name = document.createElement('span');
     name.className = 'track__title';
     name.textContent = title;
+
+    // The singer sits inside the title's own column rather than beside
+    // it, so the row's fixed flex columns are left exactly as they are.
+    var credit = creditFor(title);
+    if (credit) {
+      var who = document.createElement('span');
+      who.className = 'track__credit';
+      who.textContent = credit;
+      name.appendChild(who);
+    }
 
     // A real range control rather than a bare line: it can be dragged,
     // nudged with the arrow keys, and read out by a screen reader, all
