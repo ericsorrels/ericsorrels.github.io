@@ -381,16 +381,58 @@ window.SITE_CONTENT = {
      ======================================================================= */
   access: {
 
-    /* ---- The locked door (what visitors see first) ---------------------- */
+    /* ---- The locked door (what visitors see first) ----------------------
+       Two steps: an email address, then the six-digit code sent to it.
+       There is no password any more — nobody types a shared secret, and
+       access is given and taken away one person at a time.
+       --------------------------------------------------------------------- */
+
     gate_label: "Early Digital Access",
-    gate_hint: "Enter the password from your invitation.",
-    gate_placeholder: "Password",
-    gate_button: "Enter",
-    gate_error: "That password isn't right — please check your invitation and try again.",
+
+    // Step one: the address.
+    gate_hint: "Enter the email address your access is under, and a six-digit code will be sent to it.",
+    gate_placeholder: "Email address",      // read aloud by screen readers
+    gate_button: "Send My Code",
+
+    // What either button says while it is working, so a press is never
+    // met with silence.
+    gate_sending: "Sending…",
+
+    // Step two: the code.
+    //
+    // gate_sent IS SHOWN WHETHER OR NOT THE ADDRESS HAS ACCESS, and that
+    // is the point of how it is worded. If an approved address got a
+    // different answer from an unapproved one, anybody could use this
+    // page to find out who has bought the album. So it says "if", and
+    // points somewhere useful either way.
+    gate_sent:
+      "If this email has access, a code is on its way. Check your spam folder, or email hello@ericsorrels.com for help.",
+    gate_code_hint: "Type the six digits here.",
+    gate_code_placeholder: "Six-digit code",   // read aloud by screen readers
+    gate_code_button: "Enter",
+    gate_another: "Send another code",
+    gate_elsewhere: "Use a different email",
+
+    /* ---- When something goes wrong at the door -------------------------- */
+
+    // A mistyped address — said plainly, because this one is about what
+    // was typed rather than about who is on the list.
+    gate_bad_email: "That doesn't look like an email address. Please check it and try again.",
+
+    // A wrong code. The second sentence earns its place: someone who
+    // pressed the button twice has two emails, and the older code stopped
+    // working the moment the newer one was sent.
+    gate_code_wrong: "That code isn't right. If you asked more than once, use the code from the newest email.",
+
+    gate_code_expired: "That code has expired, or has already been used. Ask for another one.",
+    gate_code_locked: "Too many tries. Ask for another code and start again.",
+
+    // Asked too many times, too quickly.
+    gate_slow_down: "That's several codes now. Please wait a minute, then look in your spam folder.",
 
     // Shown when the album's keeper can't be reached at all — a dropped
-    // connection, rather than a wrong password. Different trouble, so
-    // it gets a different line.
+    // connection, rather than anything the visitor did. Different
+    // trouble, so it gets a different line.
     gate_offline: "The vault is out of reach just now. Try again in a moment.",
 
     // The way in for someone who arrived without a password. The shop

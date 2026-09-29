@@ -47,3 +47,57 @@ CREATE TABLE IF NOT EXISTS members (
 
 /* So the admin page can list newest-first without reading every row. */
 CREATE INDEX IF NOT EXISTS members_added_at ON members (added_at);
+
+
+/* ---------------------------------------------------------------------
+   The codes in flight.
+
+   One row per address waiting to be let in, and AT MOST ONE: the email
+   is the primary key, so asking for a new code replaces the old one
+   rather than adding to it. That is deliberate — two live codes for one
+   person is how someone ends up typing the older of two emails and
+   being told they are wrong.
+
+   THE CODE ITSELF IS NOT STORED HERE. What is stored is a signed hash
+   of it, made with SESSION_SECRET, so reading this table tells you
+   nothing you could type at the gate. A six-digit code has only a
+   million possibilities, which a plain hash would give up instantly;
+   keyed with a secret, it cannot be worked backwards at all.
+
+   Times here are plain numbers — milliseconds since 1970 — rather than
+   the readable dates used in members above. These rows are read by the
+   worker and never by a person, they live about ten minutes, and
+   comparing numbers cannot go wrong the way comparing two differently
+   written dates can.
+   --------------------------------------------------------------------- */
+
+CREATE TABLE IF NOT EXISTS codes (
+  email      TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+  code_hash  TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  tries      INTEGER NOT NULL DEFAULT 0,
+  sent_at    INTEGER NOT NULL
+);
+
+
+/* ---------------------------------------------------------------------
+   The brake.
+
+   One row per thing being counted — an address, or the internet address
+   a request came from — holding how many times it has asked and when
+   its allowance starts again. This is what stops somebody asking for
+   ten thousand codes, or guessing at six digits until they hit one.
+
+   The bucket is a plain label like  email:someone@example.com  or
+   ip:203.0.113.4 , so both kinds of limit are counted by the same
+   handful of lines rather than two sets of them.
+
+   Rows are swept away once their window has passed, so this table stays
+   small by itself and never needs tending.
+   --------------------------------------------------------------------- */
+
+CREATE TABLE IF NOT EXISTS throttle (
+  bucket       TEXT PRIMARY KEY NOT NULL,
+  count        INTEGER NOT NULL,
+  window_until INTEGER NOT NULL
+);

@@ -1361,6 +1361,12 @@ img {
   margin: 0 0 3em;
 }
 
+/* The hint on the code step follows a paragraph rather than the title,
+   so it needs far less air above it than the email step's does. */
+.gate__hint--code {
+  margin: -1em 0 2.2em;
+}
+
 .gate__form {
   display: flex;
   flex-wrap: wrap;
@@ -1369,24 +1375,116 @@ img {
   gap: 1.2em;
 }
 
+/* Deliberately larger than the password field this replaced. The people
+   coming through this door are supporters of a stage musical rather than
+   users of an app, plenty of them reading without their glasses on, and
+   a login is the one place on a site where a quiet aesthetic must give
+   way to being able to see what you are typing. */
 .gate__input {
   background: transparent;
   border: none;
   border-bottom: 1px solid rgba(27, 26, 23, 0.4);
   border-radius: 0;
   font-family: var(--font-body);
-  font-size: 1rem;
-  letter-spacing: 0.25em;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
   text-align: center;
   color: var(--ink);
-  padding: 0.6em 0.2em;
-  width: min(280px, 70vw);
+  padding: 0.7em 0.3em;
+  width: min(340px, 82vw);
   outline: none;
   transition: border-color 0.3s ease;
 }
 
+/* An email address is words, not a cipher. The wide tracking the rest of
+   the site is built on makes a long address hard to read back and pushes
+   it past the end of the line, so it is nearly closed up here — the one
+   field on the site that isn't letterspaced. */
+.gate__input--email {
+  letter-spacing: 0.02em;
+}
+
+/* Six digits, on the other hand, are exactly what wide tracking is for:
+   spread out, they can be checked against an email a character at a
+   time. Large, because this is the number being copied by hand. */
+.gate__input--code {
+  font-size: 1.7rem;
+  letter-spacing: 0.34em;
+  width: min(260px, 70vw);
+  /* The tracking adds a gap after the last digit too, which would leave
+     the row looking off-centre. Half of it back as padding re-centres
+     what is actually on screen. */
+  padding-left: 0.34em;
+}
+
 .gate__input:focus {
   border-color: var(--ink);
+}
+
+.gate__button[disabled] {
+  color: var(--gray-mid);
+  border-color: var(--gray-mid);
+  cursor: default;
+}
+
+.gate__button[disabled]:hover {
+  background: transparent;
+  color: var(--gray-mid);
+}
+
+/* The line above the code box: longer than anything else on this screen,
+   because it has to say "if this email has access" without sounding like
+   a refusal, and name somewhere to write for help. Set at reading width
+   rather than the gate's tracked capitals. */
+.gate__sent {
+  font-family: var(--font-body);
+  font-size: clamp(0.78rem, 1.1vw, 0.88rem);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  max-width: 34em;
+  margin: 0 auto 2.6em;
+}
+
+/* Send another code · Use a different email. Buttons, not links, because
+   they go nowhere — but they have to read as the quiet second options
+   they are, under the thing actually being asked for. */
+.gate__again {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9em 2.2em;
+  margin: 2.4em 0 0;
+}
+
+.gate__link {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  padding: 0.4em 0;
+  cursor: pointer;
+  /* Underlined rather than boxed: a border would make these compete with
+     Enter, which is still the thing to do on this screen. */
+  text-decoration: underline;
+  text-underline-offset: 0.35em;
+  transition: color 0.3s ease;
+}
+
+.gate__link:hover,
+.gate__link:focus-visible {
+  color: var(--ink);
+}
+
+.gate__link[disabled] {
+  color: var(--gray-mid);
+  cursor: default;
+  text-decoration: none;
 }
 
 .gate__button {
@@ -1408,14 +1506,22 @@ img {
   color: var(--paper);
 }
 
+/* These used to be uppercase tracked capitals, which suited the one short
+   line the password gate had. They are sentences now — "if you asked more
+   than once, use the code from the newest email" — and capitals at that
+   tracking are genuinely hard work to read at a stretch. So: sentence
+   case, reading width, and big enough to read while mildly annoyed.
+   Still quiet, and still no colour: the palette has no red for errors and
+   --storm-red belongs to the advisory chart alone. */
 .gate__error {
   font-family: var(--font-body);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  margin: 2em 0 0;
+  font-size: clamp(0.78rem, 1.1vw, 0.88rem);
+  font-weight: 500;
+  line-height: 1.65;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  max-width: 30em;
+  margin: 2.2em auto 0;
 }
 
 /* The way in for a visitor with no password. Set apart from the form

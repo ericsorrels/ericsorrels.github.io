@@ -6,7 +6,8 @@
 // nothing here is reachable except through this file.
 //
 // What it does:
-//   POST /vault-api/login     a password in, a signed session cookie back
+//   POST /vault-api/request-code  an email in, a six-digit code posted out
+//   POST /vault-api/verify-code   the code back, a signed session cookie out
 //   POST /vault-api/logout    throws the cookie away
 //   GET  /vault-api/session   "am I still signed in?" — yes or no, nothing more
 //   GET  /vault-api/send-test?to=…   mails a test message — see Sending mail
@@ -22,9 +23,15 @@
 // NOTHING SECRET IS WRITTEN IN THIS FILE. It is committed to a public
 // repository on purpose. The secrets live in Cloudflare:
 //
-//   VAULT_PASSWORD   the password Eric gives out with an invitation
-//   SESSION_SECRET   a long random string, used to sign session cookies
+//   SESSION_SECRET   a long random string. It signs session cookies AND
+//                    the stored hashes of codes in flight, so changing it
+//                    signs everybody out and voids any code not yet used.
 //   RESEND_API_KEY   lets this worker hand an email to Resend to deliver
+//
+// There is no VAULT_PASSWORD any more. The shared password was removed
+// on 29 September 2026 in favour of a code emailed to an address on the
+// guest list, so that access can be given and taken away one person at
+// a time instead of everyone holding the same secret.
 //
 // and two stores arrive as bindings:
 //
@@ -32,14 +39,19 @@
 //   MEMBERS   the D1 database listing who is allowed in — see The guest list
 
 export default {
-  async fetch(request, env) {
+  // ctx is here for ctx.waitUntil, which lets this worker answer the
+  // browser and go on working afterwards. Sending the email that way is
+  // what makes "was that address approved?" take the same length of
+  // time either way — see handleRequestCode.
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // Everything this worker answers for sits under /vault-api/.
     if (!url.pathname.startsWith(PREFIX)) return notFound();
     const route = url.pathname.slice(PREFIX.length);
 
-    if (route === 'login') return handleLogin(request, env);
+    if (route === 'request-code') return handleRequestCode(request, env, ctx);
+    if (route === 'verify-code') return handleVerifyCode(request, env);
     if (route === 'logout') return handleLogout(request, env);
     if (route === 'session') return handleSession(request, env);
     if (route === 'send-test') return handleSendTest(request, env, url);
@@ -60,63 +72,287 @@ const SESSION_DAYS = 30;
 const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 
 /* ---------------------------------------------------------------------
-   Signing in
+   Signing in — an address, then a code
 
-   verifyCredential() is deliberately the only place that decides whether
-   someone is who they say they are, and it hands back a "subject" — a
-   short name for whoever just signed in. Everything after it only cares
-   about that subject, never about how it was arrived at.
+   Two steps. Ask for a code, then send it back.
 
-   That is the seam for email-plus-a-code later: add a
-   POST /vault-api/request-code route that mails a one-time code, keep
-   the codes in a KV namespace against the address they were sent to,
-   and rewrite verifyCredential() to check the code and return the email
-   address as the subject. Nothing below this function has to change,
-   and sessions already issued go on working.
+   THE FIRST STEP TELLS A STRANGER NOTHING. Whether or not the address
+   is on the guest list, the answer is identical: the same words, the
+   same status, and — because the email is posted after the answer has
+   already gone back, through ctx.waitUntil — the same length of time.
+   So this cannot be used to find out who Eric's supporters are, which
+   it could if an approved address answered any differently from an
+   unapproved one.
+
+   The brake is applied BEFORE the guest list is consulted, for the same
+   reason: being turned away for asking too often has to look the same
+   whoever is asking.
    --------------------------------------------------------------------- */
 
-async function verifyCredential(body, env) {
-  const given = typeof body.password === 'string' ? body.password : '';
-  if (!given || !env.VAULT_PASSWORD) return null;
+const CODE_LIFE_MS = 10 * 60 * 1000;   // a code is good for ten minutes
+const CODE_TRIES = 5;                  // wrong guesses before it is torn up
+const RESEND_GAP_MS = 60 * 1000;       // the quiet minute after one is sent
 
-  // Compared as digests of equal length, byte by byte, so the time this
-  // takes cannot leak how much of the password was right.
-  const ok = timingSafeEqual(
-    await sha256(given),
-    await sha256(env.VAULT_PASSWORD)
-  );
+const HOUR_MS = 60 * 60 * 1000;
+const CODES_PER_EMAIL = 5;             // per address, per hour
+const CODES_PER_IP = 12;               // per internet address, per hour
+const TRIES_PER_IP = 30;               // guesses per internet address, per hour
 
-  // One subject for everyone while a single shared password is the way
-  // in. With emailed codes this becomes the address that was verified.
-  return ok ? 'invite' : null;
+async function handleRequestCode(request, env, ctx) {
+  if (request.method !== 'POST') return notFound();
+  if (!env.MEMBERS) return json({ ok: false, reason: 'offline' }, 503);
+
+  const body = await readJson(request);
+  const email = normalizeEmail(body.email);
+
+  // The one thing that IS said plainly, because it is about what was
+  // typed rather than about who is on the list. Somebody who has
+  // mistyped their address deserves to be told so rather than left
+  // waiting for an email that was never going to come.
+  if (!email) return json({ ok: false, reason: 'bad-email' }, 400);
+
+  const from = clientAddress(request);
+
+  if (
+    (await overLimit(env, 'email:' + email, CODES_PER_EMAIL, HOUR_MS)) ||
+    (await overLimit(env, 'ip:' + from, CODES_PER_IP, HOUR_MS))
+  ) {
+    return json({ ok: false, reason: 'slow-down' }, 429);
+  }
+
+  // Everything from here is done after the answer has been sent, so the
+  // reply's timing carries no news about whether the address is known.
+  ctx.waitUntil(postCode(env, email));
+
+  return json({ ok: true }, 200);
 }
 
-async function handleLogin(request, env) {
+// Decides whether there is anybody to write to, and writes to them. Its
+// answer goes nowhere: the browser was told "on its way" some
+// milliseconds ago, whatever happens in here.
+async function postCode(env, email) {
+  await sweep(env);
+
+  const member = await findMember(env, email);
+  if (!member) return;
+
+  // A code already sent and still warm is left alone. Otherwise a second
+  // press of the button would quietly replace the code in the email that
+  // is already on its way, and the listener would type the code they were
+  // sent and be told it is wrong.
+  const waiting = await env.MEMBERS.prepare(
+    'SELECT sent_at FROM codes WHERE email = ? AND expires_at > ?'
+  )
+    .bind(email, Date.now())
+    .first();
+
+  if (waiting && Date.now() - waiting.sent_at < RESEND_GAP_MS) return;
+
+  const code = newCode();
+  const now = Date.now();
+
+  await env.MEMBERS.prepare(
+    'INSERT INTO codes (email, code_hash, expires_at, tries, sent_at) ' +
+      'VALUES (?, ?, ?, 0, ?) ' +
+      'ON CONFLICT(email) DO UPDATE SET ' +
+      'code_hash = excluded.code_hash, expires_at = excluded.expires_at, ' +
+      'tries = 0, sent_at = excluded.sent_at'
+  )
+    .bind(email, await hashCode(email, code, env), now + CODE_LIFE_MS, now)
+    .run();
+
+  await sendEmail(env, {
+    to: email,
+    subject: `Your code is ${code} — The Gray Man`,
+    text:
+      `${code}\n\n` +
+      'That is your code for Early Digital Access. Type it into the page\n' +
+      'you came from. It is good for ten minutes, and it works once.\n\n' +
+      'If you did not ask for it, somebody typed your address by mistake.\n' +
+      'Nothing has happened and you can ignore this.\n\n' +
+      '— The Gray Man\n' +
+      'https://graymanmusical.com/access.html\n',
+  });
+}
+
+async function handleVerifyCode(request, env) {
   if (request.method !== 'POST') return notFound();
+  if (!env.MEMBERS) return json({ ok: false, reason: 'offline' }, 503);
 
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    body = {};
-  }
+  const body = await readJson(request);
+  const email = normalizeEmail(body.email);
 
-  const subject = await verifyCredential(body, env);
+  // Spaces and stray characters are thrown away rather than refused, so
+  // a code pasted out of an email as "123 456" is simply read as 123456.
+  const code = String(body.code == null ? '' : body.code).replace(/\D/g, '');
 
-  if (!subject) {
-    // A wrong password answers 401, not 404 — the page has to be able to
-    // tell "that isn't the password" from "the vault is broken", and a
-    // visitor typing at a password box already knows the box is there.
-    // The pause is a small brake on anyone trying passwords in bulk; the
-    // real brake is a Rate Limiting rule on this path in the dashboard.
+  if (!email || code.length !== 6) {
     await sleep(400);
-    return json({ ok: false }, 401);
+    return json({ ok: false, reason: 'wrong' }, 401);
   }
 
-  const token = await issueSession(subject, env);
+  const from = clientAddress(request);
+  if (await overLimit(env, 'try:' + from, TRIES_PER_IP, HOUR_MS)) {
+    return json({ ok: false, reason: 'slow-down' }, 429);
+  }
+
+  const held = await env.MEMBERS.prepare(
+    'SELECT code_hash, expires_at, tries FROM codes WHERE email = ?'
+  )
+    .bind(email)
+    .first();
+
+  // No code, or one past its ten minutes. Both are answered the same
+  // way, which is also the answer an address that was never on the list
+  // receives — there is no row for it either, and no reason to say so.
+  if (!held || Date.now() > held.expires_at) {
+    if (held) await forget(env, email);
+    await sleep(400);
+    return json({ ok: false, reason: 'expired' }, 401);
+  }
+
+  const offered = await hashCode(email, code, env);
+  if (!timingSafeEqual(bytes(offered), bytes(held.code_hash))) {
+    const spent = held.tries + 1;
+
+    if (spent >= CODE_TRIES) {
+      // Torn up rather than merely counted, so a code that has been
+      // guessed at five times cannot be guessed at a sixth.
+      await forget(env, email);
+      await sleep(400);
+      return json({ ok: false, reason: 'locked' }, 401);
+    }
+
+    await env.MEMBERS.prepare('UPDATE codes SET tries = ? WHERE email = ?')
+      .bind(spent, email)
+      .run();
+
+    await sleep(400);
+    return json({ ok: false, reason: 'wrong', left: CODE_TRIES - spent }, 401);
+  }
+
+  // Right. The code is spent the moment it works, so the same one can
+  // never be used twice — by this listener or by anybody who saw it.
+  await forget(env, email);
+
+  await env.MEMBERS.prepare('UPDATE members SET last_login = ? WHERE email = ?')
+    .bind(new Date().toISOString().replace(/\.\d+Z$/, 'Z'), email)
+    .run();
+
+  // The session's subject is the address itself now, rather than the one
+  // shared name every password holder used to get. So a cookie says WHO,
+  // which is what makes it possible to take one person's access away.
+  const token = await issueSession(email, env);
   return json({ ok: true }, 200, {
     'set-cookie': cookie(token, SESSION_MS / 1000),
   });
+}
+
+function forget(env, email) {
+  return env.MEMBERS.prepare('DELETE FROM codes WHERE email = ?')
+    .bind(email)
+    .run();
+}
+
+// Six digits, from the same source of randomness that makes session
+// nonces. Bytes of 250 and over are thrown away rather than folded in:
+// 256 does not divide by 10, so keeping them would make 0 to 5 very
+// slightly likelier than 6 to 9.
+function newCode() {
+  let out = '';
+  while (out.length < 6) {
+    const batch = crypto.getRandomValues(new Uint8Array(8));
+    for (const byte of batch) {
+      if (byte < 250 && out.length < 6) out += String(byte % 10);
+    }
+  }
+  return out;
+}
+
+// The code is never stored, only this. Signed with SESSION_SECRET, so
+// the guest list being read would still not tell anyone what to type;
+// and bound to the address, so a hash lifted from one row cannot be
+// offered for another.
+function hashCode(email, code, env) {
+  return sign(`code|${email}|${code}`, env.SESSION_SECRET);
+}
+
+/* ---------------------------------------------------------------------
+   The brake
+
+   Counting per address and per internet address, in windows. Each thing
+   being counted gets a row holding how many times it has asked and when
+   its allowance starts again.
+
+   It errs toward letting people in: if the database cannot be reached,
+   overLimit() says "not over", because a supporter locked out by a
+   database wobble is a worse failure than an attacker getting a few
+   extra guesses at a code that expires in ten minutes anyway.
+   --------------------------------------------------------------------- */
+
+async function overLimit(env, bucket, limit, windowMs) {
+  const now = Date.now();
+
+  try {
+    const row = await env.MEMBERS.prepare(
+      'SELECT count, window_until FROM throttle WHERE bucket = ?'
+    )
+      .bind(bucket)
+      .first();
+
+    // Nothing yet, or the window has run out: start a fresh one.
+    if (!row || now > row.window_until) {
+      await env.MEMBERS.prepare(
+        'INSERT INTO throttle (bucket, count, window_until) VALUES (?, 1, ?) ' +
+          'ON CONFLICT(bucket) DO UPDATE SET count = 1, ' +
+          'window_until = excluded.window_until'
+      )
+        .bind(bucket, now + windowMs)
+        .run();
+      return false;
+    }
+
+    if (row.count >= limit) return true;
+
+    await env.MEMBERS.prepare(
+      'UPDATE throttle SET count = count + 1 WHERE bucket = ?'
+    )
+      .bind(bucket)
+      .run();
+
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Expired codes and spent windows, cleared as we go, so neither table
+// ever needs tending. Failure here is not worth refusing anybody over.
+async function sweep(env) {
+  const now = Date.now();
+  try {
+    await env.MEMBERS.batch([
+      env.MEMBERS.prepare('DELETE FROM codes WHERE expires_at < ?').bind(now),
+      env.MEMBERS.prepare('DELETE FROM throttle WHERE window_until < ?').bind(now),
+    ]);
+  } catch (e) {
+    /* nothing worth doing about it */
+  }
+}
+
+// Cloudflare puts the visitor's real address here. It is not something
+// the browser can set, so it cannot be fiddled with from outside.
+function clientAddress(request) {
+  return request.headers.get('cf-connecting-ip') || 'unknown';
+}
+
+async function readJson(request) {
+  try {
+    const body = await request.json();
+    return body && typeof body === 'object' ? body : {};
+  } catch (e) {
+    return {};
+  }
 }
 
 function handleLogout(request, env) {
@@ -515,11 +751,6 @@ function sleep(ms) {
 }
 
 const encoder = new TextEncoder();
-
-async function sha256(text) {
-  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(text));
-  return new Uint8Array(digest);
-}
 
 async function sign(text, secret) {
   const key = await crypto.subtle.importKey(

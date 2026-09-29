@@ -66,16 +66,23 @@ def wifi_address():
 VAULT_PREFIX = "/vault-api/"
 VAULT_FOLDERS = ("audio/", "lyrics/", "notes/", "downloads/")
 
-# Two switches for testing the password screen, which a preview would
-# otherwise never show, since it lets everyone straight through.
+# Two switches for testing the gate, which a preview would otherwise
+# never show, since it lets everyone straight through.
+#
 #   TGM_PREVIEW=locked   the relay says "not signed in", so the gate
-#                        appears and a password can be typed at it
-#                        ("open sesame" is accepted, anything else is not)
+#                        appears and can be worked through end to end.
+#                        No email is sent and nothing is on any list:
+#                        any address is accepted, and the code is always
+#                        PREVIEW_CODE, which is printed at startup.
 #   TGM_PREVIEW=offline  the relay refuses to answer at all, which is
 #                        what a dropped connection looks like
+#
 # Unset, everything is open — which is what a preview should be.
+#
+# To try the error lines, type something that isn't an address (the
+# mistyped-address line), or a wrong six digits (the wrong-code line).
 PREVIEW_MODE = os.environ.get("TGM_PREVIEW", "").strip().lower()
-PREVIEW_PASSWORD = "open sesame"
+PREVIEW_CODE = "123456"
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -96,23 +103,48 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().translate_path(path)
 
     def do_POST(self):
-        """Signing in, answered locally so the gate opens in a preview."""
-        if self.path.split("?", 1)[0] != VAULT_PREFIX + "login":
+        """Signing in, answered locally so the gate works in a preview."""
+        route = self.path.split("?", 1)[0]
+        if route not in (VAULT_PREFIX + "request-code",
+                         VAULT_PREFIX + "verify-code"):
             return self.send_error(404)
 
         if PREVIEW_MODE == "offline":
             return self.hang_up()
 
-        if PREVIEW_MODE == "locked":
-            length = int(self.headers.get("Content-Length") or 0)
-            try:
-                sent = json.loads(self.rfile.read(length) or b"{}")
-            except ValueError:
-                sent = {}
-            if sent.get("password") != PREVIEW_PASSWORD:
-                return self.answer(401, b'{"ok":false}')
+        if PREVIEW_MODE != "locked":
+            # Wide open, so the gate never appears and nothing has to be
+            # typed to reach Eric's own files on Eric's own computer.
+            return self.answer(200, b'{"ok":true}')
 
-        self.answer(200, b'{"ok":true}')
+        sent = self.read_json()
+        address = str(sent.get("email") or "").strip().lower()
+
+        # The same rough look the relay takes, so the mistyped-address
+        # line can be seen here. Nothing is checked against any list:
+        # there is no list locally, and any address is let through.
+        looks_like_email = (
+            "@" in address[1:] and "." in address.split("@")[-1]
+            and " " not in address
+        )
+
+        if route.endswith("request-code"):
+            if not looks_like_email:
+                return self.answer(400, b'{"ok":false,"reason":"bad-email"}')
+            print("  preview: the code is %s" % PREVIEW_CODE)
+            return self.answer(200, b'{"ok":true}')
+
+        digits = "".join(c for c in str(sent.get("code") or "") if c.isdigit())
+        if digits != PREVIEW_CODE:
+            return self.answer(401, b'{"ok":false,"reason":"wrong"}')
+        return self.answer(200, b'{"ok":true}')
+
+    def read_json(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            return json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            return {}
 
     def do_GET(self):
         if self.path.split("?", 1)[0] == VAULT_PREFIX + "session":
@@ -210,6 +242,12 @@ if __name__ == "__main__":
     host = "0.0.0.0" if OPEN_TO_WIFI else "127.0.0.1"
     with Server((host, PORT), Handler) as server:
         print("The Gray Man — preview at http://localhost:%d" % PORT)
+        if PREVIEW_MODE == "locked":
+            print("\nThe gate is showing. Any email address is accepted here,"
+                  "\nnothing is posted, and the code is always %s." % PREVIEW_CODE)
+        elif PREVIEW_MODE == "offline":
+            print("\nThe relay is playing dead, so the gate shows its"
+                  "\n'out of reach' line.")
         if OPEN_TO_WIFI:
             found = wifi_address()
             if found:

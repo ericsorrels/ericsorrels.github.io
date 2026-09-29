@@ -15,14 +15,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=57" />
+  <link rel="stylesheet" href="assets/css/style.css?v=58" />
 </head>
 <body>
 
   <!-- ✏️  All text on this page lives in content.js → "access".
-       The password is not written anywhere in these files — the page
-       stores only a scrambled fingerprint of it. To change the
-       password, ask Claude to generate a new fingerprint. -->
+
+       There is no password, and nothing on this page decides who gets
+       in. A visitor gives an email address; a small program at
+       Cloudflare posts a six-digit code to it, but only if that address
+       is on the guest list, and only it can tell. See CLAUDE.md, "The
+       vault". To give somebody access, add their address — nothing in
+       these files changes. -->
 
   <!-- ============================================================
        THE LOCKED DOOR
@@ -32,24 +36,84 @@
     <div class="gate__title">
       <img src="assets/img/gray-man-title.png" alt="The Gray Man" data-content-alt="hero.title" />
     </div>
-    <p class="gate__hint" data-content="access.gate_hint">Enter the password from your invitation.</p>
+    <!-- STEP ONE: the address. -->
+    <div id="gateStepEmail">
+      <p class="gate__hint" data-content="access.gate_hint">
+        Enter the email address your access is under, and a six-digit code will be sent to it.
+      </p>
 
-    <form id="gateForm" class="gate__form">
-      <input
-        id="gateInput"
-        class="gate__input"
-        type="password"
-        autocomplete="off"
-        autocapitalize="off"
-        autocorrect="off"
-        spellcheck="false"
-        aria-label="Password"
-      />
-      <button type="submit" class="gate__button" data-content="access.gate_button">Enter</button>
-    </form>
+      <!-- novalidate is load-bearing. type="email" is what gives a phone
+           the keyboard with an @ on it, which is worth having — but it
+           also makes the browser refuse the submit and show its own
+           terse popup, so our own line in content.js would never appear.
+           novalidate keeps the keyboard and hands the judging back to
+           access.js, and the relay checks properly regardless. -->
+      <form id="gateEmailForm" class="gate__form" novalidate>
+        <input
+          id="gateEmail"
+          class="gate__input gate__input--email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button type="submit" class="gate__button" data-content="access.gate_button">Send My Code</button>
+      </form>
+    </div>
 
-    <p id="gateError" class="gate__error" hidden data-content="access.gate_error">
-      That password isn't right &mdash; please check your invitation and try again.
+    <!-- STEP TWO: the code that was sent to it. Hidden until a code has
+         been asked for. The line at the top of it is deliberately the
+         same whether or not that address has access — see content.js →
+         access.gate_sent. -->
+    <div id="gateStepCode" hidden>
+      <p class="gate__sent" data-content="access.gate_sent">
+        If this email has access, a code is on its way. Check your spam folder, or email
+        hello@ericsorrels.com for help.
+      </p>
+
+      <!-- Short, and its own line. Without it the code step is a blank
+           rule with nothing saying what goes on it — the message above
+           explains what was sent, not what to do next. -->
+      <p class="gate__hint gate__hint--code" data-content="access.gate_code_hint">
+        Type the six digits here.
+      </p>
+
+      <form id="gateCodeForm" class="gate__form">
+        <!-- No maxlength, deliberately. A code pasted out of an email as
+             "123 456" is longer than six characters, and a maxlength
+             would cut it off mid-paste before the spaces could be
+             stripped out. access.js does the tidying instead. -->
+        <input
+          id="gateCode"
+          class="gate__input gate__input--code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button type="submit" class="gate__button" data-content="access.gate_code_button">Enter</button>
+      </form>
+
+    </div>
+
+    <!-- Filled in by access.js, which knows which of several things went
+         wrong. No data-content slot, for that reason. -->
+    <p id="gateError" class="gate__error" hidden role="alert"></p>
+
+    <!-- These belong to the code step, but they sit outside it and below
+         the error on purpose. Inside the step they came between the code
+         box and the line explaining what was wrong with it, which put two
+         other choices in the middle of one sentence's worth of sense.
+         access.js shows and hides this with the code step. -->
+    <p class="gate__again" id="gateAgain" hidden>
+      <button type="button" id="gateAnother" class="gate__link"
+              data-content="access.gate_another">Send another code</button>
+      <button type="button" id="gateElsewhere" class="gate__link"
+              data-content="access.gate_elsewhere">Use a different email</button>
     </p>
 
     <!-- The way in for a visitor who has no password. Stays hidden until
@@ -227,12 +291,12 @@
 
   </main>
 
-  <script src="content.js?v=57"></script>
-  <script src="assets/js/main.js?v=57"></script>
+  <script src="content.js?v=58"></script>
+  <script src="assets/js/main.js?v=58"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=57"></script>
-  <script src="assets/js/access.js?v=57"></script>
+  <script src="assets/js/lyrics.js?v=58"></script>
+  <script src="assets/js/access.js?v=58"></script>
 </body>
 </html>

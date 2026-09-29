@@ -1,8 +1,9 @@
 // THE GRAY MAN — Early Digital Access page.
 //
-// 1. The gate: hands the password to the relay at Cloudflare and lets
-//    it decide. Nothing here can tell a right password from a wrong
-//    one, which is why there is nothing here worth picking apart.
+// 1. The gate: takes an email address, asks the relay at Cloudflare to
+//    post a six-digit code to it, and hands the code back. Nothing here
+//    knows who is allowed in or what any code is, which is why there is
+//    nothing here worth picking apart.
 // 2. The vault: builds the album track players and download buttons
 //    from the lists in content.js, pointing every file at the relay.
 //
@@ -75,15 +76,21 @@
     });
   }
 
-  function sendPassword(password) {
-    return fetch(vaultUrl('login'), {
+  // Both steps of signing in go through here. It resolves to the
+  // relay's own answer — { ok: true }, or { ok: false, reason: … } — or
+  // to null, which means the relay could not be reached at all and is a
+  // different thing from being turned away.
+  function askRelay(route, payload) {
+    return fetch(vaultUrl(route), {
       method: 'POST',
       credentials: 'same-origin',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password })
+      body: JSON.stringify(payload)
     }).then(function (reply) {
-      return reply.ok;
+      return reply.json().catch(function () {
+        return { ok: reply.ok };     // an answer we can't read, but a status
+      });
     }).catch(function () {
       return null;
     });
@@ -95,9 +102,21 @@
 
   var gate = document.getElementById('gate');
   var vault = document.getElementById('vault');
-  var form = document.getElementById('gateForm');
-  var input = document.getElementById('gateInput');
   var error = document.getElementById('gateError');
+
+  var stepEmail = document.getElementById('gateStepEmail');
+  var stepCode = document.getElementById('gateStepCode');
+  var emailForm = document.getElementById('gateEmailForm');
+  var codeForm = document.getElementById('gateCodeForm');
+  var emailInput = document.getElementById('gateEmail');
+  var codeInput = document.getElementById('gateCode');
+  var again = document.getElementById('gateAgain');
+  var another = document.getElementById('gateAnother');
+  var elsewhere = document.getElementById('gateElsewhere');
+
+  // The address a code was asked for, kept only so the second step can
+  // say which one it is answering for. It is never stored anywhere.
+  var asking = '';
 
   function unlock() {
     gate.hidden = true;
@@ -433,18 +452,94 @@
      remembered visitor is let straight back in.)
      ------------------------------------------------------------------ */
 
-  // The gate's own line, or the one for a relay that didn't answer.
-  // Those are different troubles and a listener deserves to know which.
+  // Which line to show depends on which of several things went wrong,
+  // and a listener deserves to know which. A mistyped address, a wrong
+  // code, an expired one, too many tries, too many requests, and a relay
+  // that never answered are six different troubles.
   function showError(key) {
     if (!error) return;
-    var line = A[key];
-    if (line) error.textContent = line;
+    error.textContent = A[key] || '';
     error.hidden = false;
   }
 
-  // The cookie decides, not this browser's memory of anything, and it
-  // lasts thirty days. seenBefore() governs only whether the password
-  // screen is shown while the question is still in the air.
+  function clearError() {
+    if (error) error.hidden = true;
+  }
+
+  // Which of the gate's two steps is on screen. The two quiet choices
+  // under the error belong to the code step as well, though they sit
+  // outside it in the markup — see the note there.
+  function showStep(which) {
+    if (stepEmail) stepEmail.hidden = which !== 'email';
+    if (stepCode) stepCode.hidden = which !== 'code';
+    if (again) again.hidden = which !== 'code';
+  }
+
+  // The relay's answers, turned into the line that goes on screen.
+  // 'offline' covers both a relay that refused to answer (null) and one
+  // that answered to say its own storage is unreachable.
+  function lineFor(answer, fallback) {
+    if (!answer) return 'gate_offline';
+    if (answer.reason === 'offline') return 'gate_offline';
+    if (answer.reason === 'bad-email') return 'gate_bad_email';
+    if (answer.reason === 'slow-down') return 'gate_slow_down';
+    if (answer.reason === 'expired') return 'gate_code_expired';
+    if (answer.reason === 'locked') return 'gate_code_locked';
+    return fallback;
+  }
+
+  // Both buttons say what they are doing while they do it, rather than
+  // going quiet and leaving a visitor wondering whether the press
+  // landed. The label is put back either way.
+  function whileWorking(button, work) {
+    var said = button ? button.textContent : '';
+    if (button) {
+      button.disabled = true;
+      if (A.gate_sending) button.textContent = A.gate_sending;
+    }
+    return work().then(function (answer) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = said;
+      }
+      return answer;
+    });
+  }
+
+  function requestCode(address, button) {
+    clearError();
+    return whileWorking(button, function () {
+      return askRelay('request-code', { email: address });
+    }).then(function (answer) {
+      if (answer && answer.ok) {
+        asking = address;
+        showStep('code');
+        if (codeInput) {
+          codeInput.value = '';
+          codeInput.focus();
+        }
+        return;
+      }
+
+      showError(lineFor(answer, 'gate_bad_email'));
+      return;
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Startup. The cookie decides, not this browser's memory of anything,
+     and it lasts thirty days. seenBefore() governs only whether the
+     gate is shown while the question is still in the air.
+     ------------------------------------------------------------------ */
+
+  // Screen-reader labels, from content.js like every other word here.
+  if (emailInput && A.gate_placeholder) {
+    emailInput.setAttribute('aria-label', A.gate_placeholder);
+  }
+  if (codeInput && A.gate_code_placeholder) {
+    codeInput.setAttribute('aria-label', A.gate_code_placeholder);
+  }
+
   if (seenBefore() && gate) gate.hidden = true;
 
   askSession().then(function (signedIn) {
@@ -456,35 +551,90 @@
 
     remember(false);
     if (gate) gate.hidden = false;
+    showStep('email');
     if (signedIn === null) showError('gate_offline');
-    if (input) input.focus();
+    if (emailInput) emailInput.focus();
   });
 
-  if (form) {
-    var busy = false;
-
-    form.addEventListener('submit', function (event) {
+  if (emailForm) {
+    emailForm.addEventListener('submit', function (event) {
       event.preventDefault();
-      if (busy) return;
 
-      var attempt = input ? input.value : '';
-      if (!attempt) return;
+      var typed = emailInput ? emailInput.value.trim() : '';
 
-      busy = true;
-      sendPassword(attempt).then(function (ok) {
-        busy = false;
-        if (input) input.value = '';
+      // A quick look before troubling the relay, so an obvious slip is
+      // answered at once. The relay checks properly; this only saves a
+      // round trip on something plainly not an address.
+      if (!typed || typed.indexOf('@') < 1 || /\s/.test(typed)) {
+        showError('gate_bad_email');
+        if (emailInput) emailInput.focus();
+        return;
+      }
 
-        if (ok) {
-          if (error) error.hidden = true;
+      requestCode(typed, emailForm.querySelector('.gate__button'));
+    });
+  }
+
+  if (codeInput) {
+    // Everything that is not a digit is dropped as it is typed, so a
+    // code pasted out of an email as "123 456" — or with a stray space
+    // at the end, which is how most of them arrive — simply reads as
+    // 123456. Six is as many as it will hold.
+    codeInput.addEventListener('input', function () {
+      var digits = codeInput.value.replace(/\D/g, '').slice(0, 6);
+      if (digits !== codeInput.value) codeInput.value = digits;
+    });
+  }
+
+  if (codeForm) {
+    codeForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      var digits = codeInput ? codeInput.value.replace(/\D/g, '') : '';
+      if (!digits) {
+        if (codeInput) codeInput.focus();
+        return;
+      }
+
+      clearError();
+
+      whileWorking(codeForm.querySelector('.gate__button'), function () {
+        return askRelay('verify-code', { email: asking, code: digits });
+      }).then(function (answer) {
+        if (answer && answer.ok) {
+          clearError();
           remember(true);
           unlock();
           return;
         }
 
-        showError(ok === null ? 'gate_offline' : 'gate_error');
-        if (input) input.focus();
+        showError(lineFor(answer, 'gate_code_wrong'));
+        if (codeInput) {
+          codeInput.value = '';
+          codeInput.focus();
+        }
       });
+    });
+  }
+
+  if (another) {
+    another.addEventListener('click', function () {
+      if (asking) requestCode(asking, another);
+    });
+  }
+
+  if (elsewhere) {
+    elsewhere.addEventListener('click', function () {
+      clearError();
+      showStep('email');
+      if (codeInput) codeInput.value = '';
+      if (emailInput) {
+        // Left filled in rather than emptied: whoever pressed this is
+        // usually fixing a typo, not starting over.
+        emailInput.value = asking;
+        emailInput.focus();
+        emailInput.select();
+      }
     });
   }
 })();

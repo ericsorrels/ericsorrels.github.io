@@ -272,6 +272,14 @@ there. Leave them alone.
   a logo or caption falls — then come back the moment playback starts, and
   go away again if `play()` is refused.
 
+- **`novalidate` on the gate's email form.** `type="email"` is what
+  gives a phone a keyboard with an `@` on it, which is worth keeping —
+  but it also makes the browser refuse the submit and show its own
+  terse popup, so `access.gate_bad_email` never appears and the site
+  answers in a voice that isn't its own. `novalidate` keeps the
+  keyboard and hands the judging back to `access.js`. Tested: without
+  it, a mistyped address produced **no message at all** from the page.
+
 - **`assets/js/access.js` runs its startup block last inside the IIFE.**
   Moving it earlier means auto-unlock fires before the player list exists,
   and the vault silently fails to build for returning visitors.
@@ -490,17 +498,19 @@ nowhere else:
 
 | Secret | What it is |
 |---|---|
-| `VAULT_PASSWORD` | the password handed out with an invitation |
-| `SESSION_SECRET` | a long random string that signs session cookies |
+| `SESSION_SECRET` | a long random string. It signs session cookies **and** the stored hashes of codes in flight, so changing it signs everybody out and voids any unused code |
 | `RESEND_API_KEY` | lets the worker hand an email to Resend to deliver |
+
+There was a third, `VAULT_PASSWORD`, until 29 September 2026. Nothing
+reads it now.
 
 And two stores arrive as bindings: `VAULT`, the R2 bucket of album
 files, and `MEMBERS`, a D1 database — see The guest list below.
 
 #### Moving from one password to emailed codes — where this stands
 
-Begun 29 September 2026, in the stages Eric set out. **Stages 1 and 2
-are done; the password is still the only way in until Stage 3.**
+Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
+3 are done: the password is gone and the gate is email plus a code.**
 
 - **Done — the guest list.** A D1 database `grayman-members`, bound as
   `MEMBERS`, one row per approved address. Its shape is in
@@ -515,8 +525,16 @@ are done; the password is still the only way in until Stage 3.**
   in the worker, along with `GET /vault-api/send-test?to=…`, which
   proves all three in one visit from a browser. Confirmed working
   29 September 2026.
-- **Next — Stage 3:** replace the password box with an email box and a
-  6-digit code. Then 4, the admin page behind Cloudflare Access; 5,
+- **Done — the gate.** Email in, six digits back, `?v=58`. The
+  password is gone from the worker, from the page and from
+  `content.js`. Two more tables, `codes` and `throttle`.
+- **Two dashboard steps belong to this stage and are Eric's to do** —
+  check they happened before trusting any of the above. Rotating
+  `SESSION_SECRET`, which ends every session issued under the old
+  password, and deleting the `VAULT_PASSWORD` secret, which nothing
+  reads any more. Until the rotation, anyone who signed in with the
+  password is still inside on a 30-day cookie.
+- **Next — Stage 4:** the admin page behind Cloudflare Access. Then 5,
   Gumroad; 6, testing and `VAULT-GUIDE.md`.
 
 **`send-test` is temporary and comes out in Stage 4**, when the admin
@@ -535,23 +553,57 @@ swallows the rest of the file and D1 answers "Requests without any
 query are not supported". That happened; it cost a round trip. Block
 comments survive being flattened.
 
-**To change the password**, edit `VAULT_PASSWORD` in the Cloudflare
-dashboard — Workers & Pages → `grayman-vault` → Settings → Variables and
-Secrets. Nothing in the repo changes and **no `?v=` bump is needed**,
-because no part of the site knows the password any more. Sessions already
-issued keep working; changing `SESSION_SECRET` instead signs everybody
-out at once, which is the lever for a leaked session.
+**To give somebody access**, add their email address to the `members`
+table — by hand in the D1 console, or from Gumroad once that is wired
+up. **To take it away**, delete the row. Nothing in the repo changes
+and **no `?v=` bump is needed**: no part of the site knows who is on
+the list. Deleting a row stops new codes but does not end a session
+already issued; changing `SESSION_SECRET` signs *everybody* out at
+once, which is the lever for a session thought to have leaked, and it
+also voids any code still in flight.
 
-**How a visitor gets in.** The page POSTs the typed password to
-`/vault-api/login`. The worker checks it and sets `tgm_vault`, a cookie
-that is **HttpOnly** (no script can read it, including the site's own),
-**Secure**, `SameSite=Lax`, and good for 30 days. It carries who it is
-for and when it expires, signed with `SESSION_SECRET` — so nothing is
-stored at Cloudflare's end and an edited cookie simply stops verifying.
-On load the page asks `/vault-api/session` rather than trusting anything
-it remembers. `tgm_vault_seen` in `localStorage` is only a hint that
-stops the password screen flashing past a returning listener; it cannot
+**How a visitor gets in.** Two steps, both POSTs.
+
+1. `/vault-api/request-code` with an address. The worker applies the
+   brake, then answers `{ok:true}` **and only then** looks the address
+   up and posts a six-digit code to it — through `ctx.waitUntil`, so
+   the reply has already gone. That is what makes an approved address
+   and an unapproved one take the same time as well as say the same
+   words.
+2. `/vault-api/verify-code` with the address and the digits. Right, and
+   the worker sets `tgm_vault`, a cookie that is **HttpOnly** (no
+   script can read it, including the site's own), **Secure**,
+   `SameSite=Lax`, and good for 30 days. It carries who it is for and
+   when it expires, signed with `SESSION_SECRET` — so nothing is stored
+   at Cloudflare's end and an edited cookie simply stops verifying.
+
+**The session's subject is now the email address**, where under the
+password it was the single word `invite` for everybody. That is what
+makes it possible to know, or later to revoke, one person.
+
+On load the page asks `/vault-api/session` rather than trusting
+anything it remembers. `tgm_vault_seen` in `localStorage` is only a
+hint that stops the gate flashing past a returning listener; it cannot
 let anyone in.
+
+**The codes.** Six digits, ten minutes, one use, five wrong guesses
+before the code is torn up rather than merely counted. **Only a hash is
+stored**, signed with `SESSION_SECRET` and bound to the address — a
+plain hash of six digits is worth nothing, since a million guesses is
+no work at all. One live code per address: asking again replaces the
+last one, which is why a code sent less than a minute ago is left alone
+rather than replaced, and why the wrong-code line says to use the
+newest email. The brake counts per address and per internet address, in
+`throttle`, and **errs toward letting people in** — if D1 is
+unreachable it does not refuse anybody, because a supporter locked out
+by a database wobble is worse than a few extra guesses at something
+that expires in ten minutes.
+
+**Saying "that isn't an address" is deliberate, and is the one thing
+the gate does say plainly.** It is about what was typed, not about who
+is on the list, so it gives nothing away — and without it somebody who
+fat-fingered their own address would wait forever for an email that was
+never coming.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.
@@ -603,12 +655,16 @@ had stopped — `cf-cache-status: EXPIRED` was the tell, while `.lrc`
 part of removing a published file, not an optional extra.
 
 **Previewing locally.** `tools/preview-server.py` answers `/vault-api/`
-itself, from the folders under `assets/`, and says everyone is signed in
-— there is no password between Eric and his own disk. Two switches exist
-for testing the password screen, which a preview would otherwise never
-show: `TGM_PREVIEW=locked` (the gate appears; "open sesame" is accepted)
-and `TGM_PREVIEW=offline` (the relay never answers, so the page shows
-`gate_offline`). Both are testing aids in a tool that is never published.
+itself, from the folders under `assets/`, and says everyone is signed
+in — there is nothing between Eric and his own disk. Two switches exist
+for testing the gate, which a preview would otherwise never show:
+`TGM_PREVIEW=locked` (the gate appears, **any** address is accepted,
+nothing is posted, and the code is always `123456`) and
+`TGM_PREVIEW=offline` (the relay never answers, so the page shows
+`gate_offline`). Both are testing aids in a tool that is never
+published. Run a switched copy on **another port** —
+`TGM_PREVIEW=locked python3 tools/preview-server.py 8421` — rather than
+restarting the one Eric has open on 8420.
 
 ### The locked door
 
@@ -1199,7 +1255,9 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (28 September 2026)
 
-Live at `?v=57`. `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+Committed at `?v=58` (57 was the last one Eric pushed — check rather
+than assume, with the curl line under Working with Eric).
+`audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
