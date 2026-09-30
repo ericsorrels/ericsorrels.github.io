@@ -769,10 +769,15 @@ the shop address. So `GUMROAD_PRODUCT` set to the pretty name out of
 `sorrels7.gumroad.com/l/earlyaccess` can match nothing at all, and the
 symptom is perfectly silent: the ping arrives, the sale is real, the
 API confirms it, and the worker decides it was for some other product
-and does nothing. **Prefer the `product_id`.** Eric's Stage 6 Gumroad
-test failed exactly this way on 29 September 2026, and his first guess
-was that a 100%-off purchase is not a real sale — it is; this was the
-cause.
+and does nothing.
+
+**Always use the `product_id`. This is settled, not suspected.** Eric's
+Stage 6 Gumroad test failed exactly this way, and the admin page's own
+check confirmed it on 30 September 2026: the sale was real, the address
+was right, the product did not match. His first guess had been that a
+100%-off purchase is not a real sale — it is, and Gumroad records free
+sales normally, charging no fee. Setting `GUMROAD_PRODUCT` to the
+`product_id` the check reported is the fix.
 
 **That is what `Why didn't somebody get in?` on the admin page is
 for.** `gumroadLookup()` asks Gumroad about one address and reports
