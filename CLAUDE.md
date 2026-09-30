@@ -39,6 +39,7 @@ assets/downloads/   the supporter downloads — GITIGNORED (still empty)
 cloudflare/weather-worker.js   the weather relay's source; runs at Cloudflare
 cloudflare/vault-worker.js     the album's keeper; holds no secrets — see The vault
 cloudflare/vault-schema.sql    the guest list's columns; no addresses, no secrets
+VAULT-GUIDE.md      the vault explained for Eric — published, holds no secrets
 tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
                     grab-frame.swift, make-icon.swift, find-letter.swift
@@ -536,6 +537,13 @@ Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
   below.
 - **Done — Gumroad.** A purchase adds an address; a refund or
   chargeback takes it away. See Gumroad below.
+- **Done — `VAULT-GUIDE.md`**, the whole thing in plain words for
+  Eric: how signing in works, adding and removing people, how Gumroad
+  connects, the secrets by name only, a table of what to do when
+  something breaks, and where the free plans run out. **It is
+  published** at `graymanmusical.com/VAULT-GUIDE.md` and was checked
+  for secrets before committing — it describes nothing the worker's own
+  source does not already say. Keep it that way, or gitignore it.
 - **Dashboard steps that belong to these stages and are Eric's to do** —
   check they happened rather than assuming. Rotating `SESSION_SECRET`,
   which ends every session issued under the old password; deleting the
@@ -545,7 +553,23 @@ Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
   Gumroad; and pressing **Watch refunds and disputes** on the admin
   page. Until the rotation, anyone who signed in with the password is
   still inside on a 30-day cookie.
-- **Next — Stage 6:** testing and `VAULT-GUIDE.md`.
+**Verified against the live site 29 September 2026**, from outside with
+no session: `/vault-api/` audio, lyrics, downloads, `admin` and
+`admin/list` all 404; `session` 401; the old `assets/audio/…` and
+`assets/lyrics/…` addresses still 404; the Gumroad doorbell 404s on a
+wrong secret, an empty secret and a GET. At the gate: a mistyped
+address 400 `bad-email`, an unknown address 200 `{ok:true}` — the same
+answer an approved one gives — a code with no row 401 `expired`, three
+digits 401 `wrong`, and a code pasted as `12 34 56` reaching the
+`expired` branch, which is the proof the spaces were stripped before it
+was judged.
+
+**Testing the gate from this machine spends Eric's own allowance.**
+`curl` here goes out over his home connection, so it lands in the same
+per-IP bucket he does — twelve code requests an hour. Five were used
+on 29 September. Leave headroom, say so when any are spent, and note
+that a malformed address costs nothing because it is refused before the
+brake.
 
 **Where the free plans actually run out**, in the order they would
 bite. Worked out 29 September 2026, when Eric asked whether a guest
