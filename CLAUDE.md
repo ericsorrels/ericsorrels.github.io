@@ -534,6 +534,18 @@ raised, and Eric's answer was that he wants **the video note kept
 separate from the world's aesthetic for now**. Don't re-raise it, and
 don't quietly grade a film toward the palette.
 
+**The album runs straight into its closing film, and the padding at
+that seam is overridden.** Two ink sections meet there with no gradient
+between them, so `.section`'s deep padding — which exists to clear a
+fade — was 230px of nothing and made the album look as though it had
+stopped. Cut to about 100px by `#vault .section--from-paper`
+(padding-bottom) and `#vault .section--contact` (padding-top), kept in
+`vh` so it still breathes on a tall screen. **The `#vault` scope is
+load-bearing:** the main page's contact section carries the same
+`section--contact` class, and there the air is doing its job after the
+Journey. Checked after the change — index's contact is still 90px and
+its two `--from-paper` sections still 139.86px.
+
 **The behind-the-scenes film carries a Carolina Theatre Workshop mark
 burned into its corner.** The main page's teaser credits them properly
 through `credit.text` / `credit.url`. This one's credit fields are
@@ -1772,7 +1784,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=64`, of which **60 through 64 are unpushed** (59 was
+Committed at `?v=65`, of which **60 through 65 are unpushed** (59 was
 the last one confirmed live — check rather than assume, with the curl
 line under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,

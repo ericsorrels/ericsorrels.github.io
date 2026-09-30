@@ -3213,3 +3213,27 @@ html.stage-open .stage .lyrics {
   max-width: 34em;
   text-align: center;
 }
+
+/* The gap between the last bonus track and the closing film.
+
+   It was 230px: two sections' padding meeting, 140 below the track list
+   and 90 above the film. Both are the generic .section values, and they
+   are right everywhere else — that depth exists to clear the gradient a
+   section fades in through. These two sections are BOTH ink with no
+   gradient between them, so there is no fade to clear and nothing to
+   separate; the page reads as one continuous stretch and the album
+   simply looked as though it had stopped.
+
+   Kept proportional rather than pinned to pixels, so it still breathes
+   on a tall screen and closes up on a short one.
+
+   Scoped under #vault deliberately: the main page's contact section
+   carries the same class and is a genuine change of subject after the
+   Journey, where that air is doing its job. */
+#vault .section--from-paper {
+  padding-bottom: clamp(50px, 7vh, 90px);
+}
+
+#vault .section--contact {
+  padding-top: clamp(44px, 6vh, 75px);
+}
