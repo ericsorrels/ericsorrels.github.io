@@ -126,6 +126,127 @@
   }
 
   /* ------------------------------------------------------------------
+     The storm — the one transition, played in one place.
+
+     unlock() above is the whole of what has to happen. Everything here
+     is weather drawn over the top of it, and it is arranged so that the
+     weather can fail in any way it likes — missing file, no canvas, a
+     throw halfway through — without a listener who has just typed a
+     correct code being left outside their album.
+
+     That is why unlock() is wrapped in a latch rather than called from
+     inside the storm: three separate things call letIn(), the first one
+     to arrive does it, and the other two find it already done.
+
+     The storm plays ONLY here. A returning visitor whose cookie is
+     still good is let in by the startup block below with no weather at
+     all — they did not just do anything, and a storm would be an
+     announcement with nothing to announce.
+     ------------------------------------------------------------------ */
+
+  // How long the vault may go unbuilt before it is built regardless of
+  // what the storm is doing. Taken from the storm's own clock where it
+  // is there to be asked, so the two cannot drift; the fallback is a
+  // number that is simply longer than the fade.
+  function unlockBy() {
+    var s = window.TGMStorm;
+    return (s && typeof s.coverMs === 'number') ? s.coverMs + 500 : 1200;
+  }
+
+  function calmPreferred() {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Nothing on the gate can be pressed again from the moment the relay
+  // says yes. The code has been spent; a second submit would only spend
+  // it again and be told it was wrong.
+  function sealGate() {
+    if (!gate) return;
+    var controls = gate.querySelectorAll('button, input');
+    for (var i = 0; i < controls.length; i++) controls[i].disabled = true;
+  }
+
+  // Where a keyboard and a screen reader should be standing once the
+  // weather clears. Without this, focus is left on a button inside a
+  // gate that is now hidden, and the next Tab starts again from the top
+  // of the document.
+  function landInVault() {
+    var heading = vault ? vault.querySelector('.vault__heading') : null;
+    if (!heading) return;
+    if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+    try {
+      heading.focus({ preventScroll: true });
+    } catch (e) {
+      heading.focus();
+    }
+  }
+
+  // The way in for somebody who has asked not to be moved about, and
+  // the way in when there is no storm to be had. A change of opacity
+  // only — reduced motion is a request to be spared movement, not a
+  // request for everything to happen without transition.
+  function arriveQuietly() {
+    if (vault) {
+      vault.classList.add('vault--arriving');
+      window.setTimeout(function () {
+        vault.classList.remove('vault--arriving');
+      }, 400);
+    }
+    landInVault();
+  }
+
+  function enterVault() {
+    var done = false;
+    function letIn() {
+      if (done) return;
+      done = true;
+      unlock();
+    }
+
+    sealGate();
+
+    var storm = window.TGMStorm;
+    if (calmPreferred() || !storm || !storm.supported()) {
+      letIn();
+      arriveQuietly();
+      return;
+    }
+
+    var playing = null;
+    try {
+      playing = storm.play(letIn);
+    } catch (e) {
+      playing = null;
+    }
+
+    // The storm refused to start. No weather, then, and no waiting for
+    // it either.
+    if (!playing || typeof playing.then !== 'function') {
+      letIn();
+      arriveQuietly();
+      return;
+    }
+
+    // The storm says when it has covered the gate, and letIn() is
+    // called from in there. This is the promise that it will happen
+    // anyway — the vault is built by now whatever the weather is doing,
+    // and well before the stylesheet's own failsafe uncovers it.
+    window.setTimeout(letIn, unlockBy());
+
+    playing.then(function () {
+      letIn();
+      landInVault();
+    }, function () {
+      letIn();
+      landInVault();
+    });
+  }
+
+  /* ------------------------------------------------------------------
      The vault — track players and download buttons.
      ------------------------------------------------------------------ */
 
@@ -604,7 +725,7 @@
         if (answer && answer.ok) {
           clearError();
           remember(true);
-          unlock();
+          enterVault();
           return;
         }
 

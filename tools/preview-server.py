@@ -79,9 +79,19 @@ VAULT_FOLDERS = ("audio/", "lyrics/", "notes/", "downloads/")
 #
 # Unset, everything is open — which is what a preview should be.
 #
+# Both can be given as plain flags too — --locked and --offline — which
+# is the same switch by another route. The environment variable came
+# first; the flags were added because some ways of starting this server
+# can pass arguments but not environment, and a test that cannot be run
+# from the tooling to hand tends not to get run.
+#
 # To try the error lines, type something that isn't an address (the
 # mistyped-address line), or a wrong six digits (the wrong-code line).
 PREVIEW_MODE = os.environ.get("TGM_PREVIEW", "").strip().lower()
+if "--locked" in ARGS:
+    PREVIEW_MODE = "locked"
+elif "--offline" in ARGS:
+    PREVIEW_MODE = "offline"
 PREVIEW_CODE = "123456"
 
 

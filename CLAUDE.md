@@ -1027,6 +1027,114 @@ line-for-line against the `tracks:` list in `content.js`. Tracks with no file
 read "Soon" and disable themselves; play-through skips over them. Bonus tracks
 are separated by `bonus_starts_at`.
 
+### The storm — the gate becoming the vault
+
+`assets/js/storm-intro.js`, added 30 September 2026. A hurricane turns
+over the gate, the vault is built underneath while it cannot be seen,
+and then the eye opens onto the album. 420ms to swallow the gate,
+820ms turning, 1020ms for the eye — 2.26 seconds.
+
+**It plays in exactly one place: the moment the relay accepts a code.**
+A returning visitor whose cookie is still good is let in by the startup
+block with no weather at all — they have just done nothing, and a storm
+would be an announcement with nothing to announce.
+
+**The contract is one function**, and the module knows nothing about
+sessions, codes or the vault:
+
+```js
+window.TGMStorm.play(onCovered) -> Promise
+```
+
+`onCovered()` fires once, when the cover is opaque and the page beneath
+is safe to rearrange. The promise resolves when the cover is gone.
+
+**Nothing about the weather may cost anyone their album.** `unlock()`
+is behind a latch in `enterVault()` and **three** separate things call
+it: the storm when it has covered the gate, a timer at 920ms whatever
+the storm is doing, and the promise settling either way. First one
+wins. Tested by deleting `window.TGMStorm` outright (vault in 123ms)
+and by making `play()` throw (vault at once, no cover left behind).
+There is a fourth net in CSS — `.storm` fades itself out at 4500ms —
+and **those two numbers are a pair: the unlock timer must stay the
+earlier**, or the failsafe would uncover a gate rather than an album.
+
+#### Three things that look like tuning and are load-bearing
+
+- **The cloud is assembled on its own canvas, then laid over the sea.**
+  The eye is taken OUT of the cloud with `destination-out` so the
+  eyewall's torn inner edge is what rings it. Done straight onto the
+  visible canvas, that cut goes through the sea as well and the eye
+  becomes a window onto the page — the gate's own words were legible
+  through the middle of the hurricane. That is what the second surface
+  is for.
+- **`radius()` is 0.50 of the long side, not 0.78.** At 0.78 the
+  viewport is inside the cloud: gorgeous texture, no legible storm,
+  because at that magnification a hurricane is just weather out of an
+  aeroplane window.
+- **Band sweeps stay under about 3.6 radians.** Past a turn and a half
+  a band closes on itself and the eye reads concentric rings rather
+  than arms. An arm has to travel *out* more than it travels *round*.
+  This was the number that took longest to find; 7 and 8 radians gave
+  a bullseye.
+
+#### Why it is stamped rather than drawn
+
+The first version drew each band as one filled path with a gradient
+through it, and Eric's word for it was "comic-book". He was right, and
+the obvious fix — retune the gradients — is the wrong one. **A
+hurricane has no smooth edges anywhere.** It is thousands of separate
+cells at every size, clumped into bands that break, thin and fray.
+Smooth is what makes a drawing of a spiral.
+
+So nothing is a filled path. One soft cell sprite is stamped ~9,000
+times with value noise opening real gaps, into **three shells turned
+at slightly different rates** (1.12 / 1.00 / 0.88) — a real storm does
+not rotate rigidly, and that shear is much of what reads as alive.
+Rates are kept close on purpose, or the four arms shear into soup.
+
+Built once at **34ms** and thereafter only turned, so a frame is three
+`drawImage` calls: **103fps measured**, against the pane's own idle
+rate. The layers are built at a fixed size and blown up — cloud
+upscales better than anything, having no edges to go soft — and the
+grain laid over the top afterwards is at the screen's own resolution,
+which is where the fine detail actually comes from.
+
+**Nothing calls `Math.random` for shape.** A seeded generator, reset
+per build, so it is the same storm on every sign-in and any shape
+worth keeping can be found again. (The grain tile is the exception and
+does not matter.)
+
+**The eyewall gets finer cells than any other band.** At the ordinary
+size a single cell is nearly as wide as the eye, and one surviving the
+cut hangs off the rim — which turned the eye into a comma on every
+screen.
+
+#### The rest of the wiring
+
+- **Reduced motion is locked twice.** `enterVault()` never calls the
+  storm, doing a 300ms opacity crossfade instead (`.vault--arriving`);
+  and `.storm { display: none }` under the media query catches any
+  route not thought of. Emulating the OS setting is not possible in
+  the built-in pane — it was tested by making the page's own
+  `matchMedia` report `reduce`, which is the exact condition
+  `calmPreferred()` asks, plus reading the rule out of the stylesheet.
+- **A press of anything ends it**, over 160ms rather than as a cut, and
+  `onCovered` fires early rather than being skipped — so someone who
+  presses at 110ms still gets a built vault.
+- **The gate is sealed the moment the relay says yes.** The code has
+  been spent; a second submit would only be told it was wrong.
+- **Focus moves to `.vault__heading`**, which carries `tabindex="-1"`
+  in the markup for that purpose, so a keyboard is not left on a button
+  inside a hidden gate. `.vault__heading:focus` drops the outline,
+  since this focus is only ever programmatic.
+- `z-index: 90` — the stage's 40 is the next highest thing.
+- **`tools/preview-server.py` takes `--locked` and `--offline`** as
+  well as the environment variable, added because the app's preview
+  tooling can pass arguments but not environment, and the gate could
+  not otherwise be walked end to end from here. Run it on another port:
+  `python3 tools/preview-server.py --locked 8421`.
+
 ### The album player
 
 `access.js` builds one row per track, each with **its own `<audio>` element**
@@ -1593,9 +1701,9 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=61`, of which **60 and 61 are unpushed** (59 was the
-last one confirmed live — check rather than assume, with the curl line
-under Working with Eric).
+Committed at `?v=62`, of which **60, 61 and 62 are unpushed** (59 was
+the last one confirmed live — check rather than assume, with the curl
+line under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 

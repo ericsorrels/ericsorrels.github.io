@@ -3102,3 +3102,92 @@ html.stage-open .stage .lyrics {
     opacity: 0.15;
   }
 }
+
+/* =====================================================================
+   THE STORM — the gate becoming the vault
+
+   Drawn by assets/js/storm-intro.js. Everything here is the frame it
+   is drawn in: a fixed sheet over the whole page, transparent to begin
+   with, lit over the same 420ms the script's first phase runs for.
+
+   The sheet has NO background of its own. The canvas paints the ink
+   field itself, which is what lets the script take a hole back out of
+   it with destination-out and have the vault show through the eye. A
+   background colour here would sit behind that hole and fill it in.
+   ===================================================================== */
+
+.storm {
+  position: fixed;
+  inset: 0;
+  z-index: 90;              /* over everything; the stage's 40 is the next */
+  opacity: 0;
+  overflow: hidden;
+  background: transparent;
+  transition: opacity 420ms ease;
+
+  /* THE FAILSAFE, and it is load-bearing. If the script throws between
+     putting this on screen and taking it off, a listener is left
+     looking at a dark rectangle with their album behind it. So the
+     sheet fades itself out after four and a half seconds no matter
+     what JavaScript does or fails to do.
+
+     access.js guarantees the vault has been built long before this —
+     it runs unlock() on its own timer at 1200ms, whatever the storm is
+     doing — so what this uncovers is always the album and never the
+     gate. The two numbers are a pair: this one must stay the later. */
+  animation: storm-failsafe 700ms ease 4500ms forwards;
+}
+
+.storm--in {
+  opacity: 1;
+}
+
+/* A press during the storm. The script opens the eye over its own
+   shorter clock; this only stops the sheet swallowing that press's
+   successors while it goes. */
+.storm--skipping {
+  pointer-events: none;
+}
+
+.storm__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes storm-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* The way in for somebody who has asked not to be moved about. access.js
+   never calls the storm under reduced motion, and the vault arrives on
+   a 300ms fade instead — a change of opacity, not of position, which is
+   what that setting is asking to be spared. This rule is the second
+   lock: if the storm is ever reached by some route not thought of here,
+   it does not play. */
+@media (prefers-reduced-motion: reduce) {
+  .storm {
+    display: none;
+  }
+}
+
+.vault--arriving {
+  animation: vault-arrive 300ms ease both;
+}
+
+@keyframes vault-arrive {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Focused by access.js when the storm clears, never by tabbing — it is
+   tabindex="-1". A ring drawn round a heading the size of this one
+   reads as a fault rather than as feedback, so the programmatic case
+   is left unmarked; :focus-visible is untouched, so a browser that
+   decides this focus was keyboard-driven still draws one. */
+.vault__heading:focus {
+  outline: none;
+}
