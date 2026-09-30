@@ -746,9 +746,31 @@ async function hasLiveSale(env, email) {
     if (sale.refunded === true || sale.chargebacked === true) return false;
     // A dispute that Eric won leaves the sale standing.
     if (sale.disputed === true && sale.dispute_won !== true) return false;
+    if (revoked(sale)) return false;
 
     return true;
   });
+}
+
+/* Revoking access is a SEPARATE act from refunding — Gumroad will not
+   even let you revoke a fully refunded purchase — and it is what Eric
+   reaches for when somebody is passing the album around. It plainly
+   ought to shut the vault too.
+
+   Three spellings are checked because Gumroad's API reference does not
+   document this field, and a name guessed wrongly would fail in
+   silence. Asking `=== true` for a field that does not exist is simply
+   false, so the wrong guesses cost nothing — and the admin page's
+   check prints the raw sale beside this, which is how the right name
+   gets confirmed rather than assumed. */
+function revoked(sale) {
+  // true or the string "true", and nothing else. Not merely truthy:
+  // the string "false" is truthy, and reading that as "revoked" would
+  // throw out somebody who paid — the one mistake this whole file is
+  // arranged to avoid.
+  const yes = (v) => v === true || v === 'true';
+
+  return yes(sale.is_access_revoked) || yes(sale.access_revoked) || yes(sale.revoked);
 }
 
 /* Asks Gumroad what it knows about one address and reports back
@@ -796,6 +818,7 @@ async function gumroadLookup(env, email) {
     else if (sale.refunded === true) verdict = 'refunded';
     else if (sale.chargebacked === true) verdict = 'charged back';
     else if (sale.disputed === true && sale.dispute_won !== true) verdict = 'disputed';
+    else if (revoked(sale)) verdict = 'access revoked';
     else verdict = 'counts — this one grants access';
 
     return {
@@ -808,6 +831,13 @@ async function gumroadLookup(env, email) {
       created: sale.created_at || sale.sale_timestamp || null,
       matches,
       verdict,
+      // Everything Gumroad said about this sale, so a field this worker
+      // does not know to look at can still be seen. The API reference
+      // is incomplete — `is_access_revoked` is not in it — and reading
+      // the real answer beats guessing at one. Only on sales looked up
+      // by address, never on the recent-sales list, which is other
+      // people's.
+      raw: sale,
     };
   };
 
@@ -826,6 +856,7 @@ async function gumroadLookup(env, email) {
       const seen = describe(sale);
       const at = String(sale.email || '');
       seen.email = at ? at.slice(0, 2) + '…' + at.slice(at.indexOf('@')) : null;
+      delete seen.raw;      // other people's sales; the identifiers suffice
       return seen;
     });
 
@@ -1157,6 +1188,12 @@ const ADMIN_PAGE = `<!doctype html>
   code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem;
          background:#fff; border:1px solid var(--edge); border-radius:2px;
          padding:.1rem .35rem; word-break:break-all; }
+  details { margin:.4rem 0 .6rem; }
+  summary { cursor:pointer; font-size:.75rem; color:var(--faint); }
+  pre { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.72rem;
+        background:#fff; border:1px solid var(--edge); border-radius:2px;
+        padding:.7rem; overflow:auto; max-height:26rem; white-space:pre-wrap;
+        word-break:break-word; margin:.4rem 0 0; }
   @media (max-width:620px) { .hide-narrow { display:none; } body { padding-top:1.5rem; } }
 </style>
 </head>
@@ -1200,15 +1237,22 @@ const ADMIN_PAGE = `<!doctype html>
     <input id="checkWho" type="email" placeholder="their email address"
            autocapitalize="off" autocorrect="off" spellcheck="false">
     <button id="checkBtn">Ask Gumroad</button>
-    <button id="syncBtn" class="x" hidden>Put it right</button>
+    <button id="syncBtn" class="x" hidden>Make the list match Gumroad</button>
   </div>
   <div class="said" id="checkSaid"></div>
   <p class="note">Asks Gumroad what it knows about that address and shows every
     sale it reports, whether or not this vault counts it. Use it when somebody
-    says they bought the album but can't get in. <b>The usual answer is the
+    says they bought the album but can't get in — or when you have revoked
+    somebody and want to be sure it took. <b>The usual answer is the
     product:</b> Gumroad's API reports a product's original perma id, not the
     custom name in your shop address, so <code>GUMROAD_PRODUCT</code> may need to
     be the id shown below rather than the pretty name.</p>
+  <p class="note"><b>Revoking access in Gumroad is not a refund</b>, and Gumroad
+    does not send a message when you do it, so nothing here changes by itself.
+    Revoke there, then come back and press <b>Make the list match Gumroad</b>.
+    If the sale still reads as counting afterwards, open <i>everything Gumroad
+    said about it</i> and send me what is in there — the field that marks a
+    revoked sale is not in Gumroad's own API reference.</p>
 
   <h2>Check the post</h2>
   <div class="row">
@@ -1367,6 +1411,10 @@ const ADMIN_PAGE = `<!doctype html>
       bits.push('<br>&nbsp;&nbsp;&nbsp;short id: <code>' + safe(s.short_product_id) + '</code>');
     }
     bits.push('<br>&nbsp;&nbsp;&nbsp;<b>' + safe(s.verdict) + '</b>');
+    if (s.raw) {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;<details><summary>everything Gumroad said about it</summary>' +
+        '<pre>' + safe(JSON.stringify(s.raw, null, 2)) + '</pre></details>');
+    }
     return bits.join(' ');
   }
 
@@ -1386,9 +1434,10 @@ const ADMIN_PAGE = `<!doctype html>
       if (r.found.length) {
         out.push('<br><br>Gumroad has ' + r.found.length + ' sale(s) to that address:');
         out.push(r.found.map(saleLine).join('<br>'));
-        if (r.found.some(function (s) { return s.verdict.indexOf('counts') === 0; })) {
-          $('syncBtn').hidden = false;
-        }
+        // Offered whichever way the answer went: it adds somebody who
+        // should be in and removes somebody who should not, so it is
+        // the button for "make this agree with Gumroad" either way.
+        $('syncBtn').hidden = false;
       } else if (r.recent.length) {
         out.push('<br><br><b>Gumroad has no sale at all to that address.</b>' +
           ' Either the purchase was under a different email, or it never' +
@@ -1406,9 +1455,12 @@ const ADMIN_PAGE = `<!doctype html>
     busy($('syncBtn'), true, '…');
     ask('gumroad-sync', { email: $('checkWho').value.trim() }).then(function (r) {
       busy($('syncBtn'), false);
-      $('checkSaid').innerHTML = (r && r.ok && r.live)
-        ? 'Added. They are on the list now.'
-        : 'Nothing changed — Gumroad does not show a live sale for that address.';
+      var said;
+      if (!r || !r.ok) said = 'That did not work.';
+      else if (r.live === true) said = 'On the list. Their sale stands.';
+      else if (r.live === false) said = 'Taken off the list, if they were on it through a purchase. Anyone added by hand stays.';
+      else said = 'Nothing changed — Gumroad could not be asked just now.';
+      $('checkSaid').textContent = said;
       $('syncBtn').hidden = true;
       load();
     });

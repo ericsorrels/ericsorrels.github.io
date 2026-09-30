@@ -741,6 +741,27 @@ prevent. **Tested, all five.**
 Gumroad reporting a refund, or no sale at all — a comped listener may
 well have never bought anything. **Tested.**
 
+**Revoking access is not refunding, and Gumroad does not announce it.**
+They are separate acts — Gumroad will not even let you revoke a fully
+refunded purchase — and revoking sends no webhook at all, so nothing
+moves by itself. Eric hit this on 30 September 2026, revoking a
+$0 test purchase (a free sale cannot be refunded) and finding the
+address still on the list. That is the design working, not a fault: the
+worker watches for refunds, chargebacks and disputes. The lever is
+**Make the list match Gumroad** on the admin page, which runs
+`reconcile()` by hand — and it is offered whichever way the answer
+went, so it removes as readily as it adds.
+
+**`revoked()` checks three spellings**, because the field is **not in
+Gumroad's API reference** and a name guessed wrongly fails in silence.
+It accepts `true` or the string `"true"` and nothing else — not merely
+truthy, since the string `"false"` is truthy and reading that as
+revoked would throw out somebody who paid. Asking for a field that does
+not exist is simply false, so the wrong guesses cost nothing. **If a
+revoked sale still reads as counting, the real field name is in the
+raw dump** the admin page now prints beside each sale; fix it there
+rather than adding a fourth guess.
+
 **Sales come in by Ping, the rest by subscription.** The Ping setting
 in Gumroad's own settings fires on sales only; `refund`, `dispute`,
 `dispute_won` and `cancellation` have to be registered through

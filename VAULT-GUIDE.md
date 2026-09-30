@@ -173,6 +173,28 @@ right** button appears. Press it and they're added.
 > The fix: run the check above on any real purchase, read the
 > `product_id` it reports, and set `GUMROAD_PRODUCT` to that instead.
 
+### Revoking somebody's access
+
+**Revoking access in Gumroad is not the same as refunding them**, and
+Gumroad doesn't notify anything when you do it — so the guest list
+won't change by itself.
+
+To cut somebody off for good:
+
+1. Revoke their access in Gumroad (Customers → find them → **Revoke
+   access**), **or** just refund them if it was a paid sale.
+2. Come back to the admin page, type their address into **Why didn't
+   somebody get in?**, press **Ask Gumroad**, then press **Make the
+   list match Gumroad**.
+
+Or simply press **Remove** on their row, which does the same thing
+without involving Gumroad at all. Removing by hand is the quicker route
+and always works.
+
+Either way, if they're signed in with the page already open, they can
+keep listening until they reload. To end every session instantly,
+change `SESSION_SECRET` — but that signs out everybody.
+
 ### "Nonrefundable" is a policy, not a mechanism
 
 You can state that sales are final, and you should — it's set in
