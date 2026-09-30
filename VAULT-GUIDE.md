@@ -173,6 +173,24 @@ right** button appears. Press it and they're added.
 > The fix: run the check above on any real purchase, read the
 > `product_id` it reports, and set `GUMROAD_PRODUCT` to that instead.
 
+### "Nonrefundable" is a policy, not a mechanism
+
+You can state that sales are final, and you should — it's set in
+Gumroad under your store's **refund policy**, and the site says it
+under both buy buttons (from `music.early_access.terms` in
+`content.js`, one line feeding both).
+
+But saying it doesn't stop a refund happening. **A buyer can raise a
+chargeback with their card issuer whatever your page says**, and
+Gumroad can refund in a dispute. So the vault still needs to take
+access away when that happens — it's the case where you'd most want it
+to.
+
+One thing to check: Gumroad retired per-product refund policies in
+March 2025, so it's now a single store-wide setting, and at one point
+they switched every store to a 30-day money-back guarantee by default.
+Worth confirming yours says what you think it says.
+
 ### Where the settings live
 
 - **Sales** arrive via the Ping address, set in Gumroad under

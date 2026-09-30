@@ -127,6 +127,19 @@ window.SITE_CONTENT = {
       url: "https://sorrels7.gumroad.com/l/earlyaccess",
       label: "Purchase Early Digital Access",
       note: "Hear the concept album before release.",
+
+      // The terms, under the button. Shown in BOTH places the button
+      // appears — here and on the access page's gate — from this one
+      // line, the same way the address is shared, so the two can never
+      // say different things.
+      //
+      // This is the site saying it. The policy itself is a setting in
+      // Gumroad, and saying it here does not set it there. Nor does
+      // either stop a card issuer allowing a chargeback — which is why
+      // the vault still takes access away on a refund or dispute.
+      //
+      // Emptying it ("") removes the line.
+      terms: "All sales are final.",
     },
   },
 

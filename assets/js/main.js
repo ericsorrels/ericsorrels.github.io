@@ -242,6 +242,14 @@
         note.remove();
       }
 
+      // The terms line. Same rule as the note: an empty line removes it
+      // rather than leaving an empty paragraph holding space open.
+      var terms = cta.querySelector('.cta__terms');
+      if (terms) {
+        if (early.terms) terms.innerHTML = format(early.terms);
+        else terms.remove();
+      }
+
       cta.hidden = false;
     }
 
@@ -256,6 +264,21 @@
     var gateBuy = document.getElementById('gateBuy');
     if (gateInvite && gateBuy && early && early.url) {
       gateBuy.href = early.url;
+
+      // The same terms as the main page's button, from the same line in
+      // content.js — a visitor buying from the gate is buying exactly
+      // the same thing, and two different answers to "can I have my
+      // money back" is the last thing a shop should have.
+      var gateTerms = document.getElementById('gateTerms');
+      if (gateTerms) {
+        if (early.terms) {
+          gateTerms.innerHTML = format(early.terms);
+          gateTerms.hidden = false;
+        } else {
+          gateTerms.remove();
+        }
+      }
+
       gateInvite.hidden = false;
     }
 

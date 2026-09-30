@@ -859,9 +859,15 @@ Under the password form, between it and the back link, the gate offers
 to go other than away. It shows on the wrong-password screen too, which is
 when it is most use.
 
-**The shop address is not written twice.** `#gateBuy` takes its `href` from
-`music.early_access.url` — the same address the main page's button uses —
-so there is one place to change it and no way for the two to drift apart.
+**Neither the shop address nor the terms are written twice.** `#gateBuy`
+takes its `href` from `music.early_access.url` and `#gateTerms` its
+words from `music.early_access.terms` — the same two the main page's
+button uses — so there is one place to change each and no way for them
+to drift apart. Somebody buying from the gate is buying the same thing,
+and two different answers to "can I have my money back" is the last
+thing a shop should have. Both follow the empty-string rule: `""`
+removes the line rather than leaving a paragraph holding space open.
+**Tested both ways, in both places.**
 Only the words are the gate's own (`access.gate_no_invite`,
 `access.gate_buy`), because "Purchase Early Digital Access" beside a
 password box is answering a different question from the one it answers

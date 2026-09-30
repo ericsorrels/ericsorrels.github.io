@@ -675,6 +675,30 @@ img {
   color: var(--gray-mid);
 }
 
+/* The terms, under the note. Quieter again than the note above it —
+   this is the small print, and it should read as small print — but set
+   in sentence case rather than the site's tracked capitals, because a
+   commercial term has to be read and understood rather than admired. */
+.cta__terms {
+  margin: 0.7em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--gray-mid);
+}
+
+/* The same line under the gate's buy button. On paper rather than ink,
+   so it takes the paper palette's faint ink instead of the mid gray. */
+.gate__terms {
+  margin: 1.1em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
 /* News */
 
 .news-item + .news-item {
