@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=62" />
+  <link rel="stylesheet" href="assets/css/style.css?v=63" />
 </head>
 <body>
 
@@ -253,9 +253,17 @@
              of the album rather than being left on a button inside a
              gate that is no longer on the page. -->
         <h1 class="vault__heading" tabindex="-1" data-content="access.heading">The Concept Album</h1>
-        <div class="section__prose">
-          <p data-content="access.intro"></p>
-        </div>
+
+        <!-- The welcome film, in place of the paragraph that used to sit
+             here. Filled by main.js from content.js → access.welcome_video,
+             using the same template and the same builder as the videos on
+             the main page — so the play button, the poster, the caption
+             rules and the hide-on-error behaviour are one piece of code in
+             one place rather than a second copy that drifts.
+
+             Left empty if there is no film named in content.js, which is
+             the same empty-string rule the rest of the site follows. -->
+        <div id="welcomeVideo" class="vault__welcome"></div>
       </div>
     </section>
 
@@ -299,19 +307,47 @@
 
   </main>
 
-  <script src="content.js?v=62"></script>
-  <script src="assets/js/main.js?v=62"></script>
+  <!-- The same markup as the videos on the main page, and deliberately a
+       copy of it: main.js builds both from this template, so a change to
+       one page's player has to be made to the other's too. Two small
+       copies of markup beat one shared file that neither page owns. -->
+  <template id="videoTemplate">
+    <figure class="video">
+      <div class="video__frame">
+        <!-- "controls" is here on purpose: it stays if the play button
+             can't be set up, and comes back if the browser refuses to
+             start playback. Normally it's taken away until someone
+             presses play, so the cover image isn't covered up. -->
+        <!-- controlsList="nodownload" takes Download out of the little
+             three-dot menu on the player. -->
+        <video class="video__player" controls controlsList="nodownload"
+               preload="metadata" playsinline></video>
+        <button class="video__play" type="button" hidden aria-label="Play the video">
+          <span class="video__play-mark" aria-hidden="true"></span>
+        </button>
+      </div>
+      <!-- Two lines: the caption, then the credit beneath it. Either
+           one left empty in content.js simply doesn't appear. -->
+      <figcaption class="video__caption">
+        <span class="video__caption-text"></span>
+        <span class="video__credit"></span>
+      </figcaption>
+    </figure>
+  </template>
+
+  <script src="content.js?v=63"></script>
+  <script src="assets/js/main.js?v=63"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=62"></script>
+  <script src="assets/js/lyrics.js?v=63"></script>
   <!-- Before access.js, for the same reason lyrics.js is: access.js
        asks for window.TGMStorm the moment a code is accepted, and a
        visitor can get that far faster than a script at the end of the
        body would expect. It is a module and nothing else — loading it
        starts no animation and touches no markup. If it is missing
        altogether, access.js lets the visitor in without weather. -->
-  <script src="assets/js/storm-intro.js?v=62"></script>
-  <script src="assets/js/access.js?v=62"></script>
+  <script src="assets/js/storm-intro.js?v=63"></script>
+  <script src="assets/js/access.js?v=63"></script>
 </body>
 </html>

@@ -127,6 +127,35 @@
       });
     }
 
+    // The welcome film on the album page, under the heading. One film
+    // rather than a list, but built by the same buildVideo() as the main
+    // page's — so the play button, the poster, the caption rules and the
+    // hide-itself-on-error behaviour are one piece of code, not two that
+    // drift apart. This runs on the main page too and finds nothing.
+    var welcomeBox = document.getElementById('welcomeVideo');
+    var welcome = C.access && C.access.welcome_video;
+
+    if (welcomeBox && videoTemplate && welcome && welcome.file) {
+      var welcomeFigure = buildVideo(welcome);
+      var welcomePlayer = welcomeFigure.querySelector('.video__player');
+
+      // The album is on this same page, and a film talking over a song
+      // is the one thing that must not happen. access.js owns the track
+      // players and is not reached into here — every one of them is an
+      // <audio> element on this page, so pausing whatever is sounding is
+      // enough, and it needs to know nothing about how the album works.
+      if (welcomePlayer) {
+        welcomePlayer.addEventListener('play', function () {
+          var sounding = document.getElementsByTagName('audio');
+          for (var i = 0; i < sounding.length; i++) {
+            if (!sounding[i].paused) sounding[i].pause();
+          }
+        });
+      }
+
+      welcomeBox.appendChild(welcomeFigure);
+    }
+
     function buildVideo(video) {
       var figure = videoTemplate.content.firstElementChild.cloneNode(true);
       var player = figure.querySelector('.video__player');

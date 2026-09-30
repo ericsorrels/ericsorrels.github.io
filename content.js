@@ -459,8 +459,35 @@ window.SITE_CONTENT = {
     /* ---- Once inside ----------------------------------------------------- */
     label: "Early Digital Access",
     heading: "The Concept Album",
-    intro:
-      "Welcome — and thank you for supporting *The Gray Man*. The concept album lives here, along with a few companions for your listening.",
+
+    // The welcome film, under the heading. It replaced the paragraph
+    // that used to sit here.
+    //
+    // The file must be an .mp4 — a .mov out of a phone or an editor is
+    // usually in a format that Firefox and a lot of Windows computers
+    // cannot play at all, and it is far too big besides. Put the
+    // original in  assets/video/  and ask Claude to prepare it; the
+    // original stays on your own computer and is never published.
+    //
+    //   shape       "tall" for a phone-shaped film, "wide" for a
+    //               widescreen one, "square" for a square one
+    //   caption     a line under the film. Empty ("") shows nothing.
+    //   credit      a second, smaller line under that. Same rule.
+    //   play_label  never seen — it is what a screen reader says about
+    //               the play button
+    //
+    // Leaving  file  empty ("") removes the film from the page.
+    welcome_video: {
+      file: "assets/video/access-welcome.mp4",
+      poster: "assets/img/access-welcome-poster.jpg",   // the frame at 0:20
+      shape: "tall",
+      caption: "",
+      credit: {
+        text: "",
+        url: "",
+      },
+      play_label: "Play the welcome from Eric Sorrels",
+    },
 
     /* ---- The album tracks ------------------------------------------------ */
     // One line per track, in album order. The matching audio files go in

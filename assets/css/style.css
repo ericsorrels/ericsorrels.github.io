@@ -3191,3 +3191,11 @@ html.stage-open .stage .lyrics {
 .vault__heading:focus {
   outline: none;
 }
+
+/* The welcome film under the album's heading, where a paragraph of
+   introduction used to be. .video already centres itself and caps its
+   own width; all this adds is the air the paragraph's margin used to
+   provide between the heading and whatever comes next. */
+.vault__welcome {
+  margin-top: 2.6em;
+}
