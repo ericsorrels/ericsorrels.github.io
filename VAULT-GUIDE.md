@@ -144,6 +144,35 @@ and isn't on the list, the vault asks Gumroad about them on the spot
 and lets them in if they find a real purchase. A missed notification
 becomes a few seconds' delay rather than an email to you at midnight.
 
+### "They bought it but can't get in"
+
+The admin page has a box called **Why didn't somebody get in?** Type
+their address and press **Ask Gumroad**. It shows every sale Gumroad
+has for that address, what product each was for, and — in plain words —
+whether the vault counts it and why not.
+
+Three answers you might see:
+
+- **"a different product"** — the vault is looking for the wrong
+  product identifier. See the warning below.
+- **"refunded" / "charged back" / "disputed"** — working as intended.
+- **"Gumroad has no sale at all to that address"** — they bought it
+  under a different email, or the purchase never completed. It then
+  lists your most recent sales so you can spot which address they
+  really used.
+
+When a sale *does* count but they still aren't on the list, a **Put it
+right** button appears. Press it and they're added.
+
+> ⚠️ **The product identifier catches everyone once.** Gumroad's API
+> reports a product's *original* perma id — a random string — not the
+> friendly name you set for your shop address. So `GUMROAD_PRODUCT` set
+> to `earlyaccess` may match nothing, even though that's what your shop
+> URL says. The failure is silent: real sale, no error, nobody added.
+>
+> The fix: run the check above on any real purchase, read the
+> `product_id` it reports, and set `GUMROAD_PRODUCT` to that instead.
+
 ### Where the settings live
 
 - **Sales** arrive via the Ping address, set in Gumroad under
@@ -191,7 +220,7 @@ guest list.
 | "It says the code expired" | more than ten minutes passed | ask for a new one |
 | "Too many tries" | five wrong guesses | ask for a new code; the old one is gone |
 | "It says my email isn't an address" | a typo, or a space on the end | check for a trailing space |
-| Someone bought but can't get in | the sale notification was missed | they should just ask for a code — the vault checks Gumroad automatically. If that fails, add them by hand |
+| Someone bought but can't get in | wrong product identifier, or a missed notification | use **Why didn't somebody get in?** on the admin page — it says which |
 | Nobody can get in at all | the vault is down or misconfigured | check the admin page. If *that* won't open either, see below |
 | Tracks say "Soon" | the audio file isn't in the vault storage | the file has to be put in the bucket, not just the folder on your Mac |
 | The whole album asks for a Cloudflare login | the Access rule is on the wrong path | it must be `vault-api/admin`, **not** `vault-api` |

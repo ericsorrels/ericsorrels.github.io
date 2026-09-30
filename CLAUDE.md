@@ -757,12 +757,33 @@ specifically because `postCode()` already runs after the browser has
 been answered, so however long Gumroad takes cannot show through as a
 difference between a known address and an unknown one.
 
-**`GUMROAD_PRODUCT` may be either the permalink or the id.** The
-permalink is the last part of the shop address (`earlyaccess` in
-`sorrels7.gumroad.com/l/earlyaccess`) and is what Eric can read off a
-URL; the id is stable but opaque. Both are matched, against
-`product_permalink`, `product_id` and `short_product_id`, so neither is
-a wrong answer to give.
+**`GUMROAD_PRODUCT` may be either the permalink or the id**, matched
+against `product_permalink`, `product_id` and `short_product_id`, and
+the permalink comes back as a full URL so a bare slug is matched on the
+end of it too.
+
+**But the custom permalink is a trap, and it cost a failed test.**
+Gumroad's sales API reports a product's **original** perma id — a
+random slug — **not** the custom permalink the creator set and put in
+the shop address. So `GUMROAD_PRODUCT` set to the pretty name out of
+`sorrels7.gumroad.com/l/earlyaccess` can match nothing at all, and the
+symptom is perfectly silent: the ping arrives, the sale is real, the
+API confirms it, and the worker decides it was for some other product
+and does nothing. **Prefer the `product_id`.** Eric's Stage 6 Gumroad
+test failed exactly this way on 29 September 2026, and his first guess
+was that a 100%-off purchase is not a real sale — it is; this was the
+cause.
+
+**That is what `Why didn't somebody get in?` on the admin page is
+for.** `gumroadLookup()` asks Gumroad about one address and reports
+every sale it returns with the identifiers laid out and a verdict per
+sale, rather than the worker's silent yes-or-no. If there is no sale
+for that address it lists the ten most recent instead, emails masked,
+so the identifiers Eric's products actually use can be read off. It
+judges nothing and changes nothing; **Put it right** next to it runs
+`reconcile()` by hand once the cause is understood. Failures say why —
+a 401, an unreachable API, no token — rather than reporting "no sales",
+which would look exactly like a real answer.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.

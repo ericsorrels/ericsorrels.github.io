@@ -751,6 +751,90 @@ async function hasLiveSale(env, email) {
   });
 }
 
+/* Asks Gumroad what it knows about one address and reports back
+   without judging — every sale it returns, what product each was for,
+   and whether this worker would count it. For finding out WHY somebody
+   who bought the album did not land on the guest list, which is
+   otherwise invisible: the lookup happens after the browser has been
+   answered, so there is nothing to watch.
+
+   The thing it most often catches: Gumroad's sales API reports a
+   product's ORIGINAL perma id, not the custom permalink in the shop
+   address. So GUMROAD_PRODUCT set to the pretty name out of the URL can
+   silently match nothing. When no sale is found for the address, the
+   most recent sales are listed instead, so the identifiers Eric's
+   products actually use are there to read. */
+async function gumroadLookup(env, email) {
+  if (!env.GUMROAD_TOKEN) {
+    return { ok: false, why: 'No GUMROAD_TOKEN is set.' };
+  }
+
+  const wanted = String(env.GUMROAD_PRODUCT || '').trim().toLowerCase();
+
+  const ask = async (extra) => {
+    const url = new URL('https://api.gumroad.com/v2/sales');
+    url.searchParams.set('access_token', env.GUMROAD_TOKEN);
+    for (const [k, v] of Object.entries(extra || {})) url.searchParams.set(k, v);
+    const reply = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+    if (!reply.ok) throw new Error('Gumroad answered ' + reply.status);
+    const data = await reply.json();
+    if (!data || data.success === false) throw new Error('Gumroad refused the token.');
+    return Array.isArray(data.sales) ? data.sales : [];
+  };
+
+  const describe = (sale) => {
+    const permalink = String(sale.product_permalink || '').toLowerCase();
+    const id = String(sale.product_id || '').toLowerCase();
+    const short = String(sale.short_product_id || '').toLowerCase();
+    const matches =
+      !!wanted &&
+      (permalink === wanted || id === wanted || short === wanted ||
+        permalink.endsWith('/' + wanted));
+
+    let verdict;
+    if (!matches) verdict = 'a different product — this is why it was ignored';
+    else if (sale.refunded === true) verdict = 'refunded';
+    else if (sale.chargebacked === true) verdict = 'charged back';
+    else if (sale.disputed === true && sale.dispute_won !== true) verdict = 'disputed';
+    else verdict = 'counts — this one grants access';
+
+    return {
+      email: sale.email || null,
+      product_permalink: sale.product_permalink || null,
+      product_id: sale.product_id || null,
+      short_product_id: sale.short_product_id || null,
+      product_name: sale.product_name || null,
+      price: sale.price,
+      created: sale.created_at || sale.sale_timestamp || null,
+      matches,
+      verdict,
+    };
+  };
+
+  try {
+    const mine = (await ask({ email })).filter(
+      (s) => normalizeEmail(s.email || '') === email
+    );
+
+    if (mine.length) {
+      return { ok: true, wanted, found: mine.map(describe), recent: [] };
+    }
+
+    // Nothing for that address. Show what IS there, so the identifiers
+    // can be compared by eye.
+    const recent = (await ask({})).slice(0, 10).map((sale) => {
+      const seen = describe(sale);
+      const at = String(sale.email || '');
+      seen.email = at ? at.slice(0, 2) + '…' + at.slice(at.indexOf('@')) : null;
+      return seen;
+    });
+
+    return { ok: true, wanted, found: [], recent };
+  } catch (e) {
+    return { ok: false, why: e.message };
+  }
+}
+
 /* The four events Gumroad will only send if asked. The Ping setting in
    Eric's account covers sales; these cover a sale coming undone. They
    are registered from the admin page rather than a terminal, and
@@ -930,6 +1014,25 @@ async function handleAdminApi(request, env, action) {
     return json(await gumroadSubscribe(env), 200);
   }
 
+  if (action === 'gumroad-check' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+    return json(await gumroadLookup(env, email), 200);
+  }
+
+  // Having looked, put it right: ask Gumroad about the address again
+  // and make the list agree. The same thing a ping would have caused,
+  // by hand, for when one was missed or arrived before any of this
+  // existed.
+  if (action === 'gumroad-sync' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+    const now = await reconcile(env, email);
+    return json({ ok: true, email, live: now }, 200);
+  }
+
   if (action === 'test-code' && request.method === 'POST') {
     // A real code by the real route, so this tests the thing itself
     // rather than a rehearsal of it.
@@ -1024,8 +1127,10 @@ const ADMIN_PAGE = `<!doctype html>
   .who { color:var(--faint); font-size:.85rem; margin:0 0 2.5rem; }
   h2 { font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--faint);
        font-weight:600; margin:2.75rem 0 .9rem; }
-  textarea { width:100%; min-height:7.5rem; padding:.8rem; background:#fff; color:var(--ink);
-             border:1px solid var(--edge); border-radius:2px; font:inherit; font-size:.95rem; resize:vertical; }
+  textarea, input[type=email] { width:100%; padding:.8rem; background:#fff; color:var(--ink);
+             border:1px solid var(--edge); border-radius:2px; font:inherit; font-size:.95rem; }
+  textarea { min-height:7.5rem; resize:vertical; }
+  input[type=email] { flex:1 1 16rem; width:auto; }
   button { font:inherit; font-size:.68rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
            color:var(--ink); background:transparent; border:1px solid var(--ink);
            padding:.75rem 1.5rem; cursor:pointer; border-radius:2px; }
@@ -1089,6 +1194,21 @@ const ADMIN_PAGE = `<!doctype html>
     four events to the same address, so a refund or a chargeback takes access
     away again. Pressing it twice does no harm. Anyone added by hand is never
     removed by Gumroad — only people who arrived through a purchase.</p>
+
+  <h2>Why didn't somebody get in?</h2>
+  <div class="row">
+    <input id="checkWho" type="email" placeholder="their email address"
+           autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="checkBtn">Ask Gumroad</button>
+    <button id="syncBtn" class="x" hidden>Put it right</button>
+  </div>
+  <div class="said" id="checkSaid"></div>
+  <p class="note">Asks Gumroad what it knows about that address and shows every
+    sale it reports, whether or not this vault counts it. Use it when somebody
+    says they bought the album but can't get in. <b>The usual answer is the
+    product:</b> Gumroad's API reports a product's original perma id, not the
+    custom name in your shop address, so <code>GUMROAD_PRODUCT</code> may need to
+    be the id shown below rather than the pretty name.</p>
 
   <h2>Check the post</h2>
   <div class="row">
@@ -1234,6 +1354,63 @@ const ADMIN_PAGE = `<!doctype html>
       if (r.failed && r.failed.length) said.push('Could not set up: ' + safe(r.failed.join(', ')));
       $('gumSaid').textContent = said.join(' ') || 'Nothing to do.';
       gumroad();
+    });
+  });
+
+  function saleLine(s, i) {
+    var bits = [];
+    bits.push('<b>' + (i + 1) + '.</b> ' + safe(s.product_name || 'a product'));
+    if (s.email) bits.push('to ' + safe(s.email));
+    bits.push('<br>&nbsp;&nbsp;&nbsp;permalink: <code>' + safe(s.product_permalink || '—') + '</code>');
+    bits.push('<br>&nbsp;&nbsp;&nbsp;product_id: <code>' + safe(s.product_id || '—') + '</code>');
+    if (s.short_product_id) {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;short id: <code>' + safe(s.short_product_id) + '</code>');
+    }
+    bits.push('<br>&nbsp;&nbsp;&nbsp;<b>' + safe(s.verdict) + '</b>');
+    return bits.join(' ');
+  }
+
+  $('checkBtn').addEventListener('click', function () {
+    var who = $('checkWho').value.trim();
+    if (!who) { $('checkSaid').textContent = 'Type an address first.'; return; }
+    busy($('checkBtn'), true, 'Asking…');
+    $('checkSaid').textContent = '';
+    $('syncBtn').hidden = true;
+    ask('gumroad-check', { email: who }).then(function (r) {
+      busy($('checkBtn'), false);
+      if (!r) { $('checkSaid').textContent = 'That did not work.'; return; }
+      if (!r.ok) { $('checkSaid').textContent = r.why || 'That did not work.'; return; }
+
+      var out = ['Looking for a product matching <code>' + safe(r.wanted || '(not set)') + '</code>.'];
+
+      if (r.found.length) {
+        out.push('<br><br>Gumroad has ' + r.found.length + ' sale(s) to that address:');
+        out.push(r.found.map(saleLine).join('<br>'));
+        if (r.found.some(function (s) { return s.verdict.indexOf('counts') === 0; })) {
+          $('syncBtn').hidden = false;
+        }
+      } else if (r.recent.length) {
+        out.push('<br><br><b>Gumroad has no sale at all to that address.</b>' +
+          ' Either the purchase was under a different email, or it never' +
+          ' completed. Your most recent sales, for comparison:');
+        out.push(r.recent.map(saleLine).join('<br>'));
+      } else {
+        out.push('<br><br><b>Gumroad reports no sales at all.</b>');
+      }
+
+      $('checkSaid').innerHTML = out.join(' ');
+    });
+  });
+
+  $('syncBtn').addEventListener('click', function () {
+    busy($('syncBtn'), true, '…');
+    ask('gumroad-sync', { email: $('checkWho').value.trim() }).then(function (r) {
+      busy($('syncBtn'), false);
+      $('checkSaid').innerHTML = (r && r.ok && r.live)
+        ? 'Added. They are on the list now.'
+        : 'Nothing changed — Gumroad does not show a live sale for that address.';
+      $('syncBtn').hidden = true;
+      load();
     });
   });
 
