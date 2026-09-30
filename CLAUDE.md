@@ -553,6 +553,11 @@ Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
   Gumroad; and pressing **Watch refunds and disputes** on the admin
   page. Until the rotation, anyone who signed in with the password is
   still inside on a 30-day cookie.
+**All six stages are done, 30 September 2026.** Five of Stage 6's six
+tests passed outright. The sixth — Gumroad — failed on the product
+identifier, was diagnosed and fixed, and its adding half then passed;
+its refund half is untested by choice, recorded under Settled below.
+
 **Verified against the live site 29 September 2026**, from outside with
 no session: `/vault-api/` audio, lyrics, downloads, `admin` and
 `admin/list` all 404; `session` 401; the old `assets/audio/…` and
@@ -1481,6 +1486,22 @@ than assume, with the curl line under Working with Eric).
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
+
+- **The refund path is untested, by choice.** Adding through Gumroad is
+  proven; a refund withdrawing access is not, because it needs a real
+  paid purchase — Gumroad cannot refund the $0 test sale, and revoking
+  is a different act (see Gumroad). It was raised on 30 September 2026,
+  the cost was named — one real purchase, refunded — and Eric judged
+  the situation unlikely for this product and chose to find out if it
+  ever happens. The mechanism is the same `reconcile()` that adding
+  uses and is tested against stand-in responses in both directions; the
+  untested part is only whether Gumroad's refund webhook arrives as
+  expected. **Don't re-raise it. Don't describe it as verified either.**
+- **A warning when `GUMROAD_PRODUCT` matches none of the recent sales**
+  was offered twice and not taken up. It would turn the silent
+  misconfiguration that cost a Stage 6 test into a visible one, and
+  would matter again if a second product is ever added. The setting is
+  correct now. Offer it if a new product appears; otherwise leave it.
 
 - **`05.lrc` has one line with no timestamp** — "Waste a time, my ass.",
   between 2:58 and 3:04 — so it never appears in the panel. It was found,
