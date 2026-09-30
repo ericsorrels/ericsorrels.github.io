@@ -1903,9 +1903,11 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=68`, of which **60 through 68 are unpushed** (59 was
-the last one confirmed live — check rather than assume, with the curl
-line under Working with Eric).
+**`?v=68` is live**, confirmed against graymanmusical.com on
+30 September 2026 with the curl line under Working with Eric — both
+pages, plus the new public files (storm-intro.js, both films, both
+posters) all 200, and the vault still answering 401 for `session` and
+404 for every file to anyone without a cookie.
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
@@ -1958,11 +1960,12 @@ and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
-- **All three download buttons on the access page lead nowhere.** Listening
-  Guide, Lyric Booklet and About the World are named in
-  `content.js` but `assets/downloads/` holds only its instructions file, so
-  a supporter clicking any of them gets a 404. **Eric knows and is making
-  the files; don't raise it again.** If they are still missing much later,
+- **Two of the three download buttons still lead nowhere.** **Lyric
+  Booklet is done** — compressed and put in the bucket on 30 September
+  2026, see The downloads above. Listening Guide and About the World
+  are named in `content.js` but have no file yet, so a supporter
+  clicking either gets a 404. **Eric knows and is making them; don't
+  raise it again.** If they are still missing much later,
   the alternative is to have a button hide itself when its file is absent —
   download buttons are always drawn, so unlike the video and buy-access
   links, emptying a label won't do it. (There were four: the full-album zip
