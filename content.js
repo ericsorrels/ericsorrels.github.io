@@ -640,18 +640,26 @@ window.SITE_CONTENT = {
     bonus_label: "Bonus Tracks",
 
     /* ---- The download buttons -------------------------------------------- */
-    // Each button needs its matching file placed in the vault's
-    // "downloads" folder with exactly the file name shown after
-    // "file:". These are no longer part of the website — ask Claude to
-    // put a new one in the vault for you.
+    // Each button needs its matching file in the vault's "downloads"
+    // folder, named EXACTLY as it appears after "file:" below. These
+    // are not part of the website: the file goes in assets/downloads/
+    // on this computer and is also uploaded to the downloads folder of
+    // the grayman-vault bucket at Cloudflare. Only the second of those
+    // is what a visitor receives.
+    //
+    // REPLACING a download means giving it a NEW file name and changing
+    // it here too. There is no version tag on these the way there is on
+    // audio and lyrics, and the vault tells a browser it may keep one
+    // for an hour — so a file swapped in under the same name goes on
+    // being handed out for up to an hour afterwards.
     //
     // A vertical bar  |  inside a label starts a new line at that point,
     // so you can control where a long button title breaks.
     downloads_label: "Downloads",
     downloads: [
       { label: "Listening Guide", file: "downloads/listening-guide.pdf" },
-      { label: "Lyric Booklet", file: "downloads/digital-lyric-book.pdf" },
-      { label: "About the World", file: "downloads/about-pawleys-island.pdf" },
+      { label: "Lyric Booklet", file: "downloads/lyric-booklet.pdf" },
+      { label: "About the World", file: "downloads/about-the-world.pdf" },
     ],
 
     back_link: "Back to the main site",

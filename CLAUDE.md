@@ -833,8 +833,39 @@ would undo the whole thing.
 
 **Adding or replacing a track now takes two steps, not one.** The file
 goes in `assets/audio/` as before *and* into the bucket, or the track
-reads "Soon". Same for lyrics and notes. `content.js` says so beside
-each list.
+reads "Soon". Same for lyrics, notes and downloads. `content.js` says
+so beside each list. The folder on the Mac is what the preview server
+reads and Eric's working copy; the bucket is what a visitor gets.
+Neither half warns you that the other is missing.
+
+| | on the Mac | in the bucket | bump |
+|---|---|---|---|
+| a track | `assets/audio/NN.mp3` | `audio/NN.mp3` | `audio_version` — **replacing only** |
+| lyrics | `assets/lyrics/NN.lrc` | `lyrics/NN.lrc` | `lyrics_version` — either |
+| notes | `assets/notes/NN.md` | `notes/NN.md` | `notes_version` — either |
+| a download | `assets/downloads/x.pdf` | `downloads/x.pdf` | none — see below |
+
+**Uploading to the root of the bucket instead of into a folder is the
+mistake to look for first** when a file that exists still 404s.
+`safeKey()` serves only the four prefixes, so a loose object at the top
+level is invisible. R2 has no real folders — the prefix *is* the name —
+so either click into the folder before uploading or put `notes/` in
+front of the name; `notes/` and `downloads/` did not exist at all until
+the first file went into them.
+
+**Downloads have no version tag, and that is a live edge.** Audio,
+lyrics and notes each carry one; a download's address is
+`vaultUrl(item.file)` and nothing else, while the worker sends
+`max-age=3600`. So a PDF swapped in under the same name goes on being
+handed out for up to an hour. **Replacing one means a new file name and
+a matching edit in `content.js`** — noted there too. Adding one for the
+first time has no such problem.
+
+**Adding a file changes nothing in the repo**, so there is nothing to
+commit or push: the page already asks for `audio/09.mp3`, and the
+moment the object exists it is served. Only a `content.js` edit — a
+version bump, a renamed track, a changed download name — needs a `?v=`
+bump and a push.
 
 **Still true, and Eric knows it:** a listener who has signed in can save
 the files — their browser has to receive them to play them. This shuts
@@ -1545,13 +1576,11 @@ and a named vocalist for every track. Each has its own section above.
   was dropped on 29 September 2026. "Listening Guide" was briefly renamed
   "Liner Notes" the same day and put straight back — that name already
   belongs to the lyrics panel's handle, and one page should not have two
-  different things under it.) **The three file names still read
-  `listening-guide.pdf`, `digital-lyric-book.pdf` and
-  `about-pawleys-island.pdf`**, which is no longer what two of the buttons
-  say. Left deliberately: Eric may already be writing files under those
-  names, and a button's label is a cheap thing to change where the name of
-  a file he is making is not. Worth offering to line them up once the files
-  exist.
+  different things under it.) **The file names now match the labels** —
+  `listening-guide.pdf`, `lyric-booklet.pdf`, `about-the-world.pdf`,
+  lined up on 30 September 2026 before Eric made the files, which was
+  the moment to do it: two of them still read `digital-lyric-book` and
+  `about-pawleys-island` from before the buttons were renamed.
 - **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
   Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
   replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3

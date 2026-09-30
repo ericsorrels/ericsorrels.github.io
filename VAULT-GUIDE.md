@@ -314,9 +314,35 @@ because anything committed here is published at a public address whether
 or not it's linked from anywhere.
 
 They live in two places: on your own Mac, where you work, and in the
-private storage at Cloudflare, where the vault reads them. **Adding a
-track means putting it in both.** A track that's only on your Mac will
-read "Soon" on the live site.
+private storage at Cloudflare, where the vault reads them. **Adding
+anything means putting it in both.** A track that's only on your Mac
+reads "Soon" on the live site; one that's only in the bucket works
+live but not in your preview. Neither half tells you the other is
+missing.
+
+| What | On your Mac | In the bucket (R2 → `grayman-vault`) |
+|---|---|---|
+| A track | `assets/audio/NN.mp3` | `audio/NN.mp3` |
+| Lyrics | `assets/lyrics/NN.lrc` | `lyrics/NN.lrc` |
+| Liner notes | `assets/notes/NN.md` | `notes/NN.md` |
+| A download | `assets/downloads/name.pdf` | `downloads/name.pdf` |
+
+`NN` is two digits — `01`, not `1` — and it's the track's position in
+the list on the access page.
+
+**Click into the folder before uploading.** Files dropped at the top
+level of the bucket are invisible to the vault, and nothing warns you.
+That's the first thing to check if a file you've uploaded still won't
+appear.
+
+**Replacing** a track means telling me, so I can change the version
+number that makes browsers fetch it again — otherwise people keep
+hearing the old one. **Replacing a download** means giving the PDF a
+new file name, because those have no version number at all. Adding
+something new has neither problem.
+
+The three download buttons expect exactly these names:
+`listening-guide.pdf`, `lyric-booklet.pdf`, `about-the-world.pdf`.
 
 The `.gitignore` file is set up to stop these being committed by
 accident. Don't remove those lines.
