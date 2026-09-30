@@ -103,9 +103,20 @@ Two deliberate exceptions, both commented in place:
 Helper conventions inside `content.js`:
 
 - `*Asterisks*` around words render them in the show-title treatment.
-- A `|` forces a line break. In a download button's label it always
-  breaks; in a video's `credit` (under `music.videos`) it breaks only on
-  phones (≤430px), where the line would otherwise run edge to edge.
+- A `|` forces a line break, but **only where something has been built
+  to honour it** — it is not a feature of `format()`, and a bar in an
+  ordinary slot prints as a bar. Three places do:
+  - a download button's label, which always breaks;
+  - a video's `credit` (under `music.videos`), which breaks only on
+    phones (≤430px), where the line would otherwise run edge to edge;
+  - any `[data-content]` element carrying **`data-content-breaks`** in
+    the markup, which always breaks. That attribute is opt-in for a
+    reason: putting the replacement inside `format()` would reach every
+    slot on both pages and turn the video credit's phones-only break
+    into one that happens on every screen. Used by `access.thanks`.
+  Nothing in an ordinary slot can be HTML — `format()` escapes the
+  string before it does anything else — so `data-content-breaks` is how
+  a line break gets into copy at all.
 - An empty string `""` hides whatever it controls — a video, a button, a
   contact line. Nothing on the site ever shows a link that leads nowhere.
 
@@ -1784,7 +1795,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=65`, of which **60 through 65 are unpushed** (59 was
+Committed at `?v=66`, of which **60 through 66 are unpushed** (59 was
 the last one confirmed live — check rather than assume, with the curl
 line under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,

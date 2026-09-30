@@ -44,6 +44,18 @@
       var value = lookup(el.getAttribute('data-content'));
       if (value == null) return;
       el.innerHTML = format(value);
+
+      // Opt in to the | line-break convention, the same bar that starts
+      // a new line in a download button's label.
+      //
+      // Deliberately NOT done inside format(), which runs on every slot
+      // on both pages: a video's credit uses | for a break that happens
+      // only on phones, and doing it here for everyone would break that
+      // line on every screen. An element has to ask.
+      if (el.hasAttribute('data-content-breaks')) {
+        el.innerHTML = el.innerHTML.replace(/\|/g, '<br>');
+      }
+
       if (el.hasAttribute('data-email')) {
         el.setAttribute('href', 'mailto:' + value);
       }

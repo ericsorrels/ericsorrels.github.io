@@ -507,8 +507,9 @@ window.SITE_CONTENT = {
       },
       play_label: "Play the behind-the-scenes film",
     },
+    // A vertical bar  |  starts a new line at that point.
     thanks:
-      "Thank you for supporting *The Gray Man*! Be sure to pre-save the album on Spotify or Apple Music, and spread the word… a hurricane is coming!",
+      "Thank you for supporting *The Gray Man*! Be sure to pre-save the album on Spotify or Apple Music, and spread the word…|a hurricane is coming!",
 
     /* ---- The album tracks ------------------------------------------------ */
     // One line per track, in album order. The matching audio files go in
