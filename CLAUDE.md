@@ -1168,8 +1168,16 @@ are separated by `bonus_starts_at`.
 
 `assets/js/storm-intro.js`, added 30 September 2026. A hurricane turns
 over the gate, the vault is built underneath while it cannot be seen,
-and then the eye opens onto the album. 420ms to swallow the gate,
-820ms turning, 1020ms for the eye — 2.26 seconds.
+and then the eye opens onto the album. **600ms to swallow the gate,
+1160ms turning, 1440ms for the eye — 3.2 seconds.**
+
+**Those three are scaled together, never padded one at a time.** Eric
+asked for it slower on 30 September 2026 and the whole clock was
+stretched from 420/820/1020. The storm turns through a fixed angle
+whatever the clock says, so stretching the clock is what actually makes
+it turn more slowly; adding the time to one phase would only have held
+a still picture for longer. `MOTE_TAIL_MS` was stretched with it for
+the same reason — see the motes below.
 
 **It plays in exactly one place: the moment the relay accepts a code.**
 A returning visitor whose cookie is still good is let in by the startup
@@ -1188,13 +1196,25 @@ is safe to rearrange. The promise resolves when the cover is gone.
 
 **Nothing about the weather may cost anyone their album.** `unlock()`
 is behind a latch in `enterVault()` and **three** separate things call
-it: the storm when it has covered the gate, a timer at 920ms whatever
-the storm is doing, and the promise settling either way. First one
-wins. Tested by deleting `window.TGMStorm` outright (vault in 123ms)
-and by making `play()` throw (vault at once, no cover left behind).
-There is a fourth net in CSS — `.storm` fades itself out at 4500ms —
-and **those two numbers are a pair: the unlock timer must stay the
-earlier**, or the failsafe would uncover a gate rather than an album.
+it: the storm when it has covered the gate, a timer at `coverMs + 500`
+whatever the storm is doing, and the promise settling either way. First
+one wins. Tested by deleting `window.TGMStorm` outright and by making
+`play()` throw — vault in both cases, no cover left behind.
+
+**Three numbers in two other files are tied to this clock.** All three
+moved when it was slowed, and a future change must move them again:
+
+| | Must be | Now |
+|---|---|---|
+| `.storm` opacity transition in `style.css` | **equal to** `COVER_MS` | 600ms |
+| `unlockBy()` in `access.js` | after `COVER_MS`, well before the CSS failsafe | `coverMs + 500` |
+| `storm-failsafe` delay in `style.css` | **comfortably after** `TOTAL_MS + 1200` | 6000ms |
+
+That last one is the trap. The storm's own last-resort timer fires at
+`TOTAL_MS + 1200` — 4400ms at the current length — and the CSS failsafe
+was sitting at 4500, a tenth of a second of margin over the very thing
+it exists to back up. It went to 6000. **A backstop that fires almost
+at the same moment as the thing it is backing up is not a backstop.**
 
 #### Three things that look like tuning and are load-bearing
 
@@ -1231,11 +1251,56 @@ not rotate rigidly, and that shear is much of what reads as alive.
 Rates are kept close on purpose, or the four arms shear into soup.
 
 Built once at **34ms** and thereafter only turned, so a frame is three
-`drawImage` calls: **103fps measured**, against the pane's own idle
-rate. The layers are built at a fixed size and blown up — cloud
-upscales better than anything, having no edges to go soft — and the
-grain laid over the top afterwards is at the screen's own resolution,
-which is where the fine detail actually comes from.
+`drawImage` calls plus the motes below: **measured at 74fps against a
+pane idling at 76**. The layers are built at a fixed size and blown up
+— cloud upscales better than anything, having no edges to go soft —
+and the grain laid over the top afterwards is at the screen's own
+resolution, which is where the fine detail actually comes from.
+
+#### The motes, and why the layers alone were not enough
+
+**A rigid picture turning reads as a picture turning.** The baked
+layers give the storm its structure but rotate as one, and what the eye
+takes for *speed* is a streak. So ~2,500 motes on a desktop (900 on a
+phone) ride the same four arms, each drawn as a short two-segment arc
+from where it was a moment ago to where it is now.
+
+This idea, the outward fling as the eye opens, and the continuous
+differential rotation came from **Eric's own earlier `storm-intro.js`**,
+which he sent on 30 September 2026 and which lives in `~/Downloads` —
+`~/Downloads` is blocked by macOS privacy protection, which is why it
+could not be found when the storm was first written. That file was a
+page-load arrival animation with no `onCovered` and no promise, so it
+could not drive this transition, and it needed a `.storm-intro` CSS
+block that has never been in this repo. Only its ideas were taken.
+
+**The tail is computed from the clock, never remembered between
+frames.** `spinAt(ms)` and `openAt(ms)` answer where a mote was at any
+moment, so a dropped frame stretches no streak and a backgrounded tab
+flings nothing across the screen on return.
+
+**Two things about streaks that had to be learned by looking:**
+
+- **They must be shorter than the eye can follow.** At the 95ms tail
+  the original used, every mote at a given radius drew the same long
+  arc and the storm filled with concentric scratches like a worn
+  record. Now 68ms — and **each mote carries its own multiplier on
+  it**, which is the other half of what kills the rings.
+- **A streak over bare water is a scratch on the picture.** They are
+  kept inside the cloud's own reach; there is nothing out there for
+  them to be part of.
+
+**They are not all ink, and that is a deliberate departure from the
+file they came from.** That storm was ink on paper; this one is lit the
+other way round — light cloud on dark water — so ink motes would be
+invisible over the sea. Tone is taken from radius: **ink near the
+bright core**, where it reads as the dark lanes between a real storm's
+bands, paper and gray further out.
+
+They are drawn onto the cloud surface **before** the eye is cut, so the
+eye and the reveal take them out too. On the visible canvas instead,
+streaks would go on blowing across an open eye with the album showing
+through it.
 
 **Nothing calls `Math.random` for shape.** A seeded generator, reset
 per build, so it is the same storm on every sign-in and any shape
@@ -1838,7 +1903,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=66`, of which **60 through 66 are unpushed** (59 was
+Committed at `?v=68`, of which **60 through 68 are unpushed** (59 was
 the last one confirmed live — check rather than assume, with the curl
 line under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,

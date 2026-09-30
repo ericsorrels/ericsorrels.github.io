@@ -78,6 +78,63 @@
 
   var TURN_TOTAL = Math.PI * 2 * 0.82;   // how far it turns, start to end
 
+  /* ------------------------------------------------------------------
+     The motes — fine grains of weather riding the arms.
+
+     The baked layers give the storm its structure, but they turn as
+     rigid pictures, and a rigid picture turning reads as a picture
+     turning. What the eye takes for SPEED is a streak. So a few
+     thousand motes ride the same arms and are drawn not as points but
+     as a short arc from where each one was a moment ago to where it is
+     now — the faster it travels, the longer its streak, at any frame
+     rate.
+
+     The tail is computed from the clock rather than remembered between
+     frames. A dropped frame therefore lengthens no streak and a tab
+     coming back from the background flings nothing across the screen.
+
+     Their colour is taken from where they are, not fixed. Over the
+     bright core they are INK, where they read as the dark lanes that
+     run between a real storm's bands; out over the water they are
+     paper and gray, where anything dark would simply vanish. That is
+     the one change from the version these came from, which was ink on
+     paper throughout — this storm is lit the other way round.
+     ------------------------------------------------------------------ */
+
+  // How far back in time a streak reaches. Short, and it matters: at
+  // 95ms every mote at a given radius drew the same long arc, and the
+  // storm filled with concentric scratches like a worn record. A streak
+  // has to be shorter than the eye can follow, or it stops reading as
+  // speed and starts reading as a drawn line. Each mote also carries
+  // its own multiplier on this, so no two at the same radius are the
+  // same length — which is the other half of what kills the rings.
+  // Scaled with the clock. A streak's length is its angular speed times
+  // this, so slowing the storm without lengthening the tail would have
+  // quietly thinned the streaks away to nothing.
+  var MOTE_TAIL_MS = 68;
+  var MOTE_FLING = 1.45;     // how far out they are thrown as the eye opens
+
+  // Four batches, each stroked in one pass. Per-mote alpha would mean a
+  // stroke per mote; the variation that matters comes from where they
+  // are and how they clump, not from each one being its own shade.
+  // Kept faint. These are meant to say the storm is moving, not to be
+  // the thing you look at — the cloud is the picture. At double these
+  // values they took it over.
+  var MOTE_TONES = [
+    { tone: 'paper',  alpha: 0.15, line: 0.9 },
+    { tone: 'shadow', alpha: 0.13, line: 1.1 },
+    { tone: 'gray',   alpha: 0.09, line: 1.4 },
+    { tone: 'ink',    alpha: 0.19, line: 1.0 }
+  ];
+
+  // Differential rotation, continuous this time rather than the three
+  // discrete shells the baked layers use: the eyewall runs fastest and
+  // the outer bands drag. Kept inside the layers' own spread so the
+  // motes never visibly outrun the cloud they are riding on.
+  function moteRate(r) {
+    return 1.16 - 0.30 * clamp01(r / 1.2);
+  }
+
   // The eye, in storm radii. There is a narrow band to hit: too large
   // and it is a dinner plate with weather round the rim, too small and
   // it reads as a pinhole punched in a cloud rather than as the thing
@@ -90,10 +147,23 @@
      to rearrange.
      ------------------------------------------------------------------ */
 
-  var COVER_MS = 420;    // the gate is swallowed; the storm begins to turn
-  var HOLD_MS = 820;     // it turns, while the vault is built underneath
-  var OPEN_MS = 1020;    // the eye opens onto the album
-  var TOTAL_MS = COVER_MS + HOLD_MS + OPEN_MS;
+  var COVER_MS = 600;    // the gate is swallowed; the storm begins to turn
+  var HOLD_MS = 1160;    // it turns, while the vault is built underneath
+  var OPEN_MS = 1440;    // the eye opens onto the album
+  var TOTAL_MS = COVER_MS + HOLD_MS + OPEN_MS;   // 3200
+
+  // All three were scaled together from 420/820/1020 rather than the
+  // extra time being added to one end. The storm turns through the same
+  // angle whatever the clock says, so stretching the clock is what
+  // actually makes it turn more slowly; padding a single phase would
+  // just have held a still picture for longer.
+  //
+  // TWO THINGS ELSEWHERE ARE TIED TO THESE NUMBERS and were moved with
+  // them. The `.storm` opacity transition in style.css must equal
+  // COVER_MS, or the gate is cut away rather than swallowed. And the
+  // CSS failsafe that fades the sheet must stay later than this file's
+  // own last-resort timer at TOTAL_MS + 1200 — now 4400ms, so the
+  // failsafe went to 6000.
 
   var SKIP_MS = 160;     // a press ends it — quickly, but not as a cut
 
@@ -363,6 +433,57 @@
   }
 
   /* ------------------------------------------------------------------
+     Scattering the motes.
+
+     They are placed on the FOUR PRINCIPAL ARMS, read from the same
+     table the cloud is built from, so the streaks run along the bands
+     a viewer can see rather than swirling independently of them. A
+     little under a third are loose haze at a random bearing, which is
+     what keeps the gaps between the arms from looking swept clean.
+
+     Seeded, like everything else here, so it is the same storm every
+     time.
+     ------------------------------------------------------------------ */
+
+  function buildMotes(n) {
+    reseed(90210);
+    var arms = bandsFor(1).slice(0, 4);
+    var out = [];
+
+    for (var i = 0; i < n; i++) {
+      var r, a;
+
+      if (rnd() < 0.28) {
+        // Haze. Squaring the roll crowds it toward the middle, which is
+        // where a storm actually keeps its weather. Kept inside the
+        // cloud's own reach: a streak out over bare water has nothing
+        // to be part of and reads as a scratch on the picture.
+        var t = rnd();
+        r = 0.10 + 0.92 * t * t;
+        a = rnd() * Math.PI * 2;
+      } else {
+        var band = arms[(rnd() * arms.length) | 0];
+        var s = rnd();
+        r = band.from * Math.pow(band.to / band.from, s) * (1 + (rnd() - 0.5) * 0.24);
+        a = band.at + s * band.sweep + (rnd() - 0.5) * 0.55;
+      }
+
+      // Tone by radius, for the reason set out beside MOTE_TONES: ink
+      // only where there is bright cloud behind it to show against.
+      var tone;
+      if (r < 0.34) tone = rnd() < 0.40 ? 3 : 0;          // ink lanes in the core
+      else if (r < 0.75) tone = rnd() < 0.55 ? 1 : 0;     // paper and shadow
+      else tone = rnd() < 0.5 ? 2 : 1;                    // thinning to gray
+
+      // Its own share of the tail length, so a ring of motes at one
+      // radius does not draw a ring of identical arcs.
+      out.push({ r: r, a: a, tone: tone, tail: 0.5 + rnd() * 0.95 });
+    }
+
+    return out;
+  }
+
+  /* ------------------------------------------------------------------
      Building one layer.
 
      Coordinates are in storm radii throughout — 1.0 is the storm's
@@ -460,6 +581,10 @@
     var gray = readColour('--gray-mid', [139, 133, 121]);
     var shadow = readColour('--paper-shadow', [211, 204, 184]);
 
+    // Named, so the mote table above can be written in the palette's own
+    // words rather than in indexes nobody can read back.
+    var tones = { paper: paper, shadow: shadow, gray: gray, ink: ink };
+
     var cover = document.createElement('div');
     cover.className = 'storm';
     cover.setAttribute('aria-hidden', 'true');
@@ -484,6 +609,7 @@
     var vignette = null;
     var layers = null;
     var layerPx = 0;
+    var motes = null;
 
     // The cloud is assembled here first, then laid over the sea as one
     // picture. It has to be a separate surface, and the reason is the
@@ -563,6 +689,15 @@
           buildLayer(2, layerPx, cells)
         ];
       }
+
+      // Same density of motes on any screen, so a phone does a fraction
+      // of the work for the same look rather than the same work for a
+      // quarter of the pixels.
+      if (!motes) {
+        motes = buildMotes(
+          Math.round(Math.min(2600, Math.max(900, w * h / 420)))
+        );
+      }
     }
 
     measure();
@@ -587,6 +722,91 @@
       // this file's to get wrong. If building the vault throws, the
       // storm still has to come off the screen.
       try { onCovered(); } catch (e) {}
+    }
+
+    /* ---------------------------------------------------------------
+       The clock, asked as a function of time rather than read off the
+       current frame. A streak needs to know where its mote was 95ms
+       ago, and the honest way to answer that is to work it out, not to
+       remember the last frame — which would stretch every streak after
+       a dropped frame and fling the lot across the screen when a
+       backgrounded tab came back.
+       --------------------------------------------------------------- */
+
+    function spinAt(ms) {
+      return TURN_TOTAL * easeIn(clamp01(ms / TOTAL_MS));
+    }
+
+    function openAt(ms) {
+      var from = skipped ? skippedAt : COVER_MS + HOLD_MS;
+      var over = skipped ? SKIP_MS : OPEN_MS;
+      return ms <= from ? 0 : easeOpen(clamp01((ms - from) / over));
+    }
+
+    // Where one mote is at a given moment, in screen pixels. The order
+    // of the transforms matches the layer draw exactly — turn, squash,
+    // tilt, then move to the eye — or the streaks would ride a
+    // different storm from the cloud beneath them.
+    function moteAt(m, ms, R, eye, cosT, sinT, out) {
+      var o = openAt(ms);
+      var rr = m.r * (1 + MOTE_FLING * o * o) * R;
+      var ang = m.a + spinAt(ms) * moteRate(m.r);
+      var lx = Math.cos(ang) * rr;
+      var ly = Math.sin(ang) * rr * OVAL;
+      out.x = eye.x + lx * cosT - ly * sinT;
+      out.y = eye.y + lx * sinT + ly * cosT;
+    }
+
+    var pA = { x: 0, y: 0 }, pB = { x: 0, y: 0 }, pC = { x: 0, y: 0 };
+
+    function drawMotes(c, elapsed, R, eye) {
+      if (!motes) return;
+
+      var cosT = Math.cos(TILT), sinT = Math.sin(TILT);
+      var o = openAt(elapsed);
+
+      // In over the first third of a second, and away as the eye opens
+      // — by the time the album is legible through the hole there
+      // should be no weather left blowing across it.
+      var fade = Math.min(1, elapsed / 480) * (1 - o * 0.85);
+      if (fade <= 0.01) return;
+
+      var paths = [[], [], [], []];
+
+      for (var i = 0; i < motes.length; i++) {
+        var m = motes[i];
+        var t1 = elapsed;
+        var t0 = Math.max(0, elapsed - MOTE_TAIL_MS * m.tail);
+        var tm = (t0 + t1) / 2;
+        moteAt(m, t0, R, eye, cosT, sinT, pA);
+        moteAt(m, tm, R, eye, cosT, sinT, pB);
+        moteAt(m, t1, R, eye, cosT, sinT, pC);
+        // Three points, two segments: a straight streak would cut the
+        // corner on an arc this tight near the eye.
+        paths[m.tone].push(pA.x, pA.y, pB.x, pB.y, pC.x, pC.y);
+      }
+
+      c.save();
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+
+      for (var k = 0; k < MOTE_TONES.length; k++) {
+        var p = paths[k];
+        if (!p.length) continue;
+        var spec = MOTE_TONES[k];
+        c.globalAlpha = spec.alpha * fade;
+        c.lineWidth = spec.line;
+        c.strokeStyle = rgba(tones[spec.tone], 1);
+        c.beginPath();
+        for (var n = 0; n < p.length; n += 6) {
+          c.moveTo(p[n], p[n + 1]);
+          c.lineTo(p[n + 2], p[n + 3]);
+          c.lineTo(p[n + 4], p[n + 5]);
+        }
+        c.stroke();
+      }
+
+      c.restore();
     }
 
     function drawFrame(elapsed) {
@@ -631,6 +851,12 @@
         cctx.drawImage(layers[i], -span / 2, -span / 2, span, span);
         cctx.restore();
       }
+
+      // The motes go on the cloud surface and BEFORE the eye is cut, so
+      // the eye takes them out along with everything else. Drawn onto
+      // the visible canvas instead, streaks would go on blowing across
+      // an open eye with the album showing through it.
+      drawMotes(cctx, elapsed, R, eye);
 
       // The eye, taken out of the cloud. What is left showing is the
       // eyewall's own torn inner edge — a drawn dark circle would give

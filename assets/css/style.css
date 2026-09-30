@@ -3123,19 +3123,28 @@ html.stage-open .stage .lyrics {
   opacity: 0;
   overflow: hidden;
   background: transparent;
-  transition: opacity 420ms ease;
+  /* Must equal COVER_MS in storm-intro.js. They are a pair: shorter and
+     the sheet is opaque before the storm has begun to turn, longer and
+     the vault is built under a sheet you can still see through. */
+  transition: opacity 600ms ease;
 
   /* THE FAILSAFE, and it is load-bearing. If the script throws between
      putting this on screen and taking it off, a listener is left
      looking at a dark rectangle with their album behind it. So the
-     sheet fades itself out after four and a half seconds no matter
-     what JavaScript does or fails to do.
+     sheet fades itself out after six seconds no matter what JavaScript
+     does or fails to do.
 
      access.js guarantees the vault has been built long before this —
-     it runs unlock() on its own timer at 1200ms, whatever the storm is
-     doing — so what this uncovers is always the album and never the
-     gate. The two numbers are a pair: this one must stay the later. */
-  animation: storm-failsafe 700ms ease 4500ms forwards;
+     it runs unlock() on its own timer at COVER_MS + 500, whatever the
+     storm is doing — so what this uncovers is always the album and
+     never the gate.
+
+     SIX SECONDS, NOT FOUR AND A HALF. The storm's own last-resort
+     timer fires at TOTAL_MS + 1200, which the move to a 3200ms storm
+     pushed out to 4400ms. At the old 4500 this had barely a tenth of a
+     second of margin over the thing it is supposed to be backing up.
+     It must stay comfortably the later of the two. */
+  animation: storm-failsafe 700ms ease 6000ms forwards;
 }
 
 .storm--in {
