@@ -604,6 +604,66 @@ limit returns Error 1027 rather than a bill.
 one-rule: this code runs at Cloudflare and has no way to read
 `content.js`. Anything read on the *page* still belongs there.
 
+#### Codes landing in spam — diagnosed and fixed
+
+A code sent to a `mac.com` address went to Junk, reported
+30 September 2026. **The cause was no DMARC record on the domain
+at all** — confirmed by querying `_dmarc.graymanmusical.com` against
+three resolvers and getting nothing back. SPF and DKIM were both
+already correct, which is why this was easy to miss: the mail was
+properly signed, but nothing published the policy tying the signature
+to the domain, and Apple/iCloud is the strictest of the big providers
+about exactly that. Eric had deferred DMARC during Stage 2 ("skip
+DMARC for now"); this is that bill arriving.
+
+Fixed the same day through **Cloudflare → Email → DMARC Management**,
+which publishes the record and keeps the aggregate reports in its own
+dashboard rather than mailing XML to Eric. Live record:
+
+```
+v=DMARC1; p=none; rua=mailto:…@dmarc-reports.cloudflare.net
+```
+
+**Verified: mail-tester.com scored the real code email 10/10** — SPF,
+DKIM and DMARC all passing. The way to re-run that test is worth
+keeping: add mail-tester's throwaway address to the guest list on the
+admin page, request a code to it from `access.html`, read the score,
+then remove it. That tests the mail the worker actually sends rather
+than a theory about it.
+
+**How the three records fit together, so none of them gets "tidied".**
+
+| Record | Where | Leave alone because |
+|---|---|---|
+| SPF | `send.graymanmusical.com` | Resend's own; the envelope sender is on this subdomain, so this is the SPF that is actually checked |
+| SPF | `graymanmusical.com` (root) | belongs to Email Routing — mail coming *to* Eric. **Never add Resend to it**; it is not consulted for the codes, and it risks the 10-lookup limit |
+| DKIM | `resend._domainkey.graymanmusical.com` | signs as the root domain, so it aligns strictly with the From header |
+
+Alignment passes on both counts: DKIM `d=` is the root domain
+(strict), and the envelope's `send.` subdomain shares the
+organizational domain with the From header (relaxed SPF).
+
+**Two things on Cloudflare's DMARC page that look like faults and are
+not.** *SPF policy: Soft fail* is the root record's `~all`, and
+Cloudflare wants `-all` — but that record is not what the codes are
+judged against, so changing it buys nothing and adds something that
+can break. *BIMI: Fail* is the brand logo beside the sender name in
+Gmail; it needs a Verified Mark Certificate at roughly $1,000–1,500 a
+year and has no bearing on inbox placement. Ignore both.
+
+**Still to do, and it is Eric's:** move the policy from `p=none` to
+`p=quarantine` once the reports have had a week or two to show nothing
+legitimate is failing. Raised 30 September 2026.
+
+**What a 10/10 does not cover.** mail-tester grades configuration and
+content, not reputation. The domain has almost no sending history, and
+a burst of near-identical short emails each containing a number is,
+to a filter, the shape of a new spam operation. It settles as real
+people receive the mail. A mailbox that has already binned one code
+also carries a per-user signal that no DNS record overrides — the cure
+there is **Not Junk** plus adding the sender to Contacts, which is
+also the right thing to tell anyone who writes for help.
+
 **Comments in `cloudflare/vault-schema.sql` must be the `/* … */`
 kind.** The D1 console runs a paste as a single line, so a `--` comment
 swallows the rest of the file and D1 answers "Requests without any

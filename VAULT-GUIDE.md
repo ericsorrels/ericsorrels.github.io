@@ -251,6 +251,65 @@ guest list.
 
 ---
 
+## Making sure codes reach the inbox
+
+Email providers decide whether to trust a message by checking three
+things published against your domain name. All three are now in place,
+and a full test of a real code email scored **10 out of 10**.
+
+You don't need to understand them, but you do need to leave them alone:
+
+| | Where it lives | |
+|---|---|---|
+| **SPF** | the `send.` part of your domain | says Resend is allowed to send for you |
+| **DKIM** | your domain | a signature proving the email wasn't tampered with |
+| **DMARC** | your domain | ties the other two together — added 30 September 2026 |
+
+**The DMARC one was missing, and that's why a code went to spam on an
+iCloud address.** Apple is the strictest of the big providers about it.
+It's set up now through Cloudflare → Email → DMARC Management.
+
+### Two warnings on that page you should ignore
+
+- **"SPF policy: Soft fail"** — this is about a *different* SPF record,
+  the one for mail coming *to* you. It isn't what your codes are checked
+  against. Changing it would help nothing and could break something.
+- **"BIMI: Fail"** — BIMI is the little logo beside a sender's name in
+  Gmail. It costs over $1,000 a year in certificates and makes no
+  difference to whether mail lands in the inbox.
+
+### One thing still to do
+
+In a week or two, go back to that page and change the policy from
+**None** to **Quarantine**. It's a stronger signal to Apple and Google
+and stops anyone sending email pretending to be you.
+
+### To test it yourself at any time
+
+1. Go to **mail-tester.com** and copy the address it shows you.
+2. On the admin page, paste that address in and press **Add these**.
+3. Go to `access.html`, enter it, and press Send My Code.
+4. Back on mail-tester, press **Check your score**.
+5. Remove the address from the admin page afterward.
+
+That tests the actual email your site sends, not a guess about it.
+
+### If someone says it went to their spam folder
+
+No setting fixes a mailbox that has already decided. Ask them to open
+their spam folder, mark the message **Not Junk**, and add
+**hello@graymanmusical.com** to their contacts. That fixes it for them
+permanently.
+
+And bear in mind your domain is new. It has barely sent any email, and
+a run of short, near-identical messages each containing a number looks
+— to a filter that doesn't know you — much like spam. It improves as
+real people receive and open the mail. **Before a big announcement,
+it's better if sign-ins spread over a few days than all arrive in one
+afternoon.**
+
+---
+
 ## When something goes wrong
 
 | What you're told | What's most likely | What to do |
