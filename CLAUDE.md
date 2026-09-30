@@ -42,7 +42,8 @@ cloudflare/vault-schema.sql    the guest list's columns; no addresses, no secret
 VAULT-GUIDE.md      the vault explained for Eric — published, holds no secrets
 tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
-                    grab-frame.swift, make-icon.swift, find-letter.swift
+                    grab-frame.swift, make-icon.swift, find-letter.swift,
+                    shrink-pdf.swift
 CNAME               the custom domain, required by GitHub Pages
 ```
 
@@ -322,6 +323,48 @@ The hero photograph is portrait, so `background-position: center 62%` pins the
 wave crest to 62% of hero height on any screen width.
 
 ### The downloads
+
+**PDFs are shrunk before they go in, with `tools/shrink-pdf.swift`.**
+
+```
+swiftc -swift-version 5 -O tools/shrink-pdf.swift -o "$SCRATCH/shrink-pdf"
+"$SCRATCH/shrink-pdf" in.pdf out.pdf 0.92
+```
+
+`lyric-booklet.pdf` arrived on 30 September 2026 at **101.8 MB** and
+went in at **9.9 MB — a tenth**, with every image at its original pixel
+dimensions and every lyric page still selectable text. That is a file a
+supporter downloads over a phone connection, so the size is the point.
+
+**The reason it shrinks so far is the compression, not the resolution.**
+The 42 images were stored as lossless Flate — what a design tool
+exports — and were already only ~130 dpi, so there was nothing to gain
+by downsampling and everything to gain by re-encoding as JPEG. **Check
+which problem you have before reaching for a DPI setting.** The probe
+worth rebuilding walks the page resources with `CGPDFDictionary…` and
+prints each image's pixel size, filter and effective dpi.
+
+**Never shrink a PDF by rendering its pages to bitmaps.** 33 of the
+booklet's 38 pages carry real text; rendering turns all of it into
+fuzzy, unselectable pixels. A Quartz filter — the machinery behind
+Preview's "Reduce File Size" — touches images and leaves text and
+vectors alone. Verified at 3x zoom on painted texture: no visible
+difference between 0.92 and the master. Quality 0.85 and 0.92 came out
+within 100 KB of each other, so there is no reason to go below 0.92.
+
+**Known and accepted: two pages lose selectable text.** Where text sits
+over artwork with transparency it gets flattened — visually identical,
+but no longer selectable. On the booklet that was the title page and
+the last, both display type nobody selects. Grafting the original pages
+back costs 4.3 MB and **does not restore the text**, because
+`PDFDocument.write` re-flattens them. That was measured; don't try it
+again.
+
+**Eric's master stays next to the web copy**, as
+`lyric-booklet-MASTER-do-not-upload.pdf` — the same bargain as the video
+masters. `assets/downloads/*` is gitignored entirely, so neither is ever
+published, but only the short name goes into the bucket.
+
 
 They sit **above the album cover**, at the head of the same section, rather
 than in the closing one where they started — moved 29 September 2026.
