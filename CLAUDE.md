@@ -501,6 +501,9 @@ nowhere else:
 | `SESSION_SECRET` | a long random string. It signs session cookies **and** the stored hashes of codes in flight, so changing it signs everybody out and voids any unused code |
 | `RESEND_API_KEY` | lets the worker hand an email to Resend to deliver |
 | `ADMIN_EMAIL` | the one address allowed to open the admin page |
+| `GUMROAD_TOKEN` | reads Eric's own sales, to confirm a purchase |
+| `GUMROAD_PRODUCT` | which product grants access — its permalink or id |
+| `GUMROAD_PING_SECRET` | the long random word in the address Gumroad posts to |
 
 There was a third, `VAULT_PASSWORD`, until 29 September 2026. Nothing
 reads it now.
@@ -531,14 +534,41 @@ Begun 29 September 2026, in the stages Eric set out. **Stages 1, 2 and
   `content.js`. Two more tables, `codes` and `throttle`.
 - **Done — the admin page**, at `/vault-api/admin`. See The admin page
   below.
+- **Done — Gumroad.** A purchase adds an address; a refund or
+  chargeback takes it away. See Gumroad below.
 - **Dashboard steps that belong to these stages and are Eric's to do** —
   check they happened rather than assuming. Rotating `SESSION_SECRET`,
   which ends every session issued under the old password; deleting the
-  `VAULT_PASSWORD` secret, which nothing reads; adding `ADMIN_EMAIL`;
-  and setting up the Cloudflare Access application. Until the rotation,
-  anyone who signed in with the password is still inside on a 30-day
-  cookie.
-- **Next — Stage 5:** Gumroad. Then 6, testing and `VAULT-GUIDE.md`.
+  `VAULT_PASSWORD` secret, which nothing reads; adding `ADMIN_EMAIL`,
+  `GUMROAD_TOKEN`, `GUMROAD_PRODUCT` and `GUMROAD_PING_SECRET`; setting
+  up the Cloudflare Access application; pasting the Ping address into
+  Gumroad; and pressing **Watch refunds and disputes** on the admin
+  page. Until the rotation, anyone who signed in with the password is
+  still inside on a 30-day cookie.
+- **Next — Stage 6:** testing and `VAULT-GUIDE.md`.
+
+**Where the free plans actually run out**, in the order they would
+bite. Worked out 29 September 2026, when Eric asked whether a guest
+list over 50 would start costing money. It would not: **Cloudflare
+Access seats are consumed only by people who authenticate through
+Access, which is Eric alone on the admin page.** Supporters never touch
+it — that is the reason the vault has its own front door rather than
+putting listeners behind Access, which would have capped the album at
+50 people.
+
+| | Free allowance | What spends it |
+|---|---|---|
+| Resend | **100 emails/day**, 3,000/month | one per sign-in — the tightest |
+| Workers | 100,000 requests/day | every track, seek and page load |
+| D1 | 5M reads, 100k writes a day | a read per page load |
+| Access seats | 50 | Eric, and nobody else |
+
+The one to plan around is Resend's 100 a day. Ordinary use is nowhere
+near it — people sign in once and stay in for thirty days — but an
+announcement to a few hundred supporters could put half of them through
+the gate in one afternoon, and codes 101 onward would simply not send.
+Resend Pro is $20 for the month it is needed. Going over the Workers
+limit returns Error 1027 rather than a bill.
 
 **The emails' wording lives in `cloudflare/vault-worker.js`, not
 `content.js`.** That is the third deliberate exception to the
@@ -653,6 +683,62 @@ left alone rather than thrown out of an album they paid for.
 **Eric's own row has no Remove button**, because the worker refuses to
 delete `ADMIN_EMAIL` — it would lock him out of the page — and offering
 a button only to say no is worse than not offering it.
+
+### Gumroad
+
+Set up 29 September 2026. A purchase puts an address on the guest list;
+a refund or chargeback takes it off again.
+
+**A ping is a rumour, not news.** Gumroad's webhook arrives unsigned —
+nothing in the message proves Gumroad sent it — so **nothing in it is
+believed**. The long random word in the address
+(`GUMROAD_PING_SECRET`) is a doorbell, not a password: it stops
+strangers ringing, but anyone who ever learned it could ring too. All a
+ping does is name an address worth asking about. The answer comes from
+`GET /v2/sales` on a connection the worker opened itself.
+
+**One handler for every event, and it does not care which.** Sale,
+refund, dispute, dispute won, cancellation all mean "something changed
+for this address, go and look". `reconcile()` asks what is true now and
+makes the list agree, so an event arriving twice, out of order, or not
+at all does no harm. That is also why the worker does not need to tell
+the events apart, which matters because Gumroad sends them all to the
+same address in the same shape.
+
+**It fails safe, not open.** `hasLiveSale()` answers `true`, `false` or
+**`null` — could not tell** — and `null` changes nothing. Every failure
+returns `null`: an unreachable API, a 500, `success:false`, a junk
+body, a missing token. Taking away access somebody paid for because an
+API had a bad minute is the one outcome worth going out of the way to
+prevent. **Tested, all five.**
+
+**Gumroad never overrules Eric.** The delete says
+`AND source = 'gumroad'`, so an address he added by hand survives
+Gumroad reporting a refund, or no sale at all — a comped listener may
+well have never bought anything. **Tested.**
+
+**Sales come in by Ping, the rest by subscription.** The Ping setting
+in Gumroad's own settings fires on sales only; `refund`, `dispute`,
+`dispute_won` and `cancellation` have to be registered through
+`PUT /v2/resource_subscriptions`. The admin page's **Watch refunds and
+disputes** button does that, so it never needs a terminal. Registering
+twice is harmless.
+
+**The backup path is what makes a missed webhook survivable.** If
+somebody asks for a code and is not on the list, `postCode()` asks
+Gumroad about them before giving up, and lets them in if they have a
+live sale. A webhook that never arrived becomes a few seconds' delay
+rather than a locked door and an email to Eric. It is safe *there*
+specifically because `postCode()` already runs after the browser has
+been answered, so however long Gumroad takes cannot show through as a
+difference between a known address and an unknown one.
+
+**`GUMROAD_PRODUCT` may be either the permalink or the id.** The
+permalink is the last part of the shop address (`earlyaccess` in
+`sorrels7.gumroad.com/l/earlyaccess`) and is what Eric can read off a
+URL; the id is stable but opaque. Both are matched, against
+`product_permalink`, `product_id` and `short_product_id`, so neither is
+a wrong answer to give.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.

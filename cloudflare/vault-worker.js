@@ -12,6 +12,7 @@
 //   GET  /vault-api/session   "am I still signed in?" — yes or no, nothing more
 //   GET  /vault-api/admin     the guest list, for Eric only — see The admin page
 //        /vault-api/admin/list · /add · /remove · /test-code
+//   POST /vault-api/gumroad/<secret>   what Gumroad posts to — see Gumroad
 //   GET  /vault-api/audio/01.mp3      a file, but only with a good cookie
 //        /vault-api/lyrics/01.lrc
 //        /vault-api/notes/01.md
@@ -29,6 +30,9 @@
 //                    signs everybody out and voids any code not yet used.
 //   RESEND_API_KEY   lets this worker hand an email to Resend to deliver
 //   ADMIN_EMAIL      the one address allowed to open the admin page
+//   GUMROAD_TOKEN    reads Eric's own sales, to confirm a purchase
+//   GUMROAD_PRODUCT  which product grants access — its permalink or id
+//   GUMROAD_PING_SECRET  the long random word in the address Gumroad posts to
 //
 // There is no VAULT_PASSWORD any more. The shared password was removed
 // on 29 September 2026 in favour of a code emailed to an address on the
@@ -60,6 +64,10 @@ export default {
     if (route === 'admin') return handleAdminPage(request, env);
     if (route.startsWith('admin/')) {
       return handleAdminApi(request, env, route.slice('admin/'.length));
+    }
+
+    if (route.startsWith('gumroad/')) {
+      return handleGumroad(request, env, ctx, route.slice('gumroad/'.length));
     }
 
     return handleFile(request, env, route);
@@ -139,7 +147,24 @@ async function handleRequestCode(request, env, ctx) {
 async function postCode(env, email) {
   await sweep(env);
 
-  const member = await findMember(env, email);
+  let member = await findMember(env, email);
+
+  // Not on the list — but they may have bought it and the ping never
+  // arrived, or arrived before any of this existed, or Eric changed the
+  // address in Gumroad's settings and forgot to change it back. So ask
+  // Gumroad directly before giving up. This is the safety net that
+  // makes a missed webhook a delay rather than a locked door.
+  //
+  // It is safe to do here and nowhere else: this whole function runs
+  // after the browser has already been answered, so however long
+  // Gumroad takes, it cannot show through as a difference between an
+  // address that is known and one that is not.
+  if (!member && env.GUMROAD_TOKEN) {
+    if ((await reconcile(env, email)) === true) {
+      member = await findMember(env, email);
+    }
+  }
+
   if (!member) return;
 
   // A code already sent and still warm is left alone. Otherwise a second
@@ -585,6 +610,219 @@ async function sendEmail(env, { to, subject, text }) {
 }
 
 /* ---------------------------------------------------------------------
+   Gumroad
+
+   Somebody buys early access; their address joins the guest list on its
+   own. They refund it, or charge it back; it leaves again.
+
+   A GUMROAD PING IS TREATED AS A RUMOUR, NOT AS NEWS. It arrives
+   unsigned — there is no way to tell from the message itself that
+   Gumroad sent it — so nothing in it is believed. The long random word
+   in the address is only a doorbell: it stops strangers ringing, but
+   anybody who ever learned it could ring too. All a ping does is name
+   an address worth asking about. The answer comes from Gumroad's own
+   API, over a connection this worker opened itself, with Eric's token.
+
+   ONE HANDLER FOR EVERY EVENT, and it does not care which it was. Sale,
+   refund, dispute, dispute won, cancellation — each means the same
+   thing: "something changed for this address, go and look." reconcile()
+   asks the API what is true now and makes the list agree. That is why
+   it cannot get out of step, and why an event arriving twice, out of
+   order, or not at all does no harm.
+
+   IT FAILS SAFE, NOT OPEN. If Gumroad cannot be reached, reconcile()
+   answers "don't know" and changes nothing. Taking away access somebody
+   paid for, because an API had a bad minute, is the one outcome here
+   worth going out of the way to prevent.
+
+   AND IT NEVER OVERRULES ERIC. Only rows whose source is 'gumroad' are
+   ever removed. Somebody he added by hand stays added, whatever Gumroad
+   says about them — a comped listener may well have no sale at all.
+   --------------------------------------------------------------------- */
+
+async function handleGumroad(request, env, ctx, tail) {
+  if (request.method !== 'POST') return notFound();
+  if (!env.GUMROAD_PING_SECRET || !env.MEMBERS) return notFound();
+
+  // The doorbell. Compared whole, at constant time, so the address
+  // cannot be felt out one character at a time.
+  const given = tail.split('/')[0];
+  if (!timingSafeEqual(bytes(given), bytes(env.GUMROAD_PING_SECRET))) {
+    return notFound();
+  }
+
+  // Gumroad posts a form, not JSON.
+  let form;
+  try {
+    form = await request.formData();
+  } catch (e) {
+    return json({ ok: true }, 200);
+  }
+
+  const email = normalizeEmail(form.get('email') || '');
+
+  // Always 200, and always at once. Gumroad retries anything else, and
+  // a queue of retries is not worth earning over a mistyped address.
+  // The looking-up happens after this reply has gone.
+  if (email) ctx.waitUntil(reconcile(env, email));
+
+  return json({ ok: true }, 200);
+}
+
+/* Asks Gumroad what is true for one address and makes the guest list
+   agree with it. Returns true if they should be in, false if they
+   should not, and null if Gumroad could not be asked — in which case
+   nothing is touched. */
+async function reconcile(env, email) {
+  const live = await hasLiveSale(env, email);
+  if (live === null) return null;
+
+  if (live) {
+    await env.MEMBERS.prepare(
+      'INSERT INTO members (email, source, added_at) VALUES (?, ?, ?) ' +
+        'ON CONFLICT(email) DO NOTHING'
+    )
+      .bind(email, 'gumroad', new Date().toISOString().replace(/\.\d+Z$/, 'Z'))
+      .run();
+    return true;
+  }
+
+  // Note the source test. A refund takes away what Gumroad gave; it
+  // does not take away what Eric gave.
+  await env.MEMBERS.batch([
+    env.MEMBERS.prepare(
+      "DELETE FROM members WHERE email = ? AND source = 'gumroad'"
+    ).bind(email),
+    env.MEMBERS.prepare('DELETE FROM codes WHERE email = ?').bind(email),
+  ]);
+
+  return false;
+}
+
+/* true / false / null, where null means "could not tell". Looks for at
+   least one sale of the right product, to this address, that has not
+   been refunded, disputed or charged back. */
+async function hasLiveSale(env, email) {
+  if (!env.GUMROAD_TOKEN || !env.GUMROAD_PRODUCT) return null;
+
+  // The token goes in the query string because that is what Gumroad's
+  // own documentation specifies. It never leaves this worker except to
+  // Gumroad, over https, and is never written to a log.
+  const url = new URL('https://api.gumroad.com/v2/sales');
+  url.searchParams.set('access_token', env.GUMROAD_TOKEN);
+  url.searchParams.set('email', email);
+
+  let sales;
+  try {
+    const reply = await fetch(url.toString(), {
+      headers: { accept: 'application/json' },
+    });
+    if (!reply.ok) return null;
+    const data = await reply.json();
+    if (!data || data.success === false || !Array.isArray(data.sales)) return null;
+    sales = data.sales;
+  } catch (e) {
+    return null;
+  }
+
+  const wanted = String(env.GUMROAD_PRODUCT).trim().toLowerCase();
+
+  return sales.some((sale) => {
+    if (normalizeEmail(sale.email || '') !== email) return false;
+
+    // Eric may have set either the permalink out of the shop address or
+    // the product's id, and both are matched, so neither is a wrong
+    // answer to give.
+    const permalink = String(sale.product_permalink || '').toLowerCase();
+    const id = String(sale.product_id || '').toLowerCase();
+    const short = String(sale.short_product_id || '').toLowerCase();
+    const mine =
+      permalink === wanted ||
+      id === wanted ||
+      short === wanted ||
+      permalink.endsWith('/' + wanted);
+    if (!mine) return false;
+
+    if (sale.refunded === true || sale.chargebacked === true) return false;
+    // A dispute that Eric won leaves the sale standing.
+    if (sale.disputed === true && sale.dispute_won !== true) return false;
+
+    return true;
+  });
+}
+
+/* The four events Gumroad will only send if asked. The Ping setting in
+   Eric's account covers sales; these cover a sale coming undone. They
+   are registered from the admin page rather than a terminal, and
+   registering the same one twice is harmless. */
+const GUMROAD_EVENTS = ['refund', 'dispute', 'dispute_won', 'cancellation'];
+
+function gumroadPingUrl(env) {
+  return 'https://graymanmusical.com/vault-api/gumroad/' + env.GUMROAD_PING_SECRET;
+}
+
+async function gumroadSubscribe(env) {
+  if (!env.GUMROAD_TOKEN || !env.GUMROAD_PING_SECRET) {
+    return { ok: false, why: 'The Gumroad token or ping secret is not set.' };
+  }
+
+  const done = [];
+  const failed = [];
+
+  for (const name of GUMROAD_EVENTS) {
+    const body = new URLSearchParams({
+      access_token: env.GUMROAD_TOKEN,
+      resource_name: name,
+      post_url: gumroadPingUrl(env),
+    });
+
+    try {
+      const reply = await fetch('https://api.gumroad.com/v2/resource_subscriptions', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      const data = await reply.json().catch(() => ({}));
+      if (reply.ok && data.success !== false) done.push(name);
+      else failed.push(name + ' (' + reply.status + ')');
+    } catch (e) {
+      failed.push(name + ' (unreachable)');
+    }
+  }
+
+  return { ok: !failed.length, done, failed };
+}
+
+async function gumroadStatus(env) {
+  const set = {
+    token: !!env.GUMROAD_TOKEN,
+    product: env.GUMROAD_PRODUCT || null,
+    secret: !!env.GUMROAD_PING_SECRET,
+  };
+
+  if (!set.token) return { ok: true, set, watching: [] };
+
+  const watching = [];
+  for (const name of GUMROAD_EVENTS) {
+    try {
+      const url = new URL('https://api.gumroad.com/v2/resource_subscriptions');
+      url.searchParams.set('access_token', env.GUMROAD_TOKEN);
+      url.searchParams.set('resource_name', name);
+      const reply = await fetch(url.toString());
+      const data = await reply.json().catch(() => ({}));
+      const list = Array.isArray(data.resource_subscriptions)
+        ? data.resource_subscriptions
+        : [];
+      if (list.some((s) => s.post_url === gumroadPingUrl(env))) watching.push(name);
+    } catch (e) {
+      /* leave it out of the list */
+    }
+  }
+
+  return { ok: true, set, watching, ping: set.secret ? gumroadPingUrl(env) : null };
+}
+
+/* ---------------------------------------------------------------------
    The admin page
 
    Eric's own view of the guest list: who is on it, where each came
@@ -682,6 +920,14 @@ async function handleAdminApi(request, env, action) {
     ]);
 
     return json({ ok: true, removed: email }, 200);
+  }
+
+  if (action === 'gumroad' && request.method === 'GET') {
+    return json(await gumroadStatus(env), 200);
+  }
+
+  if (action === 'gumroad-connect' && request.method === 'POST') {
+    return json(await gumroadSubscribe(env), 200);
   }
 
   if (action === 'test-code' && request.method === 'POST') {
@@ -803,6 +1049,9 @@ const ADMIN_PAGE = `<!doctype html>
   .x { border:none; color:var(--gray); font-size:.62rem; padding:.35rem .5rem; letter-spacing:.14em; }
   .x:hover:not(:disabled) { background:transparent; color:var(--ink); text-decoration:underline; }
   .note { font-size:.82rem; color:var(--faint); margin:.6rem 0 0; }
+  code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem;
+         background:#fff; border:1px solid var(--edge); border-radius:2px;
+         padding:.1rem .35rem; word-break:break-all; }
   @media (max-width:620px) { .hide-narrow { display:none; } body { padding-top:1.5rem; } }
 </style>
 </head>
@@ -828,6 +1077,18 @@ const ADMIN_PAGE = `<!doctype html>
   <p class="note">Removing somebody stops any new code being sent to them. If they are
     signed in already, that session lasts until it runs out — to end every session at
     once, change SESSION_SECRET in the Cloudflare dashboard.</p>
+
+  <h2>Gumroad</h2>
+  <div id="gum" class="said">Asking Gumroad…</div>
+  <div class="row">
+    <button id="gumBtn">Watch refunds and disputes</button>
+    <span class="said" id="gumSaid"></span>
+  </div>
+  <p class="note">Sales arrive through the Ping address in Gumroad under
+    Settings &rarr; Advanced. The button above asks Gumroad to send the other
+    four events to the same address, so a refund or a chargeback takes access
+    away again. Pressing it twice does no harm. Anyone added by hand is never
+    removed by Gumroad — only people who arrived through a purchase.</p>
 
   <h2>Check the post</h2>
   <div class="row">
@@ -944,6 +1205,38 @@ const ADMIN_PAGE = `<!doctype html>
     });
   });
 
+  function gumroad() {
+    return ask('gumroad').then(function (r) {
+      if (!r || !r.ok) { $('gum').textContent = 'Gumroad could not be asked.'; return; }
+      var lines = [];
+      lines.push(r.set.token ? 'Token set.' : '<b>No token set</b> — add GUMROAD_TOKEN.');
+      lines.push(r.set.product ? 'Product: ' + safe(r.set.product) : '<b>No product set</b> — add GUMROAD_PRODUCT.');
+      if (!r.set.secret) lines.push('<b>No ping secret set</b> — add GUMROAD_PING_SECRET.');
+      lines.push(r.watching && r.watching.length
+        ? 'Watching: ' + r.watching.join(', ')
+        : 'Not watching refunds yet.');
+      $('gum').innerHTML = lines.join('<br>');
+      if (r.ping) {
+        $('gum').innerHTML += '<br>Ping address: <code>' + safe(r.ping) + '</code>';
+      }
+    });
+  }
+
+  $('gumBtn').addEventListener('click', function () {
+    busy($('gumBtn'), true, 'Asking…');
+    $('gumSaid').textContent = '';
+    ask('gumroad-connect', {}).then(function (r) {
+      busy($('gumBtn'), false);
+      if (!r) { $('gumSaid').textContent = 'That did not work.'; return; }
+      if (r.why) { $('gumSaid').textContent = r.why; return; }
+      var said = [];
+      if (r.done && r.done.length) said.push('Now watching ' + r.done.join(', ') + '.');
+      if (r.failed && r.failed.length) said.push('Could not set up: ' + safe(r.failed.join(', ')));
+      $('gumSaid').textContent = said.join(' ') || 'Nothing to do.';
+      gumroad();
+    });
+  });
+
   $('testBtn').addEventListener('click', function () {
     busy($('testBtn'), true, 'Sending…');
     $('testSaid').textContent = '';
@@ -956,6 +1249,7 @@ const ADMIN_PAGE = `<!doctype html>
   });
 
   load();
+  gumroad();
 })();
 </script>
 </body>
