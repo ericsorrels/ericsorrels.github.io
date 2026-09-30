@@ -662,6 +662,28 @@ is on the list, so it gives nothing away — and without it somebody who
 fat-fingered their own address would wait forever for an email that was
 never coming.
 
+**The gate's words are set large, and that is deliberate — don't quietly
+shrink them back toward the site's small print.** Eric asked for it on
+30 September 2026. Both instructions (`.gate__hint`, which covers the
+email step and the code step's "Type the six digits here") run at
+`clamp(1.05rem, 2vw, 1.3rem)`, roughly half again what they were, and
+`.gate__sent` and `.gate__error` sit a step below them at
+`clamp(0.95rem, 1.7vw, 1.12rem)`. The hierarchy is the point: what to do
+leads, what was sent and what went wrong follow. **`.gate__error` was
+raised in the same pass although only the instructions were asked for** —
+left at its old size it became the smallest thing on a screen where it is
+the only line a stuck visitor reads.
+
+Tracking stayed at `0.1em` rather than being loosened: it is in `em`, so
+the site's wide treatment holds its proportion as the size grows. What
+did have to change is the measure. These paragraphs had none, and at the
+new size a sentence ran in one thin line across a desktop — so each is
+capped in `em` (30 / 28 / 26) and carries **`text-wrap: balance`**, which
+evens the lines rather than filling one and orphaning what is left. That
+is there so the wording stays Eric's to change without the measure
+needing re-tuning; a browser that has never heard of it simply wraps as
+before.
+
 ### The admin page
 
 `/vault-api/admin`, added 29 September 2026. Eric's view of the guest
@@ -1509,10 +1531,11 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (28 September 2026)
+## Where things stand (30 September 2026)
 
-Committed at `?v=58` (57 was the last one Eric pushed — check rather
-than assume, with the curl line under Working with Eric).
+Committed at `?v=61`, of which **60 and 61 are unpushed** (59 was the
+last one confirmed live — check rather than assume, with the curl line
+under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 

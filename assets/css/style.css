@@ -1376,19 +1376,36 @@ img {
   margin-bottom: -39.2%;
 }
 
+/* Set large on purpose — roughly half again the size of the small print
+   elsewhere on the site. This is the one line telling a visitor what to
+   do, read by supporters of a stage musical rather than users of an app,
+   plenty of them without their reading glasses to hand, and a door is no
+   place to be quiet at the cost of being legible. The tracking is in em,
+   so the site's wide treatment holds its proportion as the size grows.
+   The measure is capped in em for the same reason: left to the gate's
+   full width the sentence would run in one thin line across a desktop. */
 .gate__hint {
   font-family: var(--font-body);
-  font-size: clamp(0.7rem, 1vw, 0.8rem);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
   font-weight: 400;
+  line-height: 1.55;
   letter-spacing: 0.1em;
   color: var(--ink-soft);
-  margin: 0 0 3em;
+  max-width: 30em;
+  /* Evens the lines out rather than filling one and orphaning what is
+     left. At this size a centred hint that ends on a single stray word
+     reads as a mistake, and the wording is Eric's to change — so the
+     browser is asked to balance it rather than the measure being tuned
+     to one sentence. Ignored where unsupported, which simply wraps
+     normally. */
+  text-wrap: balance;
+  margin: 0 auto 2.6em;
 }
 
 /* The hint on the code step follows a paragraph rather than the title,
    so it needs far less air above it than the email step's does. */
 .gate__hint--code {
-  margin: -1em 0 2.2em;
+  margin: -0.6em auto 2em;
 }
 
 .gate__form {
@@ -1459,16 +1476,23 @@ img {
 /* The line above the code box: longer than anything else on this screen,
    because it has to say "if this email has access" without sounding like
    a refusal, and name somewhere to write for help. Set at reading width
-   rather than the gate's tracked capitals. */
+   rather than the gate's tracked capitals — and large, like the hint
+   above it, because this is the sentence that sends somebody to their
+   inbox and their spam folder. It is kept a step below .gate__hint so
+   the instruction still leads and this reads as the note beneath it.
+   The measure came in from 34em as the size went up: em measures widen
+   with the type, and a line of 34 of these would be too far to track
+   back to. */
 .gate__sent {
   font-family: var(--font-body);
-  font-size: clamp(0.78rem, 1.1vw, 0.88rem);
+  font-size: clamp(0.95rem, 1.7vw, 1.12rem);
   font-weight: 400;
   line-height: 1.7;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
-  max-width: 34em;
-  margin: 0 auto 2.6em;
+  max-width: 28em;
+  text-wrap: balance;
+  margin: 0 auto 2.4em;
 }
 
 /* Send another code · Use a different email. Buttons, not links, because
@@ -1537,14 +1561,20 @@ img {
    case, reading width, and big enough to read while mildly annoyed.
    Still quiet, and still no colour: the palette has no red for errors and
    --storm-red belongs to the advisory chart alone. */
+/* Raised to the same size as .gate__sent when the instructions above it
+   were enlarged. Left where it was it became the smallest thing on the
+   screen — and it is the line that matters most, since it is the only
+   one read by somebody who is already stuck. It stays a step below the
+   instruction, which is still what to do rather than what went wrong. */
 .gate__error {
   font-family: var(--font-body);
-  font-size: clamp(0.78rem, 1.1vw, 0.88rem);
+  font-size: clamp(0.95rem, 1.7vw, 1.12rem);
   font-weight: 500;
   line-height: 1.65;
   letter-spacing: 0.04em;
   color: var(--ink);
-  max-width: 30em;
+  max-width: 26em;
+  text-wrap: balance;
   margin: 2.2em auto 0;
 }
 
