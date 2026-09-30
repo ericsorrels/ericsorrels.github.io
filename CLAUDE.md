@@ -469,43 +469,76 @@ chooses posters by time.
 Raw `.mov` masters are gitignored. An `.mp4` master is not — it would be
 published — so tell Eric to move it out once the web copy exists.
 
-**There are videos on BOTH pages now.** The Music section's list, and a
-single welcome film under the album's heading on `access.html`, added
-30 September 2026. Both are built by the same `buildVideo()` in
-`main.js` — the play button, the poster, the caption rules and the
-hide-itself-on-error behaviour are one piece of code. What is
-duplicated is the `<template id="videoTemplate">` markup, deliberately:
-two small copies beat one shared file that neither page owns. **Change
-a player and you must change both templates.**
+**There are four videos now, across both pages.** The Music section's
+list of two, and two on `access.html` — a welcome film under the
+album's heading, and a behind-the-scenes film at the foot after the
+bonus tracks, with the thank-you line beneath it. Both access-page
+films were added 30 September 2026.
 
-The access page's entry is `content.js → access.welcome_video` — one
-object, not a list, and emptying its `file` removes the film. Its
-player also **pauses any sounding `<audio>` on the page** when it
-starts, because the album is right there and a film talking over a song
-is the one thing that must not happen. It does that by looking for
-`<audio>` elements rather than by reaching into `access.js`, so it
-needs to know nothing about how the album works.
+All four are built by the same `buildVideo()` in `main.js` — the play
+button, the poster, the caption rules and the hide-itself-on-error
+behaviour are one piece of code. What is duplicated is the
+`<template id="videoTemplate">` markup, deliberately: two small copies
+beat one shared file that neither page owns. **Change a player and you
+must change both templates.**
 
-**Check the codec before assuming a re-encode is optional.**
-`Access-Welcome.mov` came off a phone as **HEVC (`hvc1`) 1080×1920 at
-11.2 Mbps, 84 MB** — unplayable in Firefox and on a lot of Windows
-machines, which is a silent failure for the visitor. Re-encoded with
-the documented settings it is **17.1 MB, H.264 `avc1` 720×1280 at
-2.2 Mbps**, `ftyp → moov` confirmed, and the encode took 10 seconds.
-The probe worth keeping is a few lines of AVFoundation reporting codec,
-natural size, frame rate and bitrate; `mdls` is useless on fresh video.
+The access page's two are `content.js → access.welcome_video` and
+`access.thanks_video`, each one object rather than a list, and emptying
+a `file` removes that film. The page names them in `main.js` as a
+two-row `pageFilms` table; a third would be one more row.
 
-**Open, and Eric's to decide: the welcome film is in full colour.** The
-site is duotone and the teasers are near-monochrome VHS, so this is the
-first saturated colour on either page, and it also carries modern
-burned-in social-media captions in a rounded sans — a different
-register from "a vintage found artifact". It was placed as asked and
-left as shot, because desaturating a man's own footage of himself is
-his call and not something to do in passing. Raised 30 September 2026.
-If he wants it toned, the honest options are a duotone grade of the
-video (needs a filter step the current tool has no switch for) or
-simply leaving it — a person speaking to camera is a different kind of
-object from a teaser, and arguably earns its own register.
+**`buildVideo()` pushes to `players` itself.** Pushing again at the
+call site gives that player two copies of the pause-others listener.
+That was written and caught before it shipped; it is the obvious
+mistake to make when adding a film.
+
+**One "nothing talks over anything else" block, run once after every
+player exists.** It does two jobs: films pause each other, and a film
+pauses any sounding `<audio>` — because the album is right there and a
+film talking over a song is the one thing that must not happen. The
+audio half works by finding `<audio>` elements rather than reaching
+into `access.js`, so `main.js` needs to know nothing about how the
+album is built. On the main page the audio loop finds none. **Tested in
+all three directions:** film pauses film, film pauses album track, and
+the main page's own one-at-a-time still holds.
+
+**Probe every master before assuming anything.** Both of Eric's
+masters needed a different thing, and neither announced it:
+
+| | `Access-Welcome.mov` | `TGM BHS.mov` |
+|---|---|---|
+| came in as | HEVC 1080×1920, 11.2 Mbps, **84 MB** | H.264 **2160×3840**, 44 Mbps, LPCM audio, **618 MB** |
+| the trap | HEVC is unplayable in Firefox and on much of Windows | uncompressed audio, which mp4 barely carries |
+| went out as | 17.1 MB, avc1 720×1280 | 31 MB, avc1 720×1280, AAC 125 kbps |
+
+Both are 2.2 Mbps with `ftyp → moov`, and each encoded in about ten
+seconds. `mdls` is useless on fresh video; the probe worth keeping is a
+few lines of AVFoundation printing codec, natural size, frame rate and
+bitrate for every track.
+
+**`tools/transcode-video.swift` now encodes audio to AAC unless the
+source is already AAC**, in which case it is still passed through
+untouched. It says which it did. Before this it passed *everything*
+through, and `TGM BHS.mov` would have shipped with **30 MB of LPCM** —
+more than the whole video budget — that a good share of browsers play
+as silence. Channel count is read from the source rather than assumed,
+because asking the encoder for two channels it hasn't got fails at
+`startWriting`. The AAC-passthrough path was regression-tested against
+the welcome film after the change.
+
+**Settled 30 September 2026: the access page's films stay in colour.**
+The site is duotone and the teasers are near-monochrome VHS, so these
+are the first saturated colour on either page — and the welcome film
+also carries burned-in social-media captions in a rounded sans. It was
+raised, and Eric's answer was that he wants **the video note kept
+separate from the world's aesthetic for now**. Don't re-raise it, and
+don't quietly grade a film toward the palette.
+
+**The behind-the-scenes film carries a Carolina Theatre Workshop mark
+burned into its corner.** The main page's teaser credits them properly
+through `credit.text` / `credit.url`. This one's credit fields are
+empty — mentioned to Eric, left for him to fill if he wants the credit
+spelled out in words as well as in the corner of the picture.
 
 ---
 
@@ -1739,7 +1772,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-Committed at `?v=63`, of which **60 through 63 are unpushed** (59 was
+Committed at `?v=64`, of which **60 through 64 are unpushed** (59 was
 the last one confirmed live — check rather than assume, with the curl
 line under Working with Eric).
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,

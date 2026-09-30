@@ -116,45 +116,50 @@
       videoList.forEach(function (video) {
         if (video && video.file) videoBox.appendChild(buildVideo(video));
       });
+    }
 
-      // Only one plays at a time: starting a video pauses any other.
-      players.forEach(function (player) {
-        player.addEventListener('play', function () {
-          players.forEach(function (other) {
-            if (other !== player && !other.paused) other.pause();
-          });
+    // The album page's two films: the welcome under the heading, and the
+    // behind-the-scenes one at the foot after the bonus tracks. Each is a
+    // single film rather than a list, but both go through the same
+    // buildVideo() as the main page's — so the play button, the poster,
+    // the caption rules and the hide-itself-on-error behaviour are one
+    // piece of code rather than three that drift apart. This runs on the
+    // main page too, where neither box exists and nothing happens.
+    var pageFilms = [
+      ['welcomeVideo', 'welcome_video'],
+      ['thanksVideo', 'thanks_video']
+    ];
+
+    pageFilms.forEach(function (pair) {
+      var box = document.getElementById(pair[0]);
+      var film = C.access && C.access[pair[1]];
+      if (!box || !videoTemplate || !film || !film.file) return;
+
+      // buildVideo() adds the player to `players` itself — don't push it
+      // again here, or it gets two copies of the listener below.
+      box.appendChild(buildVideo(film));
+    });
+
+    // Nothing on a page may talk over anything else on it, and this is
+    // the one place that is arranged — for the main page's list and the
+    // album page's two films alike, once every player exists.
+    //
+    // Pausing sounding <audio> is the album half of it. access.js owns
+    // those track players and is deliberately not reached into: every
+    // one of them is an <audio> element on the page, so this needs to
+    // know nothing about how the album works. On the main page there is
+    // no audio and the loop finds none.
+    players.forEach(function (player) {
+      player.addEventListener('play', function () {
+        var sounding = document.getElementsByTagName('audio');
+        for (var i = 0; i < sounding.length; i++) {
+          if (!sounding[i].paused) sounding[i].pause();
+        }
+        players.forEach(function (other) {
+          if (other !== player && !other.paused) other.pause();
         });
       });
-    }
-
-    // The welcome film on the album page, under the heading. One film
-    // rather than a list, but built by the same buildVideo() as the main
-    // page's — so the play button, the poster, the caption rules and the
-    // hide-itself-on-error behaviour are one piece of code, not two that
-    // drift apart. This runs on the main page too and finds nothing.
-    var welcomeBox = document.getElementById('welcomeVideo');
-    var welcome = C.access && C.access.welcome_video;
-
-    if (welcomeBox && videoTemplate && welcome && welcome.file) {
-      var welcomeFigure = buildVideo(welcome);
-      var welcomePlayer = welcomeFigure.querySelector('.video__player');
-
-      // The album is on this same page, and a film talking over a song
-      // is the one thing that must not happen. access.js owns the track
-      // players and is not reached into here — every one of them is an
-      // <audio> element on this page, so pausing whatever is sounding is
-      // enough, and it needs to know nothing about how the album works.
-      if (welcomePlayer) {
-        welcomePlayer.addEventListener('play', function () {
-          var sounding = document.getElementsByTagName('audio');
-          for (var i = 0; i < sounding.length; i++) {
-            if (!sounding[i].paused) sounding[i].pause();
-          }
-        });
-      }
-
-      welcomeBox.appendChild(welcomeFigure);
-    }
+    });
 
     function buildVideo(video) {
       var figure = videoTemplate.content.firstElementChild.cloneNode(true);

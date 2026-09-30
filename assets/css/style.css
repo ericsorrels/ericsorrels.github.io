@@ -3199,3 +3199,17 @@ html.stage-open .stage .lyrics {
 .vault__welcome {
   margin-top: 2.6em;
 }
+
+/* The closing film and its thank-you, after the bonus tracks. The film
+   centres and caps its own width through .video; these only supply the
+   air around them, since .section--contact has no bottom padding of its
+   own and the back link below carries no top margin. */
+.vault__thanks-film {
+  margin-bottom: 2.6em;
+}
+
+.vault__thanks {
+  margin: 0 auto 3em;
+  max-width: 34em;
+  text-align: center;
+}

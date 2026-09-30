@@ -1,7 +1,15 @@
 // Web transcode with explicit control avconvert's presets don't offer:
 // H.264 High at a chosen size and average bitrate, keyframes every 2s
-// (so scrubbing is snappy), BT.709 tags, fast-start (moov first), and
-// the source AAC audio passed through untouched.
+// (so scrubbing is snappy), BT.709 tags, fast-start (moov first).
+//
+// Audio: AAC is passed through untouched, because it is already what
+// the web wants and re-encoding would only lose a little for nothing.
+// ANYTHING ELSE IS ENCODED TO AAC at 128 kbps stereo. A camera or an
+// editor will hand you uncompressed LPCM — a 106-second clip carried
+// 30 MB of it, more than the whole video budget — and LPCM inside an
+// .mp4 is not reliably playable in a browser at all. Passing that
+// through produced a file that looked fine here and would have been
+// silent for a good share of visitors.
 //
 // usage: transcode-video in out width height videoBitsPerSecond [start duration]
 
@@ -36,9 +44,29 @@ let vOut = AVAssetReaderTrackOutput(track: vTrack, outputSettings: [
 vOut.alwaysCopiesSampleData = false
 reader.add(vOut)
 
+// Is the source already AAC? If so it is left alone; if not it has to be
+// decoded to LPCM here so the writer can encode it to AAC below.
+var audioIsAAC = false
+if let a = aTrack, let d = a.formatDescriptions.first {
+    let sub = CMFormatDescriptionGetMediaSubType(d as! CMFormatDescription)
+    audioIsAAC = (sub == kAudioFormatMPEG4AAC)
+    let tag = String(bytes: [UInt8((sub >> 24) & 255), UInt8((sub >> 16) & 255),
+                             UInt8((sub >> 8) & 255), UInt8(sub & 255)],
+                     encoding: .ascii) ?? "?"
+    print("source audio: \(tag) — \(audioIsAAC ? "passed through" : "re-encoded to AAC 128k")")
+}
+
 var aOut: AVAssetReaderTrackOutput?
 if let a = aTrack {
-    let o = AVAssetReaderTrackOutput(track: a, outputSettings: nil)   // passthrough
+    let o = AVAssetReaderTrackOutput(
+        track: a,
+        outputSettings: audioIsAAC ? nil : [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ])
     o.alwaysCopiesSampleData = false
     reader.add(o)
     aOut = o
@@ -72,8 +100,25 @@ writer.add(vIn)
 
 var aIn: AVAssetWriterInput?
 if let a = aTrack, let hint = a.formatDescriptions.first {
-    let i = AVAssetWriterInput(mediaType: .audio, outputSettings: nil,
+    let i: AVAssetWriterInput
+    if audioIsAAC {
+        i = AVAssetWriterInput(mediaType: .audio, outputSettings: nil,
                                sourceFormatHint: (hint as! CMFormatDescription))
+    } else {
+        // Channel count is taken from the source rather than assumed: a
+        // camera may hand over one channel or four, and asking the
+        // encoder for two it hasn't got fails at startWriting.
+        var channels = 2
+        if let basic = CMAudioFormatDescriptionGetStreamBasicDescription(hint as! CMFormatDescription) {
+            channels = min(2, max(1, Int(basic.pointee.mChannelsPerFrame)))
+        }
+        i = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 48000,
+            AVNumberOfChannelsKey: channels,
+            AVEncoderBitRateKey: channels > 1 ? 128000 : 96000,
+        ])
+    }
     i.expectsMediaDataInRealTime = false
     writer.add(i)
     aIn = i

@@ -489,6 +489,27 @@ window.SITE_CONTENT = {
       play_label: "Play the welcome from Eric Sorrels",
     },
 
+    /* ---- The closing, after the bonus tracks ----------------------------- */
+    // A second film, at the foot of the page, and the words beneath it.
+    // Same rules as the welcome film above — emptying  file  takes it away.
+    thanks_video: {
+      file: "assets/video/tgm-bhs.mp4",
+      poster: "assets/img/tgm-bhs-poster.jpg",          // the frame at 0:25
+      shape: "tall",
+      caption: "",
+      // The teaser on the main page credits Carolina Theatre Workshop.
+      // This film carries their mark burned into the corner, so nothing
+      // is written here — put text and a web address in if you want the
+      // credit spelled out beneath it as well.
+      credit: {
+        text: "",
+        url: "",
+      },
+      play_label: "Play the behind-the-scenes film",
+    },
+    thanks:
+      "Thank you for supporting *The Gray Man*! Be sure to pre-save the album on Spotify or Apple Music, and spread the word… a hurricane is coming!",
+
     /* ---- The album tracks ------------------------------------------------ */
     // One line per track, in album order. The matching audio files go in
     // the folder  assets/audio/  numbered to match this list:
