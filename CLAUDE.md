@@ -904,6 +904,35 @@ good as what stands in front of it: with Access off, or on a path it
 does not cover, anyone could send that header themselves and be
 believed. The cookie cannot be forged without `SESSION_SECRET`.
 
+**Picking addresses out of the list, added 1 October 2026.** A tick
+box on every row, one at the top of the table that takes the lot, and
+**Copy selected addresses**. The count says how many are chosen, and a
+redraw after Add or Remove clears the ticks — `draw()` calls `tally()`
+at the end for exactly that, so the box at the top never claims to
+speak for a list it is no longer describing. The header box goes
+half-ticked when only some are chosen.
+
+**It copies to the clipboard rather than opening a mail window, and
+that is not laziness.** A `mailto:` link puts the addresses in a URL,
+every browser and mail client caps how long a URL may be, and the ones
+that do not simply drop the overflow — so a long guest list would
+silently lose its tail. That is the worst way for this to fail,
+because nothing would look wrong. The clipboard has no such limit.
+
+**The page says to paste into BCC, in bold, and that line is the point
+of the feature.** Addresses in the To line are shown to everyone who
+gets the message — the whole guest list, handed to all of it. Eric is
+emailing people who paid him; leaking their addresses to each other is
+the one mistake here that cannot be taken back.
+
+**There is a fallback for a refused clipboard**: a read-only box
+appears below, filled and pre-selected. Tested by making both
+`navigator.clipboard.writeText` and `document.execCommand` fail.
+
+**Your own row has a tick box even though it has no Remove button.**
+There is nothing odd about sending yourself the announcement, and it is
+the easiest way to see what everyone else got.
+
 **Its wording is hardcoded, not in `content.js`** — a tool of Eric's,
 like `tools/lyric-timer.html`. No visitor sees it and it must work with
 no site around it, so it loads no fonts and no libraries.

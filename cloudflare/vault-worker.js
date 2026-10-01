@@ -1182,6 +1182,16 @@ const ADMIN_PAGE = `<!doctype html>
   .tag { font-size:.6rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
          border:1px solid var(--edge); border-radius:2px; padding:.16rem .5rem; white-space:nowrap; }
   .never { color:var(--gray); }
+  /* Big enough to hit without aiming. This page is used by one person
+     who may well be reading it without his glasses on. */
+  input[type=checkbox] { width:1.1rem; height:1.1rem; accent-color:var(--ink);
+                         cursor:pointer; margin:0; vertical-align:middle; }
+  th.pick, td.pick { width:1.1rem; padding-right:0; }
+  .picked { display:flex; gap:1rem; align-items:center; flex-wrap:wrap;
+            margin:.5rem 0 1rem; }
+  .picked .said { margin:0; }
+  #pickedOut { display:none; margin-top:.8rem; font-size:.85rem; }
+  #pickedOut[data-open] { display:block; }
   .x { border:none; color:var(--gray); font-size:.62rem; padding:.35rem .5rem; letter-spacing:.14em; }
   .x:hover:not(:disabled) { background:transparent; color:var(--ink); text-decoration:underline; }
   .note { font-size:.82rem; color:var(--faint); margin:.6rem 0 0; }
@@ -1210,11 +1220,23 @@ const ADMIN_PAGE = `<!doctype html>
   </div>
 
   <h2>On the list — <span id="count">…</span></h2>
+
+  <div class="picked">
+    <button id="copyBtn" disabled>Copy selected addresses</button>
+    <span class="said" id="pickSaid"></span>
+  </div>
+  <p class="note"><b>Paste them into BCC, not To.</b> Addresses in the To line are
+    shown to everybody who gets the message — your whole guest list, handed to all
+    of it. BCC keeps each person's address to themselves. Tick the box at the top
+    of the table to take the lot.</p>
+  <textarea id="pickedOut" readonly rows="4"></textarea>
+
   <table>
     <thead><tr>
+      <th class="pick"><input type="checkbox" id="pickAll" aria-label="Select everybody"></th>
       <th>Email</th><th>Source</th><th class="hide-narrow">Added</th><th>Last signed in</th><th></th>
     </tr></thead>
-    <tbody id="rows"><tr><td colspan="5" class="never">Reading the list…</td></tr></tbody>
+    <tbody id="rows"><tr><td colspan="6" class="never">Reading the list…</td></tr></tbody>
   </table>
   <p class="note">Removing somebody stops any new code being sent to them. If they are
     signed in already, that session lasts until it runs out — to end every session at
@@ -1299,7 +1321,8 @@ const ADMIN_PAGE = `<!doctype html>
   function draw(list) {
     $('count').textContent = list.length === 1 ? '1 person' : list.length + ' people';
     if (!list.length) {
-      $('rows').innerHTML = '<tr><td colspan="5" class="never">Nobody yet.</td></tr>';
+      $('rows').innerHTML = '<tr><td colspan="6" class="never">Nobody yet.</td></tr>';
+      tally();
       return;
     }
     $('rows').innerHTML = list.map(function (m) {
@@ -1310,18 +1333,119 @@ const ADMIN_PAGE = `<!doctype html>
       var last = (m.email === you)
         ? '<span class="never">you</span>'
         : '<button class="x" data-email="' + safe(m.email) + '">Remove</button>';
-      return '<tr><td class="addr">' + safe(m.email) + '</td>' +
+      // Your own row DOES get a tick box, unlike the Remove button —
+      // there is nothing odd about sending yourself the announcement,
+      // and it is the easiest way to see what everyone else got.
+      return '<tr><td class="pick">' +
+        '<input type="checkbox" class="pick" data-email="' + safe(m.email) +
+        '" aria-label="Select ' + safe(m.email) + '"></td>' +
+        '<td class="addr">' + safe(m.email) + '</td>' +
         '<td><span class="tag">' + safe(m.source) + '</span></td>' +
         '<td class="when hide-narrow">' + safe(day(m.added_at) || '') + '</td>' +
         '<td class="when">' + (seen ? safe(seen) : '<span class="never">never</span>') + '</td>' +
         '<td style="text-align:right">' + last + '</td></tr>';
     }).join('');
+    // A redraw builds new boxes, so whatever was ticked is gone. Said
+    // plainly by the count rather than left to be noticed.
+    tally();
   }
+
+  /* ------------------------------------------------------------------
+     Picking addresses out of the list.
+
+     This copies to the clipboard rather than opening a mail window. A
+     mailto: link looked tempting and is a trap: addresses go into the
+     URL, every browser and mail client caps how long that may be, and
+     the ones that do not simply drop the overflow — so a long guest
+     list would silently lose its tail, which is the worst way for this
+     to fail. The clipboard has no such limit and the paste goes
+     wherever he likes.
+     ------------------------------------------------------------------ */
+
+  function picks() {
+    return [].slice.call(document.querySelectorAll('input.pick'));
+  }
+
+  function chosen() {
+    return picks().filter(function (b) { return b.checked; })
+      .map(function (b) { return b.getAttribute('data-email'); });
+  }
+
+  function tally() {
+    var all = picks();
+    var n = chosen().length;
+    var head = $('pickAll');
+
+    head.checked = n > 0 && n === all.length;
+    // Half-ticked when only some are chosen, so the box at the top
+    // never claims to speak for the whole list when it doesn't.
+    head.indeterminate = n > 0 && n < all.length;
+    head.disabled = all.length === 0;
+
+    $('copyBtn').disabled = n === 0;
+    $('pickSaid').textContent = n === 0 ? ''
+      : (n === 1 ? '1 address selected' : n + ' addresses selected');
+
+    if (n === 0) $('pickedOut').removeAttribute('data-open');
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Older browsers, and any page the clipboard permission refuses.
+    return new Promise(function (resolve, reject) {
+      var box = document.createElement('textarea');
+      box.value = text;
+      box.setAttribute('readonly', '');
+      box.style.position = 'fixed';
+      box.style.top = '-1000px';
+      document.body.appendChild(box);
+      box.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(box);
+      if (ok) resolve(); else reject(new Error('no'));
+    });
+  }
+
+  $('pickAll').addEventListener('change', function () {
+    var on = this.checked;
+    picks().forEach(function (b) { b.checked = on; });
+    tally();
+  });
+
+  // Delegated, because the rows are rebuilt on every redraw.
+  $('rows').addEventListener('change', function (e) {
+    if (e.target && e.target.classList.contains('pick')) tally();
+  });
+
+  $('copyBtn').addEventListener('click', function () {
+    var list = chosen();
+    if (!list.length) return;
+
+    // Commas, which is what every mail client expects in a BCC field.
+    var text = list.join(', ');
+
+    copyText(text).then(function () {
+      $('pickSaid').innerHTML = '<b>' + list.length +
+        '</b> copied — paste into BCC.';
+    }).catch(function () {
+      // The clipboard was refused. Hand them over on screen instead
+      // rather than leaving him with a button that did nothing.
+      var out = $('pickedOut');
+      out.value = text;
+      out.setAttribute('data-open', '1');
+      out.focus();
+      out.select();
+      $('pickSaid').textContent = 'The clipboard was blocked — copy them from the box below.';
+    });
+  });
 
   function load() {
     return ask('list').then(function (r) {
       if (!r || !r.ok) {
-        $('rows').innerHTML = '<tr><td colspan="5" class="never">The list could not be read.</td></tr>';
+        $('rows').innerHTML = '<tr><td colspan="6" class="never">The list could not be read.</td></tr>';
         return;
       }
       you = r.you;
