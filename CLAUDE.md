@@ -904,7 +904,8 @@ good as what stands in front of it: with Access off, or on a path it
 does not cover, anyone could send that header themselves and be
 believed. The cookie cannot be forged without `SESSION_SECRET`.
 
-**Picking addresses out of the list, added 1 October 2026.** A tick
+**Picking addresses out of the list, added 1 October 2026 and live.**
+Eric deployed it and confirmed the copying works. A tick
 box on every row, one at the top of the table that takes the lot, and
 **Copy selected addresses**. The count says how many are chosen, and a
 redraw after Add or Remove clears the ticks — `draw()` calls `tally()`
@@ -924,6 +925,11 @@ of the feature.** Addresses in the To line are shown to everyone who
 gets the message — the whole guest list, handed to all of it. Eric is
 emailing people who paid him; leaking their addresses to each other is
 the one mistake here that cannot be taken back.
+
+**Settled 1 October 2026: Eric said he will always and only paste into
+BCC.** Take him at his word and don't lecture him about it again. The
+line stays on the page regardless — it is there for a tired evening a
+year from now, not because anyone doubts him.
 
 **There is a fallback for a refused clipboard**: a read-only box
 appears below, filled and pre-selected. Tested by making both
@@ -1932,11 +1938,18 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (30 September 2026)
 
-**`?v=68` is live**, confirmed against graymanmusical.com on
-30 September 2026 with the curl line under Working with Eric — both
-pages, plus the new public files (storm-intro.js, both films, both
-posters) all 200, and the vault still answering 401 for `session` and
-404 for every file to anyone without a cookie.
+**`?v=68` is live and everything is pushed**, confirmed against
+graymanmusical.com — both pages, plus the new public files
+(storm-intro.js, both films, both posters) all 200. The worker was
+redeployed on 1 October 2026 for the guest-list picking, and checked
+afterwards: `session` 401, `admin`, `admin/list`, every vault file and
+a wrong Gumroad doorbell secret all 404.
+
+**Check the worker after every dashboard deploy, with that same
+handful of requests.** It is pasted in by hand, and a paste that lost
+its tail would leave the album unreachable for everyone with nothing on
+the site to show it. The public endpoints answer without a session, so
+the check costs nothing and spends none of the per-IP code allowance.
 `audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
