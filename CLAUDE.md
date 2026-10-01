@@ -1936,21 +1936,24 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (30 September 2026)
+## Where things stand (1 October 2026)
 
-**`?v=68` is live and everything is pushed**, confirmed against
-graymanmusical.com — both pages, plus the new public files
-(storm-intro.js, both films, both posters) all 200. The worker was
-redeployed on 1 October 2026 for the guest-list picking, and checked
-afterwards: `session` 401, `admin`, `admin/list`, every vault file and
-a wrong Gumroad doorbell secret all 404.
+**`?v=69` is committed and waiting for Eric to push.** `?v=68` is the
+last one confirmed live, checked against graymanmusical.com — both
+pages, plus the public files added with it (storm-intro.js, both
+films, both posters) all 200.
+
+**The worker was redeployed on 1 October 2026** for the guest-list
+picking, and checked afterwards: `session` 401, and `admin`,
+`admin/list`, every vault file and a wrong Gumroad doorbell secret all
+404.
 
 **Check the worker after every dashboard deploy, with that same
 handful of requests.** It is pasted in by hand, and a paste that lost
 its tail would leave the album unreachable for everyone with nothing on
 the site to show it. The public endpoints answer without a session, so
 the check costs nothing and spends none of the per-IP code allowance.
-`audio_version: 3`, `lyrics_version: 3`, `notes_version: 1`,
+`audio_version: 4`, `lyrics_version: 4`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -1985,6 +1988,15 @@ the check costs nothing and spends none of the per-IP code allowance.
   needless bump makes every listener re-download the whole album.
   `lyrics_version` is bumped for additions too — those files are a few
   kilobytes, so the cost is nothing and new words appear at once.
+  **REORDERING COUNTS AS REPLACING, and this is the case that hides.**
+  Swapping two tracks changes what two existing addresses *mean*:
+  somebody who played the old 16 has it in their browser under
+  `audio/16.mp3`, and the new 16 asks for that same name. Without a bump
+  they hear the song that used to be there, under the new title, and
+  nothing looks wrong. Both numbers went to 4 for the 15/16 swap on
+  1 October 2026. The cost is smaller than it sounds: the player
+  preloads metadata only, so a listener re-fetches a track when they
+  play it, not the album on load.
 - **The site has a favicon now.** Eric declined one twice and then asked
   for it on 28 September 2026. Settled; the old "don't offer again" note
   is gone.
@@ -2019,11 +2031,19 @@ and a named vocalist for every track. Each has its own section above.
   lined up on 30 September 2026 before Eric made the files, which was
   the moment to do it: two of them still read `digital-lyric-book` and
   `about-pawleys-island` from before the buttons were renamed.
-- **Two tracks have no audio:** 09 Some Things Never Leave You · 15 The Gray
+- **Two tracks have no audio:** 09 Some Things Never Leave You · 16 The Gray
   Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
   replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3
   — the whole album now runs at 127 kbps. He added 18 on 29 September;
   `audio_version` was deliberately *not* bumped, per the rule below.)
+- **15 and 16 were swapped on 1 October 2026** — 15 is now How to Be
+  Young, 16 is The Gray Man and is the one still waiting for a file.
+  Eric renamed `16.mp3`/`16.lrc` to `15.*` on his Mac **and in the
+  bucket**, and both version numbers were bumped to 4. The singers
+  needed no attention: `track_artists` is keyed by title, which is
+  exactly what that design is for. Checked afterwards that Next and the
+  end-of-song roll-on both skip the empty 16 and land on 17, and that
+  `bonus_starts_at` at 19 was untouched because the swap sits above it.
 - **Three tracks have audio but no words:** 08, 13 and 18. Their panel says
   there are no lyrics, which is correct but not final. (02, 04, 12 and 14
   were written on 29 September 2026, `lyrics_version` to 3.)

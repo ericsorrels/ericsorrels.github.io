@@ -531,7 +531,13 @@ window.SITE_CONTENT = {
     // is already on the live site. Browsers keep a copy of every track
     // they have played, and without this they go on playing the old one.
     // Adding brand-new tracks doesn't need it — only replacements.
-    audio_version: 3,
+    //
+    // REORDERING COUNTS AS REPLACING. Moved to 4 on 1 October 2026 when
+    // 15 and 16 were swapped: anyone who had played the old 16 had it
+    // kept in their browser, and the new 16 asks for the same file by
+    // the same name. Without this they would hear the song that used to
+    // be there, under the new title, and nothing would look wrong.
+    audio_version: 4,
 
     /* ---- The panel that follows the track ----
        Opens and closes with a small tab in the bottom corner. Inside it
@@ -578,7 +584,8 @@ window.SITE_CONTENT = {
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their
     // browser kept. Works exactly like audio_version above.
-    lyrics_version: 3,
+    // Moved to 4 on 1 October 2026 with the 15/16 swap.
+    lyrics_version: 4,
 
     /* ---- What you've written about the song ----
        The panel's other tab, beside Lyrics. Whichever tab a listener
@@ -673,8 +680,8 @@ window.SITE_CONTENT = {
       "St. Elmo's Fire",
       "Eye of the Storm II",
       "Weather Chatter (2022)",
-      "The Gray Man",
       "How to Be Young",
+      "The Gray Man",
       "Is That You?",
       "Eye of the Storm III",
       "I Will Reach For You (Demo)",
