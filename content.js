@@ -537,6 +537,11 @@ window.SITE_CONTENT = {
     // kept in their browser, and the new 16 asks for the same file by
     // the same name. Without this they would hear the song that used to
     // be there, under the new title, and nothing would look wrong.
+    //
+    // Deliberately LEFT at 4 on 2 October, when 09 and 16 got their
+    // audio. Nothing was replaced — both addresses had never served a
+    // file, so there is no old copy anywhere to displace, and bumping
+    // would have made every listener re-fetch all twenty for nothing.
     audio_version: 4,
 
     /* ---- The panel that follows the track ----
@@ -584,8 +589,9 @@ window.SITE_CONTENT = {
     // Raise this number by one whenever you add or change a lyrics
     // file, so listeners get the new words instead of a copy their
     // browser kept. Works exactly like audio_version above.
-    // Moved to 4 on 1 October 2026 with the 15/16 swap.
-    lyrics_version: 4,
+    // Moved to 4 on 1 October 2026 with the 15/16 swap, and to 5 on
+    // 2 October when track 09 got its words.
+    lyrics_version: 5,
 
     /* ---- What you've written about the song ----
        The panel's other tab, beside Lyrics. Whichever tab a listener

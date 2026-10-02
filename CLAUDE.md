@@ -1938,10 +1938,18 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (1 October 2026)
 
-**`?v=69` is committed and waiting for Eric to push.** `?v=68` is the
-last one confirmed live, checked against graymanmusical.com — both
-pages, plus the public files added with it (storm-intro.js, both
-films, both posters) all 200.
+**`?v=70` is committed and waiting for Eric to push.** `?v=69` is the
+last one confirmed live, checked against graymanmusical.com.
+
+**A vault 404 is not cached anywhere, which is worth knowing when a
+file seems not to have arrived.** Worker responses bypass Cloudflare's
+edge cache — three requests to a made-up track came back 404 with no
+`cf-cache-status` header at all — and `notFound()` sends no
+`Cache-Control`, so nothing holds a miss. **A file put in the bucket is
+therefore served immediately.** If a track still reads "Soon" after an
+upload, the upload itself is wrong — wrong name, or dropped at the root
+instead of inside its folder — and waiting will not fix it. Checked
+2 October 2026.
 
 **The worker was redeployed on 1 October 2026** for the guest-list
 picking, and checked afterwards: `session` 401, and `admin`,
@@ -1953,7 +1961,7 @@ handful of requests.** It is pasted in by hand, and a paste that lost
 its tail would leave the album unreachable for everyone with nothing on
 the site to show it. The public endpoints answer without a session, so
 the check costs nothing and spends none of the per-IP code allowance.
-`audio_version: 4`, `lyrics_version: 4`, `notes_version: 1`,
+`audio_version: 4`, `lyrics_version: 5`, `notes_version: 1`,
 `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
@@ -2031,11 +2039,17 @@ and a named vocalist for every track. Each has its own section above.
   lined up on 30 September 2026 before Eric made the files, which was
   the moment to do it: two of them still read `digital-lyric-book` and
   `about-pawleys-island` from before the buttons were renamed.
-- **Two tracks have no audio:** 09 Some Things Never Leave You · 16 The Gray
-  Man. They read "Soon" and are skipped. (Eric added 04, 08 and 14 and
-  replaced 02, 12 and 13 on 24 September 2026, bumping `audio_version` to 3
-  — the whole album now runs at 127 kbps. He added 18 on 29 September;
-  `audio_version` was deliberately *not* bumped, per the rule below.)
+- **Every track has audio now**, as of 2 October 2026, when Eric added
+  09 and 16 — the last two. Nothing reads "Soon" any more and the
+  "Soon" path has no live example on the album; keep that in mind
+  before assuming it still has one to test against. Both new files are
+  128 kbps stereo 44.1 kHz, matching the other eighteen. (Earlier:
+  04, 08 and 14 added and 02, 12 and 13 replaced on 24 September 2026,
+  `audio_version` to 3; 18 added on 29 September with no bump.)
+  **`audio_version` was deliberately NOT bumped for 09 and 16** —
+  both addresses had never served a file, so there was no old copy
+  anywhere to displace. The reasoning is written into `content.js`
+  beside the setting.
 - **15 and 16 were swapped on 1 October 2026** — 15 is now How to Be
   Young, 16 is The Gray Man and is the one still waiting for a file.
   Eric renamed `16.mp3`/`16.lrc` to `15.*` on his Mac **and in the
@@ -2044,9 +2058,16 @@ and a named vocalist for every track. Each has its own section above.
   exactly what that design is for. Checked afterwards that Next and the
   end-of-song roll-on both skip the empty 16 and land on 17, and that
   `bonus_starts_at` at 19 was untouched because the swap sits above it.
-- **Three tracks have audio but no words:** 08, 13 and 18. Their panel says
-  there are no lyrics, which is correct but not final. (02, 04, 12 and 14
-  were written on 29 September 2026, `lyrics_version` to 3.)
+- **Four tracks have audio but no words:** 08, 13, 16 and 18. Their
+  panel says there are no lyrics, which is correct but not final.
+  (02, 04, 12 and 14 were written on 29 September 2026,
+  `lyrics_version` to 3; 09 on 2 October, `lyrics_version` to 5.)
+- **16 The Gray Man is waiting on its `.lrc`, and Eric believed he had
+  added it.** On 2 October 2026 he said 09 and 16 were both in as
+  `.mp3` **and** `.lrc`; `09.lrc` arrived, `16.lrc` did not — not on
+  the Mac, and so almost certainly not in the bucket either. Raised the
+  same day. It is the one of the four above that is expected to have
+  words: 08, 13 and 18 are the *Eye of the Storm* interstitials.
 - **No track has liner notes yet.** `assets/notes/` holds only its
   instructions, so every track's Notes tab reads "No notes for this track"
   — correct, and what a half-filled album should look like. Eric writes
