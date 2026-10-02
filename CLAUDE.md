@@ -1996,7 +1996,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (1 October 2026)
 
-**`?v=72` is committed and waiting for Eric to push.** `?v=69` is the
+**`?v=73` is committed and waiting for Eric to push.** `?v=69` is the
 last one confirmed live, checked against graymanmusical.com.
 
 **A vault 404 is not cached anywhere, which is worth knowing when a
@@ -2147,14 +2147,15 @@ and a named vocalist for every track. Each has its own section above.
   Donnell and note 16 Ella Frederickson, matching `track_artists`.
   **It is a better check than reading the prose**, because most notes
   never name their own song.
-- **Track 15's note credits three performers where `track_artists`
-  credits one.** The note says "Colin Donnell, Eric Sorrels, & Ella
-  Frederickson"; the track list says "Colin Donnell", so the row under
-  the title and the Notes tab disagree. Every other track matches
-  exactly, which is what makes this one stand out. Raised with Eric on
-  2 October 2026 — it may well be lead singer versus full ensemble and
-  entirely deliberate. (08, 13 and 18 have no Featured Performer line
-  at all, which is correct: they are instrumental.)
+- **Settled 2 October 2026: track 15 is "Colin Donnell, Eric Sorrels, &
+  Ella Frederickson".** The note was right and `track_artists` was
+  short; Eric confirmed and the track list was brought into line. **All
+  eighteen now agree with their notes**, which is the check to re-run
+  after any credit change — match each note's Featured Performer
+  against `track_artists` rather than reading the prose. (08, 13 and 18
+  have no Featured Performer line at all, which is correct: they are
+  instrumental, and `track_artists` naming Eric Sorrels for them is not
+  a mismatch.)
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
   That is a setting on Gumroad's side, not something in this repo. Since

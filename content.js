@@ -668,7 +668,7 @@ window.SITE_CONTENT = {
       "Eye of the Storm II": "Eric Sorrels",
       "Weather Chatter (2022)": "Brock Ward",
       "The Gray Man": "Ella Frederickson",
-      "How to Be Young": "Colin Donnell",
+      "How to Be Young": "Colin Donnell, Eric Sorrels, & Ella Frederickson",
       "Is That You?": "Greg Toft & Ella Frederickson",
       "Eye of the Storm III": "Eric Sorrels",
       "I Will Reach For You (Demo)": "Eric Sorrels",
