@@ -606,7 +606,11 @@ window.SITE_CONTENT = {
 
     // Raise this by one whenever you add or change a notes file, the
     // same way as lyrics_version just above.
-    notes_version: 1,
+    // Moved to 2 on 2 October 2026, when notes arrived for tracks 01–18.
+    //
+    // They may be .md or .txt — whichever you save, the page reads it
+    // the same way. TextEdit writes .txt, so there is nothing to rename.
+    notes_version: 2,
 
     /* ---- The album's cover ----
        The picture above the track list. Nobody reads these words: they
@@ -709,22 +713,29 @@ window.SITE_CONTENT = {
     // the grayman-vault bucket at Cloudflare. Only the second of those
     // is what a visitor receives.
     //
-    // REPLACING a download means giving it a NEW file name and changing
-    // it here too. There is no version tag on these the way there is on
-    // audio and lyrics, and the vault tells a browser it may keep one
-    // for an hour — so a file swapped in under the same name goes on
-    // being handed out for up to an hour afterwards.
+    // Raise this number by one whenever you replace a download with a
+    // new version of itself, so people get the new one instead of the
+    // copy their browser kept for an hour. Adding a download for the
+    // first time doesn't need it.
     //
+    // This is what audio_version and lyrics_version do, and until
+    // 2 October 2026 downloads were the one thing without it — so
+    // replacing a PDF used to mean renaming the file as well. It no
+    // longer does: the same name is now safe.
+    downloads_version: 1,
+
     // A vertical bar  |  inside a label starts a new line at that point,
     // so you can control where a long button title breaks.
     downloads_label: "Downloads",
     downloads: [
       { label: "Listening Guide", file: "downloads/listening-guide.pdf" },
-      // Renamed from lyric-booklet.pdf on 2 October 2026 when the booklet
-      // was replaced — that is the rule just above, not a tidy-up. The
-      // longer name is also what a supporter ends up with in their
-      // Downloads folder, where "lyric-booklet.pdf" says nothing about
-      // whose it is.
+      // Renamed from lyric-booklet.pdf on 2 October 2026 when the
+      // booklet was replaced, under the rule that applied that morning.
+      // downloads_version above now makes renaming unnecessary, so the
+      // next replacement can keep this name — the longer one is worth
+      // keeping anyway, since it is what a supporter ends up with in
+      // their Downloads folder, where "lyric-booklet.pdf" says nothing
+      // about whose it is.
       { label: "Lyric Booklet", file: "downloads/the-gray-man-lyric-booklet.pdf" },
       { label: "About the World", file: "downloads/about-the-world.pdf" },
     ],

@@ -59,9 +59,22 @@ cloudflare/HOW-TO-DEPLOY.txt
 # usual, and ask Claude to put it in the vault as well. See CLAUDE.md,
 # "The vault".
 # ---------------------------------------------------------------------
-assets/audio/*.mp3
-assets/lyrics/*.lrc
-assets/lyrics/*.txt
-assets/notes/*.md
+# IGNORE EVERYTHING IN THESE FOLDERS, then allow back the one note
+# explaining what goes in each. Listing extensions instead — which is
+# what this did until 2 October 2026 — is one keystroke from publishing
+# the album: the rule read "assets/notes/*.md", Eric's eighteen liner
+# notes arrived as .txt, and all eighteen were staged for commit before
+# anything caught it. They are personal writing about his own life. The
+# same hole was open for any audio that was not .mp3.
+#
+# A folder listed here holds Eric's private material and the only thing
+# in it that may ever be published is the PUT-…-HERE note. Deny first,
+# allow by name.
+assets/audio/*
+!assets/audio/PUT-AUDIO-FILES-HERE.txt
+assets/lyrics/*
+!assets/lyrics/PUT-LYRICS-HERE.txt
+assets/notes/*
+!assets/notes/PUT-NOTES-HERE.txt
 assets/downloads/*
 !assets/downloads/PUT-DOWNLOAD-FILES-HERE.txt

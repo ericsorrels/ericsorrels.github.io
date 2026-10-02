@@ -340,16 +340,25 @@
     return out.join('');
   }
 
-  function notesUrl(number) {
-    return VAULT + 'notes/' + number + '.md'
+  function notesUrl(number, extension) {
+    return VAULT + 'notes/' + number + '.' + extension
       + (A.notes_version ? '?v=' + encodeURIComponent(A.notes_version) : '');
   }
 
   // Resolves to the file's text, or null when there is none worth showing.
+  //
+  // .md first, then .txt — the same bargain the words above strike with
+  // .lrc and .txt, and for the same reason: TextEdit saves a plain file
+  // as .txt, so insisting on .md would mean renaming every note by hand
+  // for ever. Either is read as Markdown, which costs a .txt nothing —
+  // a note with no markup in it is simply paragraphs.
   function findNotes(number) {
     if (notesCache[number] !== undefined) return Promise.resolve(notesCache[number]);
 
-    return fetchText(notesUrl(number)).then(function (text) {
+    return fetchText(notesUrl(number, 'md')).then(function (text) {
+      if (text != null && text.trim()) return text;
+      return fetchText(notesUrl(number, 'txt'));
+    }).then(function (text) {
       var kept = (text != null && text.trim()) ? text : null;
       notesCache[number] = kept;        // an empty file counts as none
       return kept;

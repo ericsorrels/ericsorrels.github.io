@@ -158,6 +158,7 @@ Three different rules, because three different mechanisms:
 | `content.js`, any `.js`, `style.css` | Bump `?v=N` in **both** `index.html` and `access.html` |
 | An image | Give the new file a **new name**, then update wherever it is named — see below |
 | An audio track already online | Bump `access.audio_version` in `content.js` |
+| A download already online | Bump `access.downloads_version` in `content.js` |
 | A lyrics file, added or changed | Bump `access.lyrics_version` in `content.js` |
 | A notes file, added or changed | Bump `access.notes_version` in `content.js` |
 
@@ -635,6 +636,29 @@ website.** Its audio, words, notes and downloads live in a private
 Cloudflare R2 bucket, `grayman-vault`, which has no public address of its
 own, and the only way to them is a Worker — `cloudflare/vault-worker.js` —
 on the route `graymanmusical.com/vault-api/*`. See The vault below.
+
+**`.gitignore` denies whole folders now, and listing extensions is
+what went wrong.** Until 2 October 2026 the rules named extensions —
+`assets/audio/*.mp3`, `assets/notes/*.md` — so anything saved in
+another format fell straight through. Eric's eighteen liner notes
+arrived as `.txt`, **all eighteen were staged for commit**, and only a
+check of what was about to go in caught them. They are personal
+writing about his own life, and they would have been readable at
+`graymanmusical.com/assets/notes/01.txt` by anyone. Nothing had ever
+been committed, so there was no history to purge — this was a near
+miss, not an incident.
+
+The four private folders now read *deny everything, allow back the one
+`PUT-…-HERE` note by name*. **Keep that shape.** It fails safe: a
+`.wav`, an `.m4a`, an `.rtf`, a `.zip` — anything Eric drops in a
+folder is ignored without anyone having to think of it first. Verified
+against all six of those after the change, and that the four
+instruction files are still tracked. `assets/video/` is deliberately
+NOT in this list: its `.mp4` web copies are meant to be public and
+only the `.mov` masters are ignored.
+
+**Always read what `git add` actually staged before committing**, not
+just what you expected it to. That is what caught this.
 
 **Anything committed becomes a public URL at `graymanmusical.com/<path>`.**
 A guide written for Eric with the password in it was committed and served
@@ -1127,13 +1151,17 @@ so either click into the folder before uploading or put `notes/` in
 front of the name; `notes/` and `downloads/` did not exist at all until
 the first file went into them.
 
-**Downloads have no version tag, and that is a live edge.** Audio,
-lyrics and notes each carry one; a download's address is
-`vaultUrl(item.file)` and nothing else, while the worker sends
-`max-age=3600`. So a PDF swapped in under the same name goes on being
-handed out for up to an hour. **Replacing one means a new file name and
-a matching edit in `content.js`** — noted there too. Adding one for the
-first time has no such problem.
+**Downloads carry `downloads_version` now**, added 2 October 2026 at
+Eric's request, and that closes what used to be a live edge. Until
+then a download's address was `vaultUrl(item.file)` and nothing else
+while the worker sent `max-age=3600`, so a PDF swapped in under the
+same name went on being handed out for up to an hour — and the rule
+was to rename the file on every replacement. **That rule is gone:
+bump the number instead.** `the-gray-man-lyric-booklet.pdf` still
+carries the name it was given that morning under the old rule, which
+is worth keeping on its own merits — it is what lands in a supporter's
+Downloads folder. Adding a download for the first time still needs no
+bump.
 
 **Adding a file changes nothing in the repo**, so there is nothing to
 commit or push: the page already asks for `audio/09.mp3`, and the
@@ -1603,8 +1631,18 @@ is only followed when `isShowing()`, because a hidden pane has no height
 to measure the reading line against. Switching back to Lyrics calls
 `remeasure()` for exactly that reason.
 
-**Notes are Markdown** in `assets/notes/NN.md`, numbered like everything
-else, with `notes_version` in `content.js` as their cache tag. The reader
+**Notes are Markdown** in `assets/notes/NN.md` **or `NN.txt`** —
+`findNotes()` tries `.md` and falls back to `.txt`, the same bargain
+`findWords()` strikes with `.lrc` and `.txt`. **The fallback was added
+2 October 2026 because Eric's eighteen notes all arrived as `.txt`
+and, until then, every one of them would have 404'd in silence** with
+each Notes tab reading "No notes for this track" and nothing anywhere
+saying why. TextEdit writes `.txt`; insisting on `.md` would have meant
+renaming every note by hand for ever. Either extension is read as
+Markdown, which costs a plain file nothing — prose with no markup in it
+is simply paragraphs. `safeKey()` in the worker filters on the folder
+prefix only, never the extension, so `notes/NN.txt` needed nothing
+doing to it. `notes_version` in `content.js` is the cache tag. The reader
 in `lyrics.js` is deliberately small: paragraphs, `#`–`###` headings
 (rendered h3–h5, since the track title is the h2 above), `*italic*`,
 `**bold**`, `***both***`, and `---` for a rule. One Return is a line
@@ -1958,7 +1996,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (1 October 2026)
 
-**`?v=71` is committed and waiting for Eric to push.** `?v=69` is the
+**`?v=72` is committed and waiting for Eric to push.** `?v=69` is the
 last one confirmed live, checked against graymanmusical.com.
 
 **A vault 404 is not cached anywhere, which is worth knowing when a
@@ -1981,8 +2019,8 @@ handful of requests.** It is pasted in by hand, and a paste that lost
 its tail would leave the album unreachable for everyone with nothing on
 the site to show it. The public endpoints answer without a session, so
 the check costs nothing and spends none of the per-IP code allowance.
-`audio_version: 4`, `lyrics_version: 5`, `notes_version: 1`,
-`bonus_starts_at: 19`, twenty tracks.
+`audio_version: 4`, `lyrics_version: 5`, `notes_version: 2`,
+`downloads_version: 1`, `bonus_starts_at: 19`, twenty tracks.
 
 **Settled. Don't raise these again unless Eric does.**
 
@@ -2096,10 +2134,27 @@ and a named vocalist for every track. Each has its own section above.
   stamp inside its song. **That sweep is only worth believing because
   the checker was first proved against a deliberately broken file** —
   a clean result from an untested checker is not evidence of anything.
-- **No track has liner notes yet.** `assets/notes/` holds only its
-  instructions, so every track's Notes tab reads "No notes for this track"
-  — correct, and what a half-filled album should look like. Eric writes
-  them one `.md` file at a time as he goes.
+- **Tracks 01–18 have liner notes**, added 2 October 2026 as `.txt`.
+  The two bonus tracks, 19 and 20, have none and read "No notes for
+  this track". Each note is a credit block — Words and Music,
+  Arrangement, Featured Performers — then prose about the song. All
+  eighteen are UTF-8, with no headings, rules or emphasis markup in
+  any of them, so the reader renders paragraphs and line breaks and
+  nothing else.
+- **The notes were checked against the track list by their Featured
+  Performer line, not by eye.** That is what proved the numbering
+  survived the 15/16 swap of the day before: note 15 credits Colin
+  Donnell and note 16 Ella Frederickson, matching `track_artists`.
+  **It is a better check than reading the prose**, because most notes
+  never name their own song.
+- **Track 15's note credits three performers where `track_artists`
+  credits one.** The note says "Colin Donnell, Eric Sorrels, & Ella
+  Frederickson"; the track list says "Colin Donnell", so the row under
+  the title and the Notes tab disagree. Every other track matches
+  exactly, which is what makes this one stand out. Raised with Eric on
+  2 October 2026 — it may well be lead singer versus full ensemble and
+  entirely deliberate. (08, 13 and 18 have no Featured Performer line
+  at all, which is correct: they are instrumental.)
 - **The Gumroad product is live** and sells early access, but nothing connects
   a purchase to this page or its password — a buyer is still let in by hand.
   That is a setting on Gumroad's side, not something in this repo. Since

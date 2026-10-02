@@ -545,7 +545,13 @@
       A.downloads.forEach(function (item) {
         var link = document.createElement('a');
         link.className = 'download-btn';
-        link.href = vaultUrl(item.file);
+        // The version tag, the same one audio, lyrics and notes have
+        // carried all along. Without it a PDF replaced under the same
+        // name went on being handed out for an hour, because the vault
+        // tells a browser it may keep one that long — so replacing a
+        // download used to mean renaming the file as well.
+        link.href = vaultUrl(item.file)
+          + (A.downloads_version ? '?v=' + encodeURIComponent(A.downloads_version) : '');
         link.setAttribute('download', '');
 
         // A | in the label means "start a new line here".
