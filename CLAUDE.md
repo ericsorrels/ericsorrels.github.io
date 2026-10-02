@@ -1982,9 +1982,16 @@ the check costs nothing and spends none of the per-IP code allowance.
   would matter again if a second product is ever added. The setting is
   correct now. Offer it if a new product appears; otherwise leave it.
 
-- **`05.lrc` has one line with no timestamp** — "Waste a time, my ass.",
-  between 2:58 and 3:04 — so it never appears in the panel. It was found,
-  shown to Eric, and he is happy with how it reads. Leave it.
+- **`05.lrc`'s untimed line is fixed, and this note was stale.** It used
+  to be that "Waste a time, my ass." sat between the 2:58 and 3:04
+  stamps with no time of its own, so it never appeared. It now reads
+  `[02:58.41]I got to spend a whole Sunday with you. Waste a time, my
+  ass.` — merged onto the line before it rather than stranded. Found on
+  2 October 2026 when a checker reported the file clean and the
+  discrepancy with this note was chased rather than assumed to be the
+  checker's fault. **Worth the general lesson: when a note and a
+  measurement disagree, check which is out of date before trusting
+  either.**
 - **Track 20's title breaks mid-date on phones**, as
   "THE GRAY MAN_08-23-" / "24 (VOICE MEMO)", because browsers break at
   hyphens. Raised and waved off for now. If he ever wants it fixed: the
@@ -2039,8 +2046,9 @@ and a named vocalist for every track. Each has its own section above.
   lined up on 30 September 2026 before Eric made the files, which was
   the moment to do it: two of them still read `digital-lyric-book` and
   `about-pawleys-island` from before the buttons were renamed.
-- **Every track has audio now**, as of 2 October 2026, when Eric added
-  09 and 16 — the last two. Nothing reads "Soon" any more and the
+- **The album is complete**, as of 2 October 2026: every track has
+  audio, and every track but the three interstitials has words. Eric
+  added 09 and 16 — the last two — that day. Nothing reads "Soon" any more and the
   "Soon" path has no live example on the album; keep that in mind
   before assuming it still has one to test against. Both new files are
   128 kbps stereo 44.1 kHz, matching the other eighteen. (Earlier:
@@ -2058,16 +2066,17 @@ and a named vocalist for every track. Each has its own section above.
   exactly what that design is for. Checked afterwards that Next and the
   end-of-song roll-on both skip the empty 16 and land on 17, and that
   `bonus_starts_at` at 19 was untouched because the swap sits above it.
-- **Four tracks have audio but no words:** 08, 13, 16 and 18. Their
-  panel says there are no lyrics, which is correct but not final.
+- **Three tracks have audio but no words:** 08, 13 and 18 — the three
+  *Eye of the Storm* interstitials, so this may well be final rather
+  than a gap. Their panel says there are no lyrics, which is correct.
   (02, 04, 12 and 14 were written on 29 September 2026,
-  `lyrics_version` to 3; 09 on 2 October, `lyrics_version` to 5.)
-- **16 The Gray Man is waiting on its `.lrc`, and Eric believed he had
-  added it.** On 2 October 2026 he said 09 and 16 were both in as
-  `.mp3` **and** `.lrc`; `09.lrc` arrived, `16.lrc` did not — not on
-  the Mac, and so almost certainly not in the bucket either. Raised the
-  same day. It is the one of the four above that is expected to have
-  words: 08, 13 and 18 are the *Eye of the Storm* interstitials.
+  `lyrics_version` to 3; 09 and 16 on 2 October, `lyrics_version` to 5.)
+- **Every other track has both.** All seventeen `.lrc` files were
+  re-read on 2 October 2026 after Eric redid a batch of uploads: all
+  UTF-8, all ascending, none with an untimed line, and every last
+  stamp inside its song. **That sweep is only worth believing because
+  the checker was first proved against a deliberately broken file** —
+  a clean result from an untested checker is not evidence of anything.
 - **No track has liner notes yet.** `assets/notes/` holds only its
   instructions, so every track's Notes tab reads "No notes for this track"
   — correct, and what a half-filled album should look like. Eric writes
