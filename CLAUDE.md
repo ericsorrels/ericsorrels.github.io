@@ -331,10 +331,30 @@ swiftc -swift-version 5 -O tools/shrink-pdf.swift -o "$SCRATCH/shrink-pdf"
 "$SCRATCH/shrink-pdf" in.pdf out.pdf 0.92
 ```
 
-`lyric-booklet.pdf` arrived on 30 September 2026 at **101.8 MB** and
-went in at **9.9 MB — a tenth**, with every image at its original pixel
+The booklet arrived on 30 September 2026 at **101.8 MB** and went in
+at **9.9 MB — a tenth**, with every image at its original pixel
 dimensions and every lyric page still selectable text. That is a file a
 supporter downloads over a phone connection, so the size is the point.
+**A second master, replacing the first, was compressed the same way on
+2 October 2026** — 101,750,945 bytes down to 9,860,883, 9.7%, in under
+two seconds, and indistinguishable from its master at 3x zoom on
+painted texture. Same 38 pages, same 42 images, same two pages losing
+selectability. The settings did not need revisiting.
+
+**It went in under a NEW NAME, `the-gray-man-lyric-booklet.pdf`**,
+because replacing a download means renaming it — see the rule below
+and the comment in `content.js`. The longer name is also better on a
+supporter's disk, where `lyric-booklet.pdf` says nothing about whose
+it is. **The old `lyric-booklet.pdf` has to be deleted from the bucket
+by hand**; nothing removes it, and left there it is simply an old copy
+nobody links to.
+
+**`listening-guide.pdf` needed no compression at all**, added
+2 October 2026: 22 square pages at 12.38in, **no embedded images
+whatever**, all vector text, 165 KB. Probe before reaching for the
+tool — there was nothing here to do. (`file` reports it as 8 pages;
+that reads the linearization hint and is wrong. The PDFKit probe's 22
+is right.)
 
 **The reason it shrinks so far is the compression, not the resolution.**
 The 42 images were stored as lossless Flate — what a design tool
@@ -1938,7 +1958,7 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (1 October 2026)
 
-**`?v=70` is committed and waiting for Eric to push.** `?v=69` is the
+**`?v=71` is committed and waiting for Eric to push.** `?v=69` is the
 last one confirmed live, checked against graymanmusical.com.
 
 **A vault 404 is not cached anywhere, which is worth knowing when a
@@ -2029,12 +2049,11 @@ and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
-- **Two of the three download buttons still lead nowhere.** **Lyric
-  Booklet is done** — compressed and put in the bucket on 30 September
-  2026, see The downloads above. Listening Guide and About the World
-  are named in `content.js` but have no file yet, so a supporter
-  clicking either gets a 404. **Eric knows and is making them; don't
-  raise it again.** If they are still missing much later,
+- **One of the three download buttons still leads nowhere.** Lyric
+  Booklet and Listening Guide are both done — see The downloads above.
+  **About the World** is named in `content.js` but has no file yet, so
+  a supporter clicking it gets a 404. **Eric knows and is making it;
+  don't raise it again.** If it is still missing much later,
   the alternative is to have a button hide itself when its file is absent —
   download buttons are always drawn, so unlike the video and buy-access
   links, emptying a label won't do it. (There were four: the full-album zip

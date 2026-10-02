@@ -720,7 +720,12 @@ window.SITE_CONTENT = {
     downloads_label: "Downloads",
     downloads: [
       { label: "Listening Guide", file: "downloads/listening-guide.pdf" },
-      { label: "Lyric Booklet", file: "downloads/lyric-booklet.pdf" },
+      // Renamed from lyric-booklet.pdf on 2 October 2026 when the booklet
+      // was replaced — that is the rule just above, not a tidy-up. The
+      // longer name is also what a supporter ends up with in their
+      // Downloads folder, where "lyric-booklet.pdf" says nothing about
+      // whose it is.
+      { label: "Lyric Booklet", file: "downloads/the-gray-man-lyric-booklet.pdf" },
       { label: "About the World", file: "downloads/about-the-world.pdf" },
     ],
 
