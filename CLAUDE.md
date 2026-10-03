@@ -351,12 +351,25 @@ it is. **The old `lyric-booklet.pdf` has to be deleted from the bucket
 by hand**; nothing removes it, and left there it is simply an old copy
 nobody links to.
 
-**`listening-guide.pdf` needed no compression at all**, added
-2 October 2026: 22 square pages at 12.38in, **no embedded images
-whatever**, all vector text, 165 KB. Probe before reaching for the
-tool — there was nothing here to do. (`file` reports it as 8 pages;
-that reads the linearization hint and is wrong. The PDFKit probe's 22
-is right.)
+**`listening-guide.pdf` needed no compression at all** when it was
+added on 2 October 2026: 22 square pages at 12.38in, **no embedded
+images whatever**, all vector text, 165 KB. Probe before reaching for
+the tool — there was nothing there to do. (`file` reports it as 8
+pages; that reads the linearization hint and is wrong. The PDFKit
+probe's 22 is right.)
+
+**It was replaced on 3 October 2026 and the new one is 4.8 MB** —
+thirty times the first, because it carries a background image now
+where the first was bare vector text. **Left uncompressed, and that is
+Eric's decision, not an oversight.** He said so plainly when the size
+was raised. Don't quietly shrink it, and don't re-raise it.
+
+**The lesson from that exchange is worth more than the file.** The
+instinct was to build a probe and measure before saying anything; Eric
+already knew what had changed and what he wanted, and the measuring
+was in his way. **When a download arrives and its size has moved, say
+what the size is and ask, rather than investigating first.** The probe
+is cheap to write when it is actually wanted.
 
 **The reason it shrinks so far is the compression, not the resolution.**
 The 42 images were stored as lossless Flate — what a design tool
@@ -2227,28 +2240,38 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (2 October 2026)
+## Where things stand (3 October 2026)
 
-**The album is one continuous recording and `?v=75` is waiting to be
-pushed.** The twenty `<audio>` elements are gone, and so is the
-Gapless-5 player that briefly replaced them; `lyrics.js` was not
-touched through either change. See The album player above for why,
-and for the two designs that failed. **Not committed as of this
-writing** — Eric is to hear it on his own phone first.
+**`?v=77` is live, everything is pushed, and the album is one
+continuous recording.** Confirmed against graymanmusical.com: both
+pages at v77, branch in sync, the live `content.js` carrying
+`album_file: album.m4a`, twenty `track_starts`, `album_length`
+3625.575215, and `downloads_version: 2` — and the live `lyrics.js`
+carrying the lock-screen fix.
 
-**One thing has to happen outside this repo before v75 is any use:**
-`album.m4a` must go into the vault bucket's `audio/` folder, or every
-row reads "Soon". Nothing else — adding a file needs no push and no
-version bump, and the page asks for it the moment it exists.
+**It plays gapless, it plays behind a locked iPhone, and the lock
+screen shows skip-track buttons.** All three confirmed by Eric on his
+own phone, which is the only place the last two can be confirmed. The
+twenty `<audio>` elements are gone, and so is the Gapless-5 player
+that briefly replaced them. See The album player for the two designs
+that failed and why.
 
-**The old per-track files can come out of the bucket afterwards**, once
-the recording is proven: twenty `.mp3`s and twenty `.m4a`s that nothing
-asks for any more. Leave them until Eric says the album is right.
+**The private check was re-run after the push and everything holds.**
+`assets/audio/album.m4a`, the old per-track files, the notes, the
+lyrics and both PDFs all 404 at graymanmusical.com; the vault answers
+401 for `session` and 404 for `admin`, `admin/list` and every file to
+anyone without a cookie. The sleeve's new pictures and `sleeve.js`
+answer 200, which is intended — `assets/img/` is public and always
+has been.
 
-**`audio_version` was deliberately NOT bumped.** The address changes
-from `audio/NN.m4a` to `audio/album.m4a`, so there is no old copy
-anywhere to displace, and a bump would make every listener re-fetch
-109 MB for nothing.
+**`audio_version` was deliberately NOT bumped** for the move to one
+recording. The address changed from `audio/NN.m4a` to
+`audio/album.m4a`, so there was no old copy anywhere to displace, and
+a bump would have made every listener re-fetch 109 MB for nothing.
+
+**The old per-track files can come out of the bucket whenever Eric
+likes** — twenty `.mp3`s and twenty `.m4a`s that nothing asks for any
+more. Nothing depends on them; they are only clutter.
 
 **`?v=73` is live and everything is pushed**, confirmed against
 graymanmusical.com on 2 October 2026: both pages at v73, the branch in
