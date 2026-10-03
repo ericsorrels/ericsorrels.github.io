@@ -2166,6 +2166,17 @@ console — not another guess from here. The one thing not yet tried is
 that `drawTransport()` re-registers `nexttrack` and re-sends the
 playback state on every `play` event, including a resume.
 
+**And it is NOT the continuous file — that was tested, the same
+afternoon, before reverting the player to twenty files.** The v73
+twenty-element player was run from a scratch copy over Wi-Fi
+(`--phone`, per-track `.m4a`s) and Eric tried it on his phone: the
+panel dropped on resume exactly as it does with one recording, and
+seeking was worse besides. So the one-file design was never the
+cause, the two-clock theory is doubly dead, and **going back to twenty
+files would give up gapless playback for nothing.** Eric decided on
+3 October 2026 to keep continuous playback and carry the lock-screen
+drop as a known issue for early access. Don't offer the revert again.
+
 **`setPositionState` is told when the truth changes, not per frame.** The
 phone runs its own clock from a position and a playback rate, so it needs
 a new reading on a seek, a pause, a new track — and nothing in between.
