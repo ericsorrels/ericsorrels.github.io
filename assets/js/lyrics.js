@@ -733,17 +733,30 @@
   // press of play shouldn't quietly overrule a listener who shut it.
   // Skipped while the stage is up, where the panel is already on screen
   // in its largest form and `isOpen` only says what to return to.
-  function openForPlay() {
+  //
+  // ONE EXCEPTION, on a phone. Down there the sheet covers half the
+  // screen and the track list with it, so a listener who has shut it
+  // and is halfway through the album would otherwise have it rise over
+  // them again at every song. A roll-on — `carried`, which access.js
+  // puts on a `play` the album started by itself — leaves a sheet shut
+  // by hand where it is. A press of play on a song is still a request
+  // for the words and still opens it. Eric asked for this on 3 October
+  // 2026; it is for this visit only, and the next visit starts afresh.
+  var shutByHand = false;
+
+  function openForPlay(carried) {
     if (isVisible()) return;
+    if (carried && shutByHand && onPhone.matches) return;
     setOpen(true, false);
   }
 
   function watch(track) {
     var audio = track.audio;
 
-    audio.addEventListener('play', function () {
-      openForPlay();             // before the words are asked for, so the
-                                 // panel is already travelling by then
+    audio.addEventListener('play', function (event) {
+      openForPlay(!!(event && event.carried));   // before the words are
+                                 // asked for, so the panel is already
+                                 // travelling by then
       if (isOnShow(audio)) startFollowing();
       else show(track);          // sets current, so the redraw below lands
       drawTransport();
@@ -805,6 +818,12 @@
     isOpen = open;
     document.documentElement.classList.toggle('lyrics-open', open);
     tab.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+    // `remember` is true for exactly the closings a listener made
+    // themselves — the handle, a tap on the page behind, a swipe down,
+    // Escape — and false for the ones the page made. That is the same
+    // question openForPlay() asks, so it is answered here once.
+    if (remember) shutByHand = !open;
 
     if (remember) {
       try {

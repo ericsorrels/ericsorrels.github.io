@@ -650,6 +650,17 @@ album is built. On the main page the audio loop finds none. **Tested in
 all three directions:** film pauses film, film pauses album track, and
 the main page's own one-at-a-time still holds.
 
+**And the fourth direction, since 3 October 2026: a song starting
+pauses any film.** The pre-launch review found the rule ran one way
+only — a track pressed while the welcome film was talking played
+straight over it, confirmed in the preview. The fix is a *capturing*
+`play` listener on the document: a media element's `play` does not
+bubble, but a capturing listener up at the document still sees it, and
+that is what lets `main.js` catch the album's element without that
+element existing yet when `main.js` runs (access.js builds it when the
+vault opens). Tested both ways after: film pauses album, album pauses
+film.
+
 **Probe every master before assuming anything.** Both of Eric's
 masters needed a different thing, and neither announced it:
 
@@ -1598,6 +1609,23 @@ the harder way round.
 - **Every row knows its length at once**, because that is now
   arithmetic on the track list rather than something to fetch. The
   twenty metadata probes are gone with the twenty players.
+- **The element's `error` tells "no file" from "the network let go
+  mid-song", and the two are handled differently.** Added 3 October
+  2026 in the pre-launch review (it had been written in v81 during the
+  lock-screen rounds and reverted with the rest). A failure before any
+  duration was ever known means there is no album: every row reads
+  "Soon", as before. A failure after that is a wobble: `recover()`
+  reloads the same address — no cache-buster, so what the browser
+  already holds is still good — puts the playhead back and carries on
+  if it was playing, capped at three goes, the count cleared by
+  `playing`. Before this, one dropped connection on a phone turned all
+  twenty rows to "Soon" with every play button disabled until a reload.
+  Tested: a synthetic error at 1166.5s resumed at 1169.0s with 0 rows
+  marked and 0 buttons disabled.
+- **A `play` the album started by itself carries `carried: true`.**
+  `emit()` takes an optional third argument of extra fields for the
+  event, and `settle()` uses it on the roll-on's `play`. lyrics.js reads
+  it to keep the phone sheet down — see The phone sheet.
 
 #### Rebuilding the recording
 
@@ -1649,6 +1677,13 @@ album re-downloaded for every listener.
   volume — a quiet level chosen on a laptop must not follow a listener to a
   phone with nothing on screen to undo it. (All twenty stand-ins now pass it
   through to the one element, so it is one slider over one thing at last.)
+  **And it is never shown where a page cannot set the volume at all** —
+  an iPad, which is wide enough to pass the 620px rule and whose Safari
+  calls itself a Macintosh, so it cannot be told apart by name. Since
+  3 October 2026 `volumeIsSettable()` asks the element itself: write
+  0.5, read it back, and iOS hands back 1. If so the panel stays
+  `hidden` and `setUpVolume()` does nothing else. Lifting a hidden
+  panel onto the stage is harmless; `[hidden]` holds there too.
 - **The singer is named under each title** — `.track__credit`, read from
   `access.track_artists` by the same rule the lock screen uses, so a song is
   never credited one way in the list and another way on a phone. It sits
@@ -1722,6 +1757,19 @@ new starts — and what keeps a roll-on from disturbing the expanded stage.
 It deliberately does **not** write to `tgm_lyrics`: the tab is still what
 decides how the panel arrives on the next visit, and a press of play
 shouldn't quietly overrule a listener who closed it.
+
+**One exception, on a phone, since 3 October 2026: a roll-on does not
+raise a sheet the listener shut.** Down there the sheet covers half the
+screen and the track list with it, so a listener who closed it and was
+halfway through the album had it rise over them again at every song.
+`openForPlay(carried)` stands down when the `play` is one the album
+started itself (`carried`, set by access.js), the sheet was shut by
+hand (`shutByHand`, set in `setOpen()` whenever `remember` is true —
+the handle, a tap behind, a swipe, Escape), **and** `onPhone` matches.
+A press of play on a song still opens it, on every screen; a desktop
+roll-on still opens it; and the flag is for this visit only. Tested
+at 375px and at 1191px: press opens, close, roll-on stays shut on the
+phone and reopens on the desktop, press opens again on both.
 
 **The `.lrc` reader handles** several timestamps on one line (a chorus written
 once, stamped three times), an `[offset:…]` tag, `[ti:…]`-style tags, empty
@@ -2351,6 +2399,21 @@ granted path works in Chrome and Safari; don't chase it.
 ---
 
 ## Where things stand (3 October 2026)
+
+**`?v=79` is the pre-launch review's fixes, committed 3 October 2026
+for the Monday launch.** Eric asked for a read-only review of the whole
+access page, then for these: a song starting now stops a film (the
+rule had only ever run the other way — see Video); a mid-song network
+error recovers instead of marking every row "Soon" (see The album
+player); the phone sheet stays down on a roll-on when the listener shut
+it (see The phone sheet); the album page's tab reads "Early Digital
+Access — The Gray Man" from `access.browser_tab_title` rather than the
+main page's title, which `main.js` used to apply to both; the volume
+slider is withheld on an iPad; and `content.js`'s comments no longer
+describe twenty files or a password. **Left alone on purpose:** the
+"pre-save on Spotify or Apple Music" line has no link to tap, and the
+About the World button still 404s until the file is in the bucket —
+both Eric's, both known.
 
 **`?v=77` is live, everything is pushed, and the album is one
 continuous recording.** Confirmed against graymanmusical.com: both

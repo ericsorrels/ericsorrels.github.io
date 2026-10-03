@@ -390,9 +390,16 @@ window.SITE_CONTENT = {
 
   /* =======================================================================
      EARLY DIGITAL ACCESS PAGE  (access.html)
-     The password itself is NOT stored here — to change it, ask Claude.
+     There is no password. A visitor gives an email address and is sent
+     a six-digit code — but only if the address is on the guest list,
+     which lives at Cloudflare and not in this file. To let somebody in,
+     add them on the admin page; nothing here changes.
      ======================================================================= */
   access: {
+
+    // What the browser tab says on this page. The main page has its own,
+    // under  meta  at the top of this file.
+    browser_tab_title: "Early Digital Access — The Gray Man",
 
     /* ---- The locked door (what visitors see first) ----------------------
        Two steps: an email address, then the six-digit code sent to it.
@@ -512,36 +519,35 @@ window.SITE_CONTENT = {
       "Thank you for supporting *The Gray Man*! Be sure to pre-save the album on Spotify or Apple Music, and spread the word…|a hurricane is coming!",
 
     /* ---- The album tracks ------------------------------------------------ */
-    // One line per track, in album order. The matching audio files go in
-    // the folder  assets/audio/  numbered to match this list:
-    // 01.m4a is the first line, 02.m4a the second, and so on to 20.m4a.
+    // The album is ONE recording — see the block just below — and the
+    // list of titles further down (  tracks:  ) names the songs inside
+    // it, in order. There are no separate audio files per track any
+    // more: a track is a position in the recording, measured from it.
     //
-    // That folder is now only on your own computer — the album itself
-    // lives in private storage, away from the website. So a new or
-    // replaced track has to be put into the vault as well as into that
-    // folder, or it will read "Soon". Ask Claude and it will do it.
-    //
-    // Just replace the words inside each set of quotation marks with the
-    // real song title. To add a track, copy a whole line — including the
-    // comma at the end — and add the matching audio file.
-    // The little volume slider that floats beside the track list.
+    // So the titles are yours to edit freely — just change the words
+    // inside the quotation marks — but adding, removing or reordering a
+    // song means rebuilding the recording as well. Ask Claude and it
+    // will do it; see "To change the album" below.
+
+    // The little volume slider that floats beside the track list. Shown
+    // on a computer only: phones and iPads keep the volume under their
+    // own buttons, and a page cannot change it there.
     volume_label: "Vol",
 
-    // Raise this number by one WHENEVER you replace an audio file that
-    // is already on the live site. Browsers keep a copy of every track
-    // they have played, and without this they go on playing the old one.
-    // Adding brand-new tracks doesn't need it — only replacements.
+    // Raise this number by one WHENEVER the recording itself is replaced
+    // on the live site. Browsers keep a copy of what they have played,
+    // and without this they go on playing the old one.
     //
-    // REORDERING COUNTS AS REPLACING. Moved to 4 on 1 October 2026 when
-    // 15 and 16 were swapped: anyone who had played the old 16 had it
-    // kept in their browser, and the new 16 asks for the same file by
-    // the same name. Without this they would hear the song that used to
-    // be there, under the new title, and nothing would look wrong.
+    // It is one file now — the whole album, 109 MB — so bump it only
+    // when the recording genuinely changes. Every listener re-fetches
+    // the lot the next time they press play.
     //
-    // Deliberately LEFT at 4 on 2 October, when 09 and 16 got their
-    // audio. Nothing was replaced — both addresses had never served a
-    // file, so there is no old copy anywhere to displace, and bumping
-    // would have made every listener re-fetch all twenty for nothing.
+    // History: moved to 4 on 1 October 2026 when 15 and 16 were swapped,
+    // back when the album was twenty files and reordering two of them
+    // changed what two existing addresses meant. Left at 4 on 2 October
+    // when the album became one recording: the address changed from
+    // audio/NN.m4a to audio/album.m4a, so there was no old copy anywhere
+    // to displace.
     audio_version: 4,
 
     /* ---- The album is ONE recording --------------------------------
@@ -619,16 +625,17 @@ window.SITE_CONTENT = {
     lyrics_loading: "Finding the words…",
     lyrics_none: "No lyrics for this track",
 
-    // The little arrows button in the corner of the lyrics panel, which
-    // opens the words out to fill the whole screen. These two are what
-    // it says when you rest the pointer on it. On a computer only —
-    // there's no room for it on a phone.
+    // The arrows button in the lyrics panel, which opens the words out
+    // to fill the whole screen — on a computer, in its corner; on a
+    // phone, at the end of the row of buttons. These two are what it
+    // says when you rest the pointer on it, and what a screen reader
+    // calls it.
     lyrics_expand: "Full screen",
     lyrics_collapse: "Leave full screen",
 
-    // The three round buttons at the top of the panel on a phone. Nobody
-    // sees these words — they are what a screen reader says aloud, and
-    // what shows if the icons ever fail to draw.
+    // The previous / play / next buttons in the panel's head, on every
+    // screen. Nobody sees these words — they are what a screen reader
+    // says aloud, and what shows if the icons ever fail to draw.
     panel_previous: "Previous track",
     panel_next: "Next track",
     panel_play: "Play",

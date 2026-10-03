@@ -32,7 +32,15 @@
   if (C) {
     // Browser tab title + search-engine description.
     if (C.meta) {
-      if (C.meta.browser_tab_title) document.title = C.meta.browser_tab_title;
+      // The album page has a tab title of its own (content.js →
+      // access.browser_tab_title); the main page's is the fallback. Told
+      // apart by the gate, which only the album page has. Until
+      // 3 October 2026 this gave both pages the main page's title, over
+      // the one written in access.html.
+      var onAlbumPage = !!document.getElementById('gate');
+      var tabTitle = (onAlbumPage && C.access && C.access.browser_tab_title)
+        || C.meta.browser_tab_title;
+      if (tabTitle) document.title = tabTitle;
       var desc = document.querySelector('meta[name="description"]');
       if (desc && C.meta.search_description) {
         desc.setAttribute('content', C.meta.search_description);
@@ -172,6 +180,23 @@
         });
       });
     });
+
+    // And the other direction: a song starting stops any film. Until
+    // 3 October 2026 this rule ran one way only, and a track pressed
+    // while the welcome film was talking played straight over it.
+    //
+    // Caught at the document rather than on the album's element,
+    // because that element does not exist yet when this runs — access.js
+    // builds it when the vault opens. A media element's `play` does not
+    // bubble, but a capturing listener up here still sees it, which is
+    // what lets this know nothing about how or when the album is built.
+    document.addEventListener('play', function (event) {
+      var what = event.target;
+      if (!what || what.tagName !== 'AUDIO') return;
+      players.forEach(function (film) {
+        if (!film.paused) film.pause();
+      });
+    }, true);
 
     function buildVideo(video) {
       var figure = videoTemplate.content.firstElementChild.cloneNode(true);

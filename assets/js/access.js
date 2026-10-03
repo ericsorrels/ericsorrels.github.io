@@ -271,10 +271,29 @@
     players.forEach(function (audio) { audio.volume = level; });
   }
 
+  // Can this device's volume be set from a page at all? An iPhone or
+  // iPad cannot: iOS keeps the level under the physical buttons, ignores
+  // any value written to `volume`, and reads it back as 1 whatever was
+  // set. Asked of the element itself rather than guessed from the
+  // browser's name — an iPad in Safari calls itself a Macintosh — so a
+  // slider is never shown that moves and changes nothing.
+  function volumeIsSettable() {
+    if (!stream) return true;
+    try {
+      stream.volume = 0.5;
+      var settable = Math.abs(stream.volume - 0.5) < 0.01;
+      stream.volume = 1;
+      return settable;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function setUpVolume() {
     var panel = document.getElementById('volumePanel');
     var slider = document.getElementById('volumeSlider');
     if (!panel || !slider) return;
+    if (!volumeIsSettable()) return;    // left hidden; see above
 
     // The slider isn't shown on phones, so there a saved setting is
     // ignored in favour of full volume — otherwise a quiet level chosen
@@ -447,15 +466,22 @@
     return found;
   }
 
-  function emit(index, type) {
+  // `extra` rides on the event for anything a listener needs to know
+  // beyond the type — the one use so far is `carried`, which marks a
+  // `play` the album started by itself at a boundary rather than one
+  // somebody pressed for. lyrics.js reads it to decide whether the
+  // phone's sheet may rise again.
+  function emit(index, type, extra) {
     var who = listeners[index] && listeners[index][type];
     if (!who) return;
     var shim = players[index];
+    var event = { type: type, target: shim };
+    if (extra) for (var key in extra) event[key] = extra[key];
     for (var i = 0; i < who.length; i++) {
       // One listener throwing must not stop the others — the row's own
       // handlers and the lyrics panel's are on the same list.
       try {
-        who[i].call(shim, { type: type, target: shim });
+        who[i].call(shim, event);
       } catch (e) {
         if (window.console && console.error) console.error(e);
       }
@@ -534,7 +560,40 @@
     }
 
     finished[at] = false;
-    if (carriedOn) emit(at, 'play');
+    if (carriedOn) emit(at, 'play', { carried: true });
+  }
+
+  /* ---- Picking the recording back up --------------------------------
+     The network let go part way through a song. Load it again, put the
+     playhead back where it was, and carry on if it was playing.
+
+     The same address, deliberately: no cache-buster, so whatever the
+     browser already holds of the album is still good and only what is
+     missing is fetched. load() winds the playhead back to zero, hence
+     the position being taken before it and put back after the file's
+     head has arrived. */
+
+  var recovering = 0;
+
+  function recover() {
+    if (!stream) return;
+
+    var where = stream.currentTime
+      || (activeIndex >= 0 ? startOf(activeIndex) + (positions[activeIndex] || 0) : 0);
+    var wasPlaying = !stream.paused;
+
+    var back = function () {
+      stream.removeEventListener('loadedmetadata', back);
+      try {
+        stream.currentTime = where;
+      } catch (e) { /* the browser will land where it can */ }
+      if (!wasPlaying) return;
+      var going = stream.play();
+      if (going && going.catch) going.catch(function () {});
+    };
+
+    stream.addEventListener('loadedmetadata', back);
+    stream.load();
   }
 
   /* ---- The one element ---------------------------------------------- */
@@ -607,15 +666,38 @@
       stream.addEventListener(type, function () { emitAll(type); });
     });
 
-    // No album file at all. Every row says so, rather than twenty rows
-    // silently doing nothing.
+    // A failure before anything ever loaded means there is no album
+    // file, and every row should say so rather than twenty rows silently
+    // doing nothing. A failure part way through a song is the network
+    // letting go, and is a different thing entirely.
+    //
+    // Until 3 October 2026 this made no distinction: a dropped
+    // connection mid-song marked all twenty rows "Soon", disabled every
+    // play button, and left the element in an error state — a dead
+    // album until the page was reloaded, over a wobble. Told apart now
+    // by whether a duration was ever known.
     stream.addEventListener('error', function () {
-      stream.dataset.missing = 'true';
-      for (var i = 0; i < players.length; i++) {
-        players[i].dataset.missing = 'true';
+      var loaded = isFinite(stream.duration) && stream.duration > 0;
+
+      if (!loaded) {
+        stream.dataset.missing = 'true';
+        for (var i = 0; i < players.length; i++) {
+          players[i].dataset.missing = 'true';
+        }
+        emitAll('error');
+        return;
       }
-      emitAll('error');
+
+      // It had been going, so put it back rather than giving up. Capped,
+      // so a file that is genuinely broken cannot put this into a loop;
+      // the count is cleared by sound actually arriving.
+      if (recovering >= 3) return;
+      recovering++;
+      recover();
     });
+
+    // Sound is arriving again, so whatever went wrong is behind us.
+    stream.addEventListener('playing', function () { recovering = 0; });
 
     // Coming back to the page. A browser is free to have stopped
     // telling us anything while it was out of sight, so the labels are
