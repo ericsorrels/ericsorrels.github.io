@@ -2315,6 +2315,17 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (3 October 2026)
 
+> **THERE IS TEMPORARY DEBUG CODE ON THE LIVE SITE.** `showPlayFault()`
+> in `assets/js/access.js` puts a red band across the top of the album
+> page whenever `play()` is refused, so the reason can be read on a
+> handset where there is no console. It went in on 3 October 2026 to
+> chase play-not-working on a locked iPhone. **Take it out once that is
+> settled**: delete the block marked TEMPORARY and put the empty
+> `function () {}` back on the `.catch`. It is self-contained and
+> styled inline so nothing in `style.css` has to be unpicked. A
+> supporter should never see it.
+
+
 **`?v=77` is live, everything is pushed, and the album is one
 continuous recording.** Confirmed against graymanmusical.com: both
 pages at v77, branch in sync, the live `content.js` carrying

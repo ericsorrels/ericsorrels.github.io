@@ -1626,10 +1626,19 @@ async function handleFile(request, env, route) {
   // Passing the request's own headers lets R2 answer a Range request
   // itself — which is what makes dragging a track's seek bar work
   // instead of throwing the song back to the beginning.
-  const object = await env.VAULT.get(key, {
-    range: request.headers,
-    onlyIf: request.headers,
-  });
+  //
+  // onlyIf is passed ONLY when nothing was asked for by range, and that
+  // is load-bearing. Handed both, R2 answers a Range request with no
+  // body when the caching header matches, and the 304 below goes back
+  // to a browser that asked for sound — which Safari can mishandle.
+  // Safari sends If-None-Match alongside Range on a locked iPhone, and
+  // this is why pressing play there did nothing. A request for part of
+  // a file now always gets that part of the file.
+  const asked = request.headers.get('range');
+
+  const object = await env.VAULT.get(key, asked
+    ? { range: request.headers }
+    : { onlyIf: request.headers });
 
   if (!object) return notFound();
 
@@ -1651,7 +1660,6 @@ async function handleFile(request, env, route) {
   // (onlyIf matched), which is a 304.
   if (!object.body) return new Response(null, { status: 304, headers });
 
-  const asked = request.headers.get('range');
   if (asked && object.range) {
     const size = object.size;
     const offset = object.range.offset ?? (size - object.range.suffix);

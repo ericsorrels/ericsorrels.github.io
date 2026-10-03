@@ -628,6 +628,43 @@
     });
   }
 
+  /* ==================================================================
+     TEMPORARY — PUT IN 3 OCTOBER 2026, TO BE TAKEN OUT AGAIN
+
+     Pressing play on a locked iPhone was doing nothing, and the reason
+     was invisible: the refusal arrived as a rejected promise and was
+     thrown away by an empty catch. This puts it on screen instead, so
+     it can be read on the handset itself where there is no console to
+     look at.
+
+     IT IS FOR TESTING AND MUST NOT BE LEFT ON THE LIVE SITE. Deleting
+     this block and changing the one `showPlayFault` back to
+     `function () {}` removes every trace of it; it is deliberately
+     self-contained, with its own styling inline, so that nothing in
+     style.css has to be unpicked afterwards.
+     ================================================================== */
+  function showPlayFault(err) {
+    try {
+      var box = document.getElementById('tgmPlayFault');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'tgmPlayFault';
+        box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:999;' +
+          'padding:0.9em 1em;background:#8A3D33;color:#EDE8DD;' +
+          'font-family:monospace;font-size:13px;line-height:1.5;' +
+          'white-space:pre-wrap;word-break:break-word;cursor:pointer';
+        // A press puts it away, so it cannot sit over the album.
+        box.addEventListener('click', function () { box.remove(); });
+        document.body.appendChild(box);
+      }
+      box.textContent = 'play() refused\n'
+        + ((err && err.name) || '(no name)') + '\n'
+        + ((err && err.message) || '(no message)')
+        + '\nat ' + (stream ? stream.currentTime.toFixed(2) : '?') + 's'
+        + '\n(tap to dismiss)';
+    } catch (e) { /* the message is the least important thing here */ }
+  }
+
   // Start a song, from wherever it was left. Everything that plays
   // anything comes through here: a row's own button, the panel's, the
   // stage's and the lock screen's.
@@ -638,6 +675,8 @@
     var from = positions[index] || 0;
     if (from >= lengthOf(index) - 0.05) from = 0;   // it had played out
     var wasPlaying = !stream.paused;
+    // Asked before the block below, which is what changes it.
+    var wasActive = activeIndex === index;
 
     if (activeIndex !== index) {
       var left = activeIndex;
@@ -652,10 +691,21 @@
     }
 
     finished[index] = false;
-    stream.currentTime = startOf(index) + from;
+
+    // Only move the playhead if it is not already where it should be.
+    // Pressing play on a lock screen comes through here, and setting
+    // currentTime is a seek even when it is set to the position it
+    // already holds — which on a locked iPhone can make Safari throw
+    // away what it had buffered and go back to the network for it,
+    // something it may not be able to do with the screen off. So a
+    // resume is a plain play() and nothing else.
+    var want = startOf(index) + from;
+    if (!wasActive || Math.abs(stream.currentTime - want) >= 0.25) {
+      stream.currentTime = want;
+    }
 
     var going = stream.play();
-    if (going && going.catch) going.catch(function () {});
+    if (going && going.catch) going.catch(showPlayFault);
 
     // Already playing, so no `play` event is coming to announce the
     // song that has just been jumped to.
