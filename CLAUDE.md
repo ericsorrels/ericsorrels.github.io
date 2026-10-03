@@ -2140,12 +2140,37 @@ harmless because something always overwrote it in time is exactly the
 kind of thing the single element changed.** Eric found it on his phone
 on 3 October 2026.
 
-**`setPositionState` is told when the truth changes, not per frame.** The
-phone runs its own clock from a position and a playback rate, so it needs
-a new reading on a seek, a pause, a new track — and nothing in between.
-Measured: zero extra calls across 2.5s of plain playback. It throws if
-the position runs past the duration, so the position is clamped and a
-missing or infinite duration clears the state instead.
+**`setPositionState` is told on every `timeupdate` — four or five times
+a second — and that is not waste.** It throws if the position runs past
+the duration, so the position is clamped and a missing or infinite
+duration clears the state instead.
+
+**It used to be told only when the truth changed**, on the reasoning
+that the phone runs its own clock from the last reading and a playback
+rate: a seek, a pause, a new track, and nothing in between. *Measured:
+zero extra calls across 2.5s of plain playback.* That was correct, and
+**it stopped being correct the day the album became one file.**
+
+What the lock screen was told and what the element itself said used to
+be the same thing — 0:10 of 3:04, both of them — so the phone could run
+our clock because it *was* its clock. Now the element says 19:34 of
+1:00:25 while we say 0:10 of 3:04. **The phone cannot extrapolate that
+for us; it has to be told.** Told once and left, its reading simply
+stops.
+
+Which is exactly what Eric found on 3 October 2026: press play on the
+lock screen and the song carries on, the time sits still, and after a
+moment iOS throws the panel away for the generic one. **A Now Playing
+whose clock has stopped is one iOS discards.** Nothing was refusing to
+play; the audio was fine throughout. The fault was that we had stopped
+describing it.
+
+**Per-track times on a single recording REQUIRE this. Do not optimise
+it back out.** Settled 3 October 2026: Eric wants the lock screen to
+read like a streaming library — per-track times, skip buttons that move
+by song — over a single continuous file, and frequent reporting is the
+price of the illusion. `visibilitychange` says the whole lot again on
+return, because the page may have been out of sight for minutes.
 
 **The artwork is `COVER_STEM` plus `COVER_SIZES`** — 192, 384 and 512,
 built from the gitignored master with the same `sips` line as the sleeve.

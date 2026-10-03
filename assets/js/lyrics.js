@@ -773,6 +773,9 @@
       if (!isOnShow(audio)) return;
       if (!frameRequest) sync(false);
       tickTransport();
+      // And the lock screen, four times a second or so. See
+      // reportPosition below for why this cannot be spared any more.
+      reportPosition();
     });
 
     // How long the song runs isn't known until the file's head arrives,
@@ -1254,9 +1257,31 @@
     } catch (e) { /* an older take on the same idea; the rest still works */ }
   }
 
-  // Where the song has got to. The phone runs its own clock from this
-  // and a playback rate, so it wants telling when the truth changes —
-  // a seek, a pause, a new track — rather than sixty times a second.
+  // Where the song has got to.
+  //
+  // This used to be told only when the truth changed — a seek, a pause,
+  // a new track — on the reasoning that the phone runs its own clock
+  // from the last reading and a playback rate, so saying it again sixty
+  // times a second was waste. **That reasoning died with the twenty
+  // files, and leaving it in place was the bug.**
+  //
+  // It held while the album was twenty elements, because what we told
+  // the lock screen and what the element itself said were the same
+  // thing: 0:10 of 3:04, both of them. The phone could run our clock
+  // because it was its own clock.
+  //
+  // The album is one 60-minute recording now and the element's clock
+  // says 19:34 of 1:00:25 while we say 0:10 of 3:04. The phone cannot
+  // extrapolate that for us — it has to be TOLD where we are. Told
+  // once and left, its reading simply stops, which is what Eric saw on
+  // 3 October 2026: the song played on and the time sat still, and a
+  // Now Playing panel whose clock has stopped is one iOS eventually
+  // throws away for the generic one.
+  //
+  // So it is now said on every timeupdate, four times a second or so,
+  // which is what players that do this properly have always done.
+  // **Per-track times on a single file require it. Do not optimise
+  // this back out.**
   function reportPosition() {
     if (!hasMedia || !navigator.mediaSession.setPositionState) return;
     var audio = current && current.audio;
@@ -1319,6 +1344,16 @@
     // skip-track buttons instead, which is what an album wants.
     handle('seekbackward', null);
     handle('seekforward', null);
+
+    // Coming back from a locked screen, where the page has been out of
+    // sight and may have been left alone for minutes. Everything the
+    // lock screen knows is said again here rather than waited for:
+    // which song, where in it, and whether it is playing.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden || !current) return;
+      nameNowPlaying(current);
+      reportPlayback();
+    });
   }
 
   /* ---- Carrying the panel on and off --------------------------------- */
