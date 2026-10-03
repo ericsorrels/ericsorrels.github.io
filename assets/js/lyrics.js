@@ -1289,20 +1289,54 @@
   // which is what players that do this properly have always done.
   // **Per-track times on a single file require it. Do not optimise
   // this back out.**
+  /* ---- WHICH CLOCK THE LOCK SCREEN IS GIVEN -------------------------
+     TRUE  = the whole recording's. 45:21 of 1:00:25.
+     FALSE = the song's.            0:14 of 3:45.
+
+     The song's is what a listener wants and what Eric asked for, and it
+     is what this did until 3 October 2026. It also appears to be what
+     iOS cannot live with.
+
+     The element is ONE 60-minute recording. Telling iOS the song's
+     clock means telling it 14.0 of 225.0 while the element itself says
+     2721.5 of 3625.6. Both true; they cannot both be true of one
+     element. While playback simply runs, iOS uses what it is told and
+     all is well — but on a pause-then-play it re-reads the element and
+     gets an elapsed time four times past the duration it was given.
+     That is not a state it can show, so it throws the session away and
+     falls back to Apple Music. Which is the bug, exactly as Eric
+     reported it, down to the timer jumping as the two disagree.
+
+     Set TRUE as a test. If the session stops dying, that is the
+     explanation confirmed and the cost is a scrub bar that counts the
+     album rather than the song — everything else about the lock screen
+     stays per-song: title, artist, artwork, and skip buttons that move
+     by song. Set it back to FALSE to return to the old behaviour. */
+  var ALBUM_WIDE_POSITION = true;
+
+  // The whole recording, when there is one. access.js publishes it.
+  function recording() {
+    return (ALBUM_WIDE_POSITION && window.TGM_RECORDING) || null;
+  }
+
   function reportPosition() {
     if (!hasMedia || !navigator.mediaSession.setPositionState) return;
+
+    var whole = recording();
     var audio = current && current.audio;
-    var length = audio ? audio.duration : 0;
+    var source = whole || audio;
+    var length = source ? source.duration : 0;
+
     try {
-      if (!audio || !isFinite(length) || length <= 0) {
+      if (!source || !isFinite(length) || length <= 0) {
         navigator.mediaSession.setPositionState();     // nothing to show yet
         return;
       }
       navigator.mediaSession.setPositionState({
         duration: length,
-        playbackRate: audio.playbackRate || 1,
+        playbackRate: source.playbackRate || 1,
         // Clamped: a position past the end is the one thing this throws on.
-        position: Math.min(Math.max(0, audio.currentTime), length)
+        position: Math.min(Math.max(0, source.currentTime), length)
       });
     } catch (e) { /* a browser that disagrees about the numbers */ }
   }
@@ -1336,10 +1370,18 @@
     handle('seekto', function (details) {
       var audio = current && current.audio;
       if (!audio || !details || typeof details.seekTime !== 'number') return;
-      var length = audio.duration;
+
+      // Whatever clock the lock screen was GIVEN is the clock its scrub
+      // bar hands back. Read against the other one, a drag would land
+      // somewhere else entirely — so this follows reportPosition().
+      var whole = recording();
+      var source = whole || audio;
+      var length = source.duration;
       var to = Math.max(0, isFinite(length) ? Math.min(details.seekTime, length) : details.seekTime);
-      if (details.fastSeek && audio.fastSeek) audio.fastSeek(to);
-      else audio.currentTime = to;
+
+      if (details.fastSeek && source.fastSeek) source.fastSeek(to);
+      else source.currentTime = to;
+
       scrolledAt = 0;                      // a deliberate move: follow it at once
       sync(true);
       tickTransport();

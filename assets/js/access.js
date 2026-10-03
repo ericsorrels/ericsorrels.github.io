@@ -583,6 +583,12 @@
     stream.preload = 'metadata';
     stream.src = albumUrl();
 
+    // The one recording, published for anything that needs the WHOLE
+    // album's clock rather than one song's. The lock screen does — see
+    // reportPosition() in lyrics.js and the note there about the two
+    // clocks contradicting each other.
+    window.TGM_RECORDING = stream;
+
     // On the page on purpose. main.js stops a film talking over a song
     // by pausing any sounding <audio> it can find, and this is one —
     // so that behaviour is simply restored, with nothing in this file
