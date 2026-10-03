@@ -1307,12 +1307,17 @@
      falls back to Apple Music. Which is the bug, exactly as Eric
      reported it, down to the timer jumping as the two disagree.
 
-     Set TRUE as a test. If the session stops dying, that is the
-     explanation confirmed and the cost is a scrub bar that counts the
-     album rather than the song — everything else about the lock screen
-     stays per-song: title, artist, artwork, and skip buttons that move
-     by song. Set it back to FALSE to return to the old behaviour. */
-  var ALBUM_WIDE_POSITION = true;
+     Set TRUE as a test on 3 October 2026 and **it made no difference**
+     — the two clocks agreed and iOS dropped the session on a resume
+     exactly as before. So the contradiction, however real, is not what
+     kills it, and this is back to FALSE: the song's clock is what Eric
+     wants a listener to see and it costs nothing to give them.
+
+     Kept as a switch rather than deleted, because the reasoning above
+     still describes something true about the two clocks, and the next
+     person to wonder about it should be able to try it in one word
+     instead of rediscovering it. */
+  var ALBUM_WIDE_POSITION = false;
 
   // The whole recording, when there is one. access.js publishes it.
   function recording() {
@@ -1358,8 +1363,33 @@
   function wireMediaSession() {
     if (!hasMedia) return;
 
-    handle('play', startPlaying);
-    handle('pause', stopPlaying);
+    /* TEST, 3 October 2026 — play and pause are DELIBERATELY not
+       handled here.
+
+       They used to be: `handle('play', startPlaying)` and
+       `handle('pause', stopPlaying)`, which routed the lock screen's
+       two buttons through the stand-in layer and into the element.
+       That worked — the logs show both arriving and doing exactly the
+       right thing — and the session was dropped on a resume anyway,
+       with every other explanation eliminated.
+
+       Left unregistered, iOS works the element itself, which is the
+       one thing it certainly knows how to do. Nothing is lost by it:
+       the element's own `play` and `pause` events still reach
+       access.js, which still tells the rows, the panel and this file,
+       so the page keeps up exactly as before. The only difference is
+       that our code is no longer standing in the middle of the one
+       part of this it does not need to be in.
+
+       previoustrack, nexttrack and seekto stay — those have no native
+       meaning over one continuous recording, so they must be ours.
+
+       Put `handle('play', startPlaying)` and
+       `handle('pause', stopPlaying)` back to undo it. startPlaying and
+       stopPlaying are still used by the page's own buttons and have
+       not moved. */
+    handle('play', null);
+    handle('pause', null);
 
     // The panel's own two buttons, unchanged — so the three-second
     // rule on Previous is the same rule on the lock screen as it is
