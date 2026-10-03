@@ -28,7 +28,8 @@ assets/js/
   lyrics.js         the panel following the album, and every transport
                     that is not a track row: the stage's, the panel's
                     head, and the lock screen's (access only)
-assets/audio/NN.mp3    one per track — GITIGNORED, on Eric's disk only
+assets/audio/album.m4a the whole album as ONE recording — GITIGNORED,
+                       on Eric's disk only. See The album player.
 assets/lyrics/NN.lrc   timed words — GITIGNORED; NN.txt likewise
 assets/notes/NN.md     liner notes, Markdown — GITIGNORED
 assets/video/       the teasers, plus gitignored .mov masters
@@ -43,7 +44,7 @@ VAULT-GUIDE.md      the vault explained for Eric — published, holds no secrets
 tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
                     grab-frame.swift, make-icon.swift, find-letter.swift,
-                    shrink-pdf.swift
+                    shrink-pdf.swift, join-album.py
 CNAME               the custom domain, required by GitHub Pages
 ```
 
@@ -452,6 +453,65 @@ treatment — only where it writes HTML. The alt path calls
 read out loud as stars. `access.cover_alt` says so in its own comment.
 (`hero.title` is an array of plain words, so the two existing alt slots
 were never affected.)
+
+#### The sleeve turns over
+
+Added 3 October 2026. The cover on one side, **the credits on the
+other** — `assets/img/album-credits.jpg`. Press the left or right of
+the picture to turn it, the middle to open it larger over the page,
+where it goes on turning. A finger swipes it either way and the arrow
+keys do the same. `assets/js/sleeve.js`, which touches nothing else.
+
+**Four pictures, two sizes each.** The 900px copies are what the page
+shows (211 KB each, both fetched on load so the turn is instant); the
+2000px copies are fetched **only if somebody opens it**, named in
+`data-full` on each `<img>`. Confirmed: a page load pulls the two
+small ones and neither large one. The large cover is 693 KB and the
+large credits 414 KB, which is why they wait.
+
+```
+sips -s format jpeg -s formatOptions 82 --resampleWidth 900 \
+  album-credits-2000.jpg --out album-credits.jpg
+```
+
+**The credits picture needs its resolution, unlike the cover.** It is
+a page of small type — the sponsor list at the foot is the smallest
+of it — so an opened sleeve at 900px would be a picture of words
+nobody can read. That is the whole reason the large copies exist.
+
+**Its `alt` is the longest line in content.js on purpose.** The
+picture *is* words, so "a page of credits" would tell somebody
+reading with their ears nothing at all. `access.credits_alt` says who
+sang, who played, who recorded and who paid for it. **Keep it in step
+if the credits are ever redrawn** — nothing will warn you.
+
+**The carousel is switched on from JavaScript (`sleeve--live`), never
+assumed by the stylesheet.** With the file missing or JavaScript off,
+both pictures simply sit one above the other — checked by taking the
+class off. Nothing is hidden behind a control that cannot work, which
+matters more here than usual: the credits would otherwise be
+unreachable rather than merely awkward.
+
+Three smaller things, each with a reason:
+
+- **A swipe is swallowed so it cannot also fire the button beneath
+  it.** The press zones cover the picture, so a finger drawn across
+  the left of it would otherwise turn the sleeve twice. Same bargain
+  the lyrics sheet strikes, on the same 400ms fuse.
+- **`touch-action: pan-y` on the frame**, and `sleeve.js` lets go of
+  any gesture more up-and-down than across. The page must go on
+  scrolling under a finger that started on the picture. Tested: a
+  vertical drag turns nothing.
+- **The marks are shown outright under `(hover: none)`.** A touch
+  screen cannot hover, and an arrow nobody can see is worse than a
+  quiet one — swiping is natural down there but nothing on screen
+  would say the picture had another side.
+
+**Both pictures are PUBLIC, at `graymanmusical.com/assets/img/…`**,
+the same as the cover always has been. `assets/img/` is not behind the
+vault and never has been. The credits name private individuals in the
+sponsor list; that was raised with Eric on 3 October 2026 rather than
+decided quietly.
 
 ### The icon
 
@@ -1138,7 +1198,7 @@ Neither half warns you that the other is missing.
 
 | | on the Mac | in the bucket | bump |
 |---|---|---|---|
-| a track | `assets/audio/NN.mp3` | `audio/NN.mp3` | `audio_version` — **replacing only** |
+| the album | `assets/audio/album.m4a` | `audio/album.m4a` | `audio_version` — **replacing only**, and it is 109 MB |
 | lyrics | `assets/lyrics/NN.lrc` | `lyrics/NN.lrc` | `lyrics_version` — either |
 | notes | `assets/notes/NN.md` | `notes/NN.md` | `notes_version` — either |
 | a download | `assets/downloads/x.pdf` | `downloads/x.pdf` | none — see below |
@@ -1242,10 +1302,12 @@ outlined like the Enter button beside it but in `--gray-mid` rather than
 full ink, so the two read as first and second choice instead of competing
 — Enter is still the primary thing to do on that screen.
 
-The album is 20 tracks, expecting `assets/audio/01.mp3` … `20.mp3`, matched
-line-for-line against the `tracks:` list in `content.js`. Tracks with no file
-read "Soon" and disable themselves; play-through skips over them. Bonus tracks
-are separated by `bonus_starts_at`.
+The album is 20 tracks in one recording — `assets/audio/album.m4a` —
+with the `tracks:` list in `content.js` naming them and `track_starts`
+saying where each one begins. If the recording is missing every row
+reads "Soon" together, which is the honest answer: there are no longer
+twenty files that can go missing one at a time. Bonus tracks are
+separated by `bonus_starts_at`.
 
 ### The storm — the gate becoming the vault
 
@@ -1422,25 +1484,158 @@ screen.
 
 ### The album player
 
-`access.js` builds one row per track, each with **its own `<audio>` element**
-(`preload="metadata"`), so twenty players exist at once and the page asks the
-server for twenty files on load. Tracks with no file fire `error`, get flagged
-`data-missing`, read "Soon" and disable themselves — which is why a half-built
-album still looks deliberate rather than broken.
+**The album is ONE continuous recording, and the track list is twenty
+positions inside it.** `assets/audio/album.m4a` in the bucket's
+`audio/` folder; `access.js` builds one `<audio>` element and twenty
+rows that are windows onto it.
 
-- **Starting one track pauses every other**, so nothing ever doubles up.
-- **When a song ends, the next one with audio starts**, skipping the gaps, so
-  the album plays through like a record.
+This took three attempts to arrive at, and the two that failed are
+worth knowing about, because both look like the obvious answer:
+
+| | gapless | plays behind a locked iPhone |
+|---|---|---|
+| twenty `<audio>` elements (until 2 Oct 2026) | **no** | yes |
+| one Gapless-5 player, Web Audio (2 Oct, a few hours) | yes | **no** |
+| **one continuous recording** (now) | **yes** | **yes** |
+
+**Twenty files cannot be gapless**, and it is not a matter of tuning.
+At the end of a song the old player called `play()` on a file that had
+not fetched a note: the connection, the first chunk and the decoder
+start **are** the gap.
+
+**Web Audio can be gapless, and an iPhone suspends it.** Scheduling
+the next song on the exact sample the last one ends works — it was
+built, and measured at 43,275 ms of track 04 to 0 ms of track 05 in a
+single animation frame. But iOS suspends an audio context the moment
+the screen locks, so the album stopped when Eric locked his phone.
+**Gaplessness and background playback were the same machinery** and
+there was no reconciling them. A silent companion element put the
+lock-screen *controls* back and could not keep the *music* going;
+feeding the context a media element did not either. Both were tried.
+
+**One recording has no joins to be gapless across.** There is nothing
+between one song and the next except the next sample — the gap is not
+solved so much as abolished. And it plays through an ordinary `<audio>`
+element, which iOS is perfectly happy to keep playing with the screen
+off and to show on the lock screen.
+
+**Measured on the finished thing, across the 07 → 08 join: the element
+never paused, and the playhead never fell more than 1 ms behind the
+wall clock.** Tracks 08, 13 and 18 have no words, so their 404s in the
+console are correct and not a fault.
+
+#### The stand-ins, and why lyrics.js was never touched
+
+`lyrics.js` is 1,834 lines and reaches into `track.audio` as though it
+were an `<audio>` element in about thirty places. **It has not been
+changed by one character through any of this**, because each track
+still gets an object that behaves like its own `<audio>` —
+`currentTime`, `duration`, `paused`, `ended`, `play()`, `pause()`,
+`addEventListener` — **counting from its own beginning as though the
+other nineteen songs were not in the same file**. `startOf()`,
+`endOf()` and `within()` are the whole of that translation.
+
+State lives in arrays in the bridge rather than inside each stand-in,
+because this has to reach *across* tracks — ending the one that
+finished, pausing the one being left — and twenty closures would be
+the harder way round.
+
+#### Things here that look like detail and are not
+
+- **`settle()` is about labels, not sound.** Nothing happens to the
+  audio at a boundary; the playhead carries on. What changes is which
+  row lights up, which words arrive, which title reaches the lock
+  screen. A frame loop watches for it while playing, because
+  `timeupdate` alone fires about four times a second and would leave
+  the words a quarter-second behind. `timeupdate` is kept as the
+  backstop for when frames are throttled — a hidden tab, a locked
+  screen — which costs nothing, since nobody is looking at a late
+  label, and `visibilitychange` puts it right on return.
+- **`carriedOn` tells a roll-on from a jump.** The album running on by
+  itself ends the song it leaves (`ended`, bar back to 0, clock back
+  to full length). Somebody jumping merely stops it (`pause`), and its
+  position is kept so pressing it again carries on from there.
+- **The song being left gets `pause` EITHER way, and that line had to
+  be put back by hand.** When the album was twenty elements, starting
+  one called `pause()` on the other nineteen — and *that* is what
+  turned the last song's button from a pause mark back into a play
+  mark. With one element there is nothing left to pause and nothing
+  fires, so a row that had just finished sat showing a pause mark for
+  a song that had stopped. **Eric caught it between This Way and St.
+  Elmo's Fire**; the bar and clock had reset correctly, which is why
+  it read as cosmetic rather than as the missing event it was. The
+  general shape is worth remembering: **behaviour that used to fall
+  out of twenty players pausing each other has to be stated outright
+  now.**
+- **`startAt()` emits `play` itself when the element was already
+  playing.** Seeking inside a file that is already going fires no
+  `play` event, so the song jumped to would never be announced.
+- **The one `<audio>` is ON the page on purpose.** `main.js` stops a
+  film talking over a song by pausing any sounding `<audio>` it can
+  find — so that behaviour is simply restored, with nothing in
+  access.js arranging it. (The Gapless-5 version needed
+  `hushForFilms()` for exactly this; it is gone.) Anything that pauses
+  the element is noticed, because the rows are painted from its own
+  events.
+- **`preload="metadata"`, never `auto`.** The file is 109 MB. The
+  browser fetches as it plays, in slices, and the vault answers Range
+  requests — so starting at track 15 fetches from track 15 rather than
+  everything before it. Confirmed: a range from the middle of the file
+  is served as a 206.
+- **Every row knows its length at once**, because that is now
+  arithmetic on the track list rather than something to fetch. The
+  twenty metadata probes are gone with the twenty players.
+
+#### Rebuilding the recording
+
+`tools/join-album.py` joins `01.wav … 20.wav` end to end, altering
+nothing, and prints the positions ready to paste into content.js:
+
+```
+python3 tools/join-album.py "/Users/ericsorrels/Desktop/Gray Man Continuous"
+afconvert -f m4af -d aac -b 256000 -q 127 -s 1 album.wav album.m4a
+cp album.m4a assets/audio/album.m4a
+```
+
+Built 2 October 2026 from twenty 16-bit 44.1 kHz stereo WAVs Eric
+bounced: 159,887,867 frames, **60 min 25.58 s**, 640 MB joined, out at
+**108.9 MB** with `ftyp → moov → mdat` so playback does not wait for
+the whole file.
+
+- **It refuses to join files that disagree** about rate, depth or
+  channels, and says what each one is. One song at a different sample
+  rate plays at the wrong speed and drags everything after it out of
+  place. **Track 20 was 48 kHz while the rest were 44.1**; Eric
+  re-bounced it.
+- **It reads the finished file back** and checks the frame count
+  rather than trusting its own arithmetic. A short write would put
+  every song after it in the wrong place, silently.
+- **It alters nothing** — no trimming, no fading, no normalising.
+  **Settled 2 October 2026: the silences in Eric's bounces are
+  deliberate and are not to be "fixed".** An earlier measurement of
+  silence at five joins (09→10 at 773 ms and so on) was about the
+  previous files and is spent; do not go hunting it again.
+- **Never type a position in by hand.** They are measured from the
+  recording. A number typed by eye puts a title, its words and its
+  clock slightly out of step with the sound, and nothing looks wrong.
+
+**`audio_version` now shifts 109 MB rather than one track**, so bump it
+only when the recording genuinely changes. Changing it is the whole
+album re-downloaded for every listener.
+
+#### The rest of the row, unchanged through all of it
+
 - **The timeline is a real `<input type="range">`**, not a drawn line: it can
   be dragged, nudged with the arrow keys, and read aloud. A `scrubbing` flag
   stops playback yanking the handle out from under a finger mid-drag, and the
   `input` handler moves the song as it goes — which is what the lyrics panel
   rides on.
-- **Volume is one slider governing every track**, floating at the right edge,
+- **Volume is one slider governing the album**, floating at the right edge,
   remembered in `localStorage`. It flips light over the paper section, and is
   hidden entirely at ≤620px, where a saved level is ignored in favour of full
   volume — a quiet level chosen on a laptop must not follow a listener to a
-  phone with nothing on screen to undo it.
+  phone with nothing on screen to undo it. (All twenty stand-ins now pass it
+  through to the one element, so it is one slider over one thing at last.)
 - **The singer is named under each title** — `.track__credit`, read from
   `access.track_artists` by the same rule the lock screen uses, so a song is
   never credited one way in the list and another way on a phone. It sits
@@ -1456,27 +1651,29 @@ album still looks deliberate rather than broken.
   together in both directions. Change one, change the other.
 
 **Prev and next are not in this file.** `access.js` owns the rows, the
-roll-on at the end of a song, and the volume. Everything else that moves
-the album — the stage's transport, the panel's, and the lock screen's —
-is in `lyrics.js`, because that is where `current` and the album array
-live. Don't add a second copy here; see The transport in the head.
+recording and the volume. Everything else that moves the album — the
+stage's transport, the panel's, and the lock screen's — is in
+`lyrics.js`, because that is where `current` and the album array live.
+Don't add a second copy here; see The transport in the head.
 
-**Numbers come from position in that list, not from anything written down.**
-So adding or deleting a track renumbers every track below it, and the files
-on disk do not follow: `assets/audio/NN.mp3` and `assets/lyrics/NN.lrc` would
-then belong to the wrong songs, silently. After any change to the list, check
-which numbered files sit below the change and rename them — and move
-`bonus_starts_at` by the same amount, or the bonus heading lands on the wrong
-song. (Eric removed track 18 in September 2026; every file happened to be
-numbered 17 or lower, so nothing needed renaming that time.)
+**Numbers come from position in that list, not from anything written
+down**, and that now cuts deeper than it used to. Adding or deleting a
+track renumbers every track below it — and `track_starts` is a list in
+the same order, so it has to be rebuilt, not edited. `assets/lyrics/NN.lrc`
+and `assets/notes/NN.txt` do not follow by themselves either. After any
+change to the list: rebuild the recording with `tools/join-album.py`,
+paste the new positions, rename the numbered lyrics and notes below the
+change, and move `bonus_starts_at` by the same amount or the bonus
+heading lands on the wrong song.
 
 **Renaming a track is the other half of that.** Titles are the key
 `access.track_artists` is looked up by, so a rename has to happen in both
 places or that song silently loses its singer. Numbers don't move on a
-rename, so the files on disk are fine. (Eric renamed track 19 to
+rename, so nothing else needs touching. (Eric renamed track 19 to
 "I Will Reach For You (Demo)" on 28 September 2026, and both "Hurricane
 Chatter" tracks — 02 and 14 — to "Weather Chatter" on 29 September. He
 did both places each time.)
+
 
 **To open the vault while testing, don't type the password** — that is
 Eric's to type, and this environment has no copy of it. The local preview
@@ -1652,7 +1849,23 @@ file name or an address survives intact instead of turning silently into
 italics. Every line goes through `escapeHtml()` before any tag is added,
 so nothing written in a note can become markup of its own.
 
-Two things that look like details and are not. The notes pane fades only
+**The notes pane's bottom padding is load-bearing, and its absence was
+a real bug.** `.lyrics__scroll` sets no bottom padding at all, because
+the lyrics get theirs from `sizeTail()` in `lyrics.js` — which writes
+to the `<ol>` and so never touches the notes pane. So the last line of
+a note sat flush against the pane's bottom edge, *inside* the fade
+below, and the closing two or three lines of every note dissolved into
+the background with nothing left to scroll into. Measured before the
+fix: the final line ended **0.6px below** the pane's own bottom.
+`.lyrics__scroll--notes` now carries `padding-bottom: 3.4em` against
+its own 2.6em fade, and `.stage .lyrics__scroll--notes` 5.2rem against
+its deeper 4rem one — the stage resets padding to 0, so it has to say
+it again. **Both are in the same unit as the fade in the same rule, so
+they can be compared at a glance; change one and check the other.**
+Eric found it reading the notes. Fixed and measured in all three
+shapes — panel, stage and phone sheet — on 3 October 2026.
+
+Two more things that look like details and are not. The notes pane fades only
 at its foot — the lyrics' top fade would half-dissolve a first heading,
 which reads as a fault in prose. And `.lyrics__tabs` wraps: at 1280px
 exactly the panel is at its narrowest and the row has about 169px to
@@ -1994,7 +2207,28 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (1 October 2026)
+## Where things stand (2 October 2026)
+
+**The album is one continuous recording and `?v=75` is waiting to be
+pushed.** The twenty `<audio>` elements are gone, and so is the
+Gapless-5 player that briefly replaced them; `lyrics.js` was not
+touched through either change. See The album player above for why,
+and for the two designs that failed. **Not committed as of this
+writing** — Eric is to hear it on his own phone first.
+
+**One thing has to happen outside this repo before v75 is any use:**
+`album.m4a` must go into the vault bucket's `audio/` folder, or every
+row reads "Soon". Nothing else — adding a file needs no push and no
+version bump, and the page asks for it the moment it exists.
+
+**The old per-track files can come out of the bucket afterwards**, once
+the recording is proven: twenty `.mp3`s and twenty `.m4a`s that nothing
+asks for any more. Leave them until Eric says the album is right.
+
+**`audio_version` was deliberately NOT bumped.** The address changes
+from `audio/NN.m4a` to `audio/album.m4a`, so there is no old copy
+anywhere to displace, and a bump would make every listener re-fetch
+109 MB for nothing.
 
 **`?v=73` is live and everything is pushed**, confirmed against
 graymanmusical.com on 2 October 2026: both pages at v73, the branch in

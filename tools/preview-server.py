@@ -96,6 +96,18 @@ PREVIEW_CODE = "123456"
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    # Python labels an .m4a file "audio/mp4a-latm", which is a different
+    # thing altogether — LATM is a streaming wrapper, not a file — and
+    # Safari refuses it. Cloudflare gets this right on the live site, so
+    # without these two lines the album would play everywhere except in
+    # Eric's own preview, which is the worst way round. Named here
+    # rather than left to the system's guess.
+    extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        ".m4a": "audio/mp4",
+        ".flac": "audio/flac",
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=ROOT, **kwargs)
 

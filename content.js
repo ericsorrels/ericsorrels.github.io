@@ -514,7 +514,7 @@ window.SITE_CONTENT = {
     /* ---- The album tracks ------------------------------------------------ */
     // One line per track, in album order. The matching audio files go in
     // the folder  assets/audio/  numbered to match this list:
-    // 01.mp3 is the first line, 02.mp3 the second, and so on to 21.mp3.
+    // 01.m4a is the first line, 02.m4a the second, and so on to 20.m4a.
     //
     // That folder is now only on your own computer — the album itself
     // lives in private storage, away from the website. So a new or
@@ -544,6 +544,54 @@ window.SITE_CONTENT = {
     // would have made every listener re-fetch all twenty for nothing.
     audio_version: 4,
 
+    /* ---- The album is ONE recording --------------------------------
+       The songs run straight into each other, so the album is a single
+       audio file and the track list is twenty positions inside it.
+       There is nothing between one song and the next except the next
+       moment of the recording — which is the only way it can be
+       seamless AND go on playing when an iPhone is locked.
+
+       DO NOT EDIT THE NUMBERS BELOW BY HAND. They are measured from
+       the finished recording by  tools/join-album.py , which prints
+       them ready to paste. Typing one in by eye would put a song's
+       title, its words and its clock slightly out of step with the
+       sound, and nothing would look wrong.
+
+       To change the album: bounce the songs again as 01.wav … 20.wav,
+       put them in a folder, and ask Claude. It rebuilds the recording,
+       measures the new positions, and replaces this list. */
+
+    // The file in the vault's  audio/  folder.
+    album_file: "album.m4a",
+
+    // Where each song begins, in seconds from the start of the album.
+    // Measured 2 October 2026. Twenty of them, in album order.
+    track_starts: [
+      0.000000,    //  1  The Legend of the Gray Man
+      348.345760,  //  2  Weather Chatter (2004)
+      438.143129,  //  3  Hurricane Charli
+      640.011610,  //  4  September, Remember
+      683.275828,  //  5  Worth the Wait
+      915.779592,  //  6  Pisces
+      1163.402517, //  7  Riptide
+      1348.268186, //  8  Eye of the Storm I
+      1451.655034, //  9  Some Things Never Leave You
+      1649.884376, // 10  Catch and Release
+      1876.150431, // 11  This Way
+      2103.201066, // 12  St. Elmo's Fire
+      2207.261293, // 13  Eye of the Storm II
+      2301.500590, // 14  Weather Chatter (2022)
+      2448.017392, // 15  How to Be Young
+      2707.500385, // 16  The Gray Man
+      2932.530771, // 17  Is That You?
+      3101.130862, // 18  Eye of the Storm III
+      3230.130839, // 19  I Will Reach For You (Demo)
+      3363.475215, // 20  The Gray Man_08-23-24 (Voice Memo)
+    ],
+
+    // How long the whole recording runs, which is where the last song
+    // ends. 60 minutes 25.58 seconds.
+    album_length: 3625.575215,
     /* ---- The panel that follows the track ----
        Opens and closes with a small tab in the bottom corner. Inside it
        are two views of whatever is playing — its words, and whatever
@@ -627,6 +675,31 @@ window.SITE_CONTENT = {
        this line is read out rather than drawn, and a star read aloud
        is just noise. Write the title plainly. */
     cover_alt: "The album cover: a wave breaking on a foggy Carolina beach, a pier behind it in the mist, with the hand-painted title The Gray Man across the sky. Written by Eric Sorrels. A Musical in Three Hurricanes.",
+
+    /* ---- The sleeve's other side ----
+       The album art turns over. The front is the cover above; the back
+       is the credits — everyone who sang, played, recorded, mixed and
+       paid for the record.
+
+       Its description matters more than most, because the picture IS
+       words: somebody who cannot see it gets nothing from "a page of
+       credits". This stands in for the whole of it, so anyone reading
+       with their ears still learns who made the album. Keep it in step
+       if the credits are ever redrawn.
+
+       The picture is  assets/img/album-credits.jpg , with the larger
+       copy beside it for when it is opened up. Same as the cover:
+       *stars* do nothing in these lines. */
+    credits_alt: "The back of the album sleeve: the credits, in weathered capitals on aged paper. Words and music by Eric Sorrels. Produced by Eric Sorrels and Carolina Theater Workshop. The Gray Man sung by Michael Maliakel and Greg Toft; Charli Ballenger by Hannah Elless and Ella Frederickson; Theo Gray by Colin Donnell and Keagan Kermode; additional voices by Christopher Tramantana and Brock Ward. Band: Jesse Kapsha on keyboards, Eric Sorrels on synthesizers, Warren Sharp on guitar, Keith Lewis on bass, Vince Moss on drums. Arrangements by Christopher Gurr and Eric Sorrels. Recorded at Soundtrax Studios, North Carolina, by Cameron Fitzpatrick, and at Flux Studios, New York City, by Daniel Sanint. Mixed and mastered by Cameron Fitzpatrick. Album art by Cavan Hendron. Additional concept art by Kelsey Roy, Molly Kessler and Cavan Hendron. With special thanks to the studio manager sponsors. Copyright 2026 Pisces Theatrical LLC.",
+
+    /* ---- Turning the sleeve over ----
+       Read out to anyone using a screen reader, and shown as a tooltip
+       on a computer. Nobody sees these unless they go looking, so they
+       say plainly what the thing does. */
+    sleeve_previous: "Show the album cover",
+    sleeve_next: "Show the album credits",
+    sleeve_open: "Open the album art larger",
+    sleeve_close: "Close the album art",
 
     /* ---- What a phone shows while a track plays ----
        Start a song and the handset takes it over: the lock screen, the

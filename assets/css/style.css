@@ -1678,6 +1678,302 @@ img {
   .album-cover { margin-bottom: 2.6em; }
 }
 
+/* ---------------------------------------------------------------------
+   THE SLEEVE, WHICH TURNS OVER
+
+   Cover on one side, credits on the other. Everything below the first
+   rule waits on `sleeve--live`, which assets/js/sleeve.js adds once it
+   has wired itself up — so with JavaScript off, or that file missing,
+   both pictures simply sit one above the other and nothing is lost
+   behind a control that cannot work.
+   --------------------------------------------------------------------- */
+
+.sleeve {
+  margin: 0;
+}
+
+.sleeve--live .sleeve__frame {
+  position: relative;
+  width: min(100%, 400px);
+  margin: 0 auto;
+  /* Up and down belongs to the page; across belongs to the sleeve. The
+     other half of this is in sleeve.js, which lets go of a gesture that
+     turns out to be a scroll. */
+  touch-action: pan-y;
+}
+
+/* The frame holds its shape before either picture has arrived, so the
+   track list below never jumps. Square, as both pictures are. */
+.sleeve--live .sleeve__frame::before {
+  content: '';
+  display: block;
+  padding-top: 100%;
+}
+
+.sleeve--live .sleeve__face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+  /* Slow, like everything else here. One picture dissolves into the
+     other rather than sliding, which suits two sides of one object. */
+  transition: opacity 0.75s ease, visibility 0s linear 0.75s;
+}
+
+.sleeve--live .sleeve__face.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.75s ease, visibility 0s;
+}
+
+.sleeve--calm .sleeve__face,
+.sleeve--calm .sleeve__face.is-shown {
+  transition: none;
+}
+
+/* ---- The three places to press ------------------------------------
+   Laid over the picture: a quarter at each side turns it, and the
+   middle opens it larger. They show nothing until the sleeve is
+   hovered or one of them is focused — a sleeve should look like a
+   sleeve, not like a control panel. */
+
+.sleeve__press {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sleeve__press--prev { left: 0; width: 25%; justify-content: flex-start; }
+.sleeve__press--next { right: 0; width: 25%; justify-content: flex-end; }
+.sleeve__press--open { left: 25%; width: 50%; }
+
+.sleeve__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4em;
+  height: 2.4em;
+  margin: 0 0.5em;
+  border-radius: 50%;
+  /* Ink behind the mark, so a pale chevron reads over the brightest
+     part of a picture as well as the darkest. */
+  background: rgba(27, 26, 23, 0.55);
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.sleeve__mark--open {
+  width: 2.8em;
+  height: 2.8em;
+  /* The same ink as the chevrons, not lighter. It sits over the middle
+     of the picture, which on the cover is the brightest part of it —
+     at 0.45 the mark all but vanished there while reading perfectly
+     well over the pale credits. Judged against both sides, not one. */
+  background: rgba(27, 26, 23, 0.55);
+}
+
+/* Shown when the sleeve is hovered, or when a keyboard is on one of
+   the buttons. A touch screen has no hover, which is why swiping and
+   the dots below both exist. */
+.sleeve--live .sleeve__frame:hover .sleeve__mark,
+.sleeve__press:focus-visible .sleeve__mark {
+  opacity: 1;
+  transform: none;
+}
+
+.sleeve__press:focus-visible .sleeve__mark {
+  outline: 1px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* A touch screen cannot hover, so on one the marks are simply there —
+   held well back, because a sleeve should still read as a sleeve. The
+   alternative is a control nobody can see: swiping is the natural
+   gesture down here, but nothing on screen would say the picture had
+   another side, and the two dots alone are a hint rather than an
+   invitation. */
+@media (hover: none) {
+  .sleeve--live .sleeve__mark {
+    opacity: 0.55;
+    transform: none;
+  }
+}
+
+/* ---- Which side is up --------------------------------------------- */
+
+.sleeve__dots {
+  display: flex;
+  gap: 0.6em;
+  justify-content: center;
+  margin: 1.5em auto 3.5em;
+}
+
+.sleeve__dot {
+  width: 0.5em;
+  height: 0.5em;
+  padding: 0;
+  border: 1px solid var(--gray-mid);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.4s ease, border-color 0.4s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sleeve__dot.is-here {
+  background: var(--paper);
+  border-color: var(--paper);
+}
+
+.sleeve__dot:focus-visible {
+  outline: 1px solid var(--paper);
+  outline-offset: 3px;
+}
+
+@media (max-width: 620px) {
+  .sleeve__dots { margin-bottom: 2.6em; }
+}
+
+/* ---------------------------------------------------------------------
+   OPENED OVER THE PAGE
+
+   Built by sleeve.js the first time it is wanted and kept afterwards.
+   z-index 60: over the lyrics stage's 40, under the storm's 90 — though
+   the storm has long finished by the time anyone reaches the sleeve.
+   --------------------------------------------------------------------- */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: clamp(1rem, 4vw, 3rem);
+  /* All but opaque. At 0.94 the track list read through it clearly
+     enough to pull the eye off the picture, which is the one thing an
+     opened sleeve is for. */
+  background: rgba(27, 26, 23, 0.97);
+  animation: lightbox-in 0.4s ease;
+}
+
+.lightbox[hidden] { display: none; }
+
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* The page behind must not scroll under an open sleeve. */
+html.lightbox-open,
+html.lightbox-open body {
+  overflow: hidden;
+}
+
+.lightbox__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+.lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  cursor: pointer;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.4s ease;
+}
+
+/* While the larger copy is still on its way, the small one is shown
+   stretched. Held very slightly back so the swap to the real thing
+   reads as it arriving rather than as the picture flickering. */
+.lightbox__img.is-waiting { opacity: 0.88; }
+
+.lightbox__step,
+.lightbox__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.8em;
+  height: 2.8em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(237, 232, 221, 0.1);
+  color: var(--paper);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lightbox__step:hover,
+.lightbox__close:hover {
+  background: rgba(237, 232, 221, 0.2);
+}
+
+.lightbox__step:focus-visible,
+.lightbox__close:focus-visible {
+  outline: 1px solid var(--paper);
+  outline-offset: 3px;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: clamp(0.8rem, 2.5vw, 1.6rem);
+  right: clamp(0.8rem, 2.5vw, 1.6rem);
+  z-index: 1;
+}
+
+/* On a phone the arrows would eat the picture, so they go underneath
+   it and the swipe does the real work. */
+@media (max-width: 620px) {
+  .lightbox {
+    flex-wrap: wrap;
+    align-content: center;
+    padding: 1rem;
+  }
+
+  .lightbox__frame {
+    flex: 1 1 100%;
+    height: auto;
+    max-height: 76vh;
+    order: 1;
+  }
+
+  .lightbox__step { order: 2; margin-top: 1.4em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox { animation: none; }
+  .lightbox__img,
+  .sleeve__mark,
+  .sleeve__dot { transition: none; }
+}
+
 /* Track players */
 
 .track-list {
@@ -2635,6 +2931,19 @@ button.lyrics__line:focus-visible {
 .lyrics__scroll--notes {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent 100%);
+  /* Room under the last line, and it is load-bearing rather than
+     spacing. .lyrics__scroll sets no bottom padding at all, because
+     the lyrics get theirs from sizeTail() in lyrics.js — which writes
+     to the <ol> and so never touches this pane. So the last line of a
+     note sat flush against the bottom edge, INSIDE the fade above,
+     and the closing two or three lines of every note dissolved into
+     the background with nothing left to scroll into. Measured: the
+     last line ended 0.6px BELOW the pane's own bottom.
+
+     It must stay larger than the fade in the same rule, and both are
+     in em against this element, so they can be compared at a glance.
+     Change one, check the other. */
+  padding-bottom: 3.4em;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2821,6 +3130,10 @@ html.stage-open .stage .lyrics {
   padding-top: 0.5rem;
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 4rem), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 4rem), transparent 100%);
+  /* The same clearance as the panel's, against this pane's deeper
+     fade. `.stage .lyrics__scroll` resets padding to 0, so this has
+     to say it again rather than inheriting it. */
+  padding-bottom: 5.2rem;
 }
 
 .stage .notes__body h3 { font-size: clamp(0.72rem, 0.6rem + 0.26vw, 0.9rem); }

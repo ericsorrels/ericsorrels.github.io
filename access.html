@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=73" />
+  <link rel="stylesheet" href="assets/css/style.css?v=75" />
 </head>
 <body>
 
@@ -276,22 +276,41 @@
         <p class="section-label" data-content="access.downloads_label">Downloads</p>
         <div id="downloadList" class="downloads"></div>
 
-        <!-- The album's cover, standing in for the label that used to
+        <!-- The album's sleeve, standing in for the label that used to
              head this section. The words on the sleeve say what it is
              better than "THE ALBUM" did.
 
-             The width and height attributes are the picture's real
+             It turns over: the cover on one side, the credits on the
+             other. The two buttons sit ON the picture, left and right,
+             and the one in the middle opens it larger — see
+             assets/js/sleeve.js, which also handles swiping and the
+             keyboard. With JavaScript off, both pictures are simply
+             shown one above the other, which is the honest fallback:
+             nothing is hidden behind a control that cannot work.
+
+             The width and height attributes are each picture's real
              pixels: they tell the browser the shape before the file
              arrives, so the track list below doesn't jump when it
-             lands. Its alt text — read aloud by a screen reader, and
-             shown if the file ever goes missing — is in content.js.
+             lands. data-full names the larger copy, which is fetched
+             only if somebody opens it. Alt text — read aloud by a
+             screen reader, and shown if a file ever goes missing — is
+             in content.js.
 
-             To change the cover: put the new one in assets/img/ under
-             a NEW NAME, which is the cache rule for pictures, and ask
-             Claude to point this at it. -->
-        <img class="album-cover" src="assets/img/album-cover.jpg"
-             width="900" height="900" loading="lazy" decoding="async"
-             alt="" data-content-alt="access.cover_alt" />
+             To change either picture: put the new one in assets/img/
+             under a NEW NAME, which is the cache rule for pictures,
+             and ask Claude to point this at it. -->
+        <figure class="sleeve" id="sleeve">
+          <div class="sleeve__frame">
+            <img class="album-cover sleeve__face" src="assets/img/album-cover.jpg"
+                 data-full="assets/img/album-cover-2000.jpg"
+                 width="900" height="900" loading="lazy" decoding="async"
+                 alt="" data-content-alt="access.cover_alt" />
+            <img class="album-cover sleeve__face" src="assets/img/album-credits.jpg"
+                 data-full="assets/img/album-credits-2000.jpg"
+                 width="900" height="900" loading="lazy" decoding="async"
+                 alt="" data-content-alt="access.credits_alt" />
+          </div>
+        </figure>
 
         <div id="trackList" class="track-list"></div>
       </div>
@@ -349,19 +368,25 @@
     </figure>
   </template>
 
-  <script src="content.js?v=73"></script>
-  <script src="assets/js/main.js?v=73"></script>
+  <script src="content.js?v=75"></script>
+  <script src="assets/js/main.js?v=75"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=73"></script>
+  <script src="assets/js/lyrics.js?v=75"></script>
   <!-- Before access.js, for the same reason lyrics.js is: access.js
        asks for window.TGMStorm the moment a code is accepted, and a
        visitor can get that far faster than a script at the end of the
        body would expect. It is a module and nothing else — loading it
        starts no animation and touches no markup. If it is missing
        altogether, access.js lets the visitor in without weather. -->
-  <script src="assets/js/storm-intro.js?v=73"></script>
-  <script src="assets/js/access.js?v=73"></script>
+  <script src="assets/js/storm-intro.js?v=75"></script>
+  <!-- The album sleeve turning over, and opening out over the page.
+       After main.js, which is what pours the two pictures' descriptions
+       into them from content.js. It touches nothing else on the page,
+       and if it is missing both pictures simply show one above the
+       other. -->
+  <script src="assets/js/sleeve.js?v=75"></script>
+  <script src="assets/js/access.js?v=75"></script>
 </body>
 </html>
