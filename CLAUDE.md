@@ -1598,19 +1598,6 @@ the harder way round.
 - **Every row knows its length at once**, because that is now
   arithmetic on the track list rather than something to fetch. The
   twenty metadata probes are gone with the twenty players.
-- **An `error` on the element means two completely different things,
-  and treating them alike cost a day.** Before anything has loaded it
-  means there is no album file, and every row should say "Soon". Part
-  way through a song it means the network let go — and marking all
-  twenty rows "Soon" there, which is what this did until 3 October
-  2026, turns a wobble into a dead album: `startAt()` then refuses to
-  do anything, and the element sits in an error state for good.
-  **On a locked phone that is also what killed the lock screen**, since
-  iOS has no interest in an element that has stopped. Told apart by
-  whether a duration was ever known. `recover()` reloads the same
-  address — no cache-buster, so what the browser already holds is still
-  good — puts the playhead back, and carries on. Capped at three
-  attempts, cleared by sound actually arriving.
 
 #### Rebuilding the recording
 
@@ -2153,37 +2140,12 @@ harmless because something always overwrote it in time is exactly the
 kind of thing the single element changed.** Eric found it on his phone
 on 3 October 2026.
 
-**`setPositionState` is told on every `timeupdate` — four or five times
-a second — and that is not waste.** It throws if the position runs past
-the duration, so the position is clamped and a missing or infinite
-duration clears the state instead.
-
-**It used to be told only when the truth changed**, on the reasoning
-that the phone runs its own clock from the last reading and a playback
-rate: a seek, a pause, a new track, and nothing in between. *Measured:
-zero extra calls across 2.5s of plain playback.* That was correct, and
-**it stopped being correct the day the album became one file.**
-
-What the lock screen was told and what the element itself said used to
-be the same thing — 0:10 of 3:04, both of them — so the phone could run
-our clock because it *was* its clock. Now the element says 19:34 of
-1:00:25 while we say 0:10 of 3:04. **The phone cannot extrapolate that
-for us; it has to be told.** Told once and left, its reading simply
-stops.
-
-Which is exactly what Eric found on 3 October 2026: press play on the
-lock screen and the song carries on, the time sits still, and after a
-moment iOS throws the panel away for the generic one. **A Now Playing
-whose clock has stopped is one iOS discards.** Nothing was refusing to
-play; the audio was fine throughout. The fault was that we had stopped
-describing it.
-
-**Per-track times on a single recording REQUIRE this. Do not optimise
-it back out.** Settled 3 October 2026: Eric wants the lock screen to
-read like a streaming library — per-track times, skip buttons that move
-by song — over a single continuous file, and frequent reporting is the
-price of the illusion. `visibilitychange` says the whole lot again on
-return, because the page may have been out of sight for minutes.
+**`setPositionState` is told when the truth changes, not per frame.** The
+phone runs its own clock from a position and a playback rate, so it needs
+a new reading on a seek, a pause, a new track — and nothing in between.
+Measured: zero extra calls across 2.5s of plain playback. It throws if
+the position runs past the duration, so the position is clamped and a
+missing or infinite duration clears the state instead.
 
 **The artwork is `COVER_STEM` plus `COVER_SIZES`** — 192, 384 and 512,
 built from the gitignored master with the same `sips` line as the sleeve.
@@ -2352,17 +2314,6 @@ granted path works in Chrome and Safari; don't chase it.
 ---
 
 ## Where things stand (3 October 2026)
-
-> **THERE IS TEMPORARY DEBUG CODE ON THE LIVE SITE.** `showPlayFault()`
-> in `assets/js/access.js` puts a red band across the top of the album
-> page whenever `play()` is refused, so the reason can be read on a
-> handset where there is no console. It went in on 3 October 2026 to
-> chase play-not-working on a locked iPhone. **Take it out once that is
-> settled**: delete the block marked TEMPORARY and put the empty
-> `function () {}` back on the `.catch`. It is self-contained and
-> styled inline so nothing in `style.css` has to be unpicked. A
-> supporter should never see it.
-
 
 **`?v=77` is live, everything is pushed, and the album is one
 continuous recording.** Confirmed against graymanmusical.com: both

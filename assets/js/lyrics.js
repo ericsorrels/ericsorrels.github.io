@@ -773,9 +773,6 @@
       if (!isOnShow(audio)) return;
       if (!frameRequest) sync(false);
       tickTransport();
-      // And the lock screen, four times a second or so. See
-      // reportPosition below for why this cannot be spared any more.
-      reportPosition();
     });
 
     // How long the song runs isn't known until the file's head arrives,
@@ -1167,12 +1164,6 @@
   // and a toggle there would stop a song that a stray `play` arrived
   // for. Same work, told apart.
   function startPlaying() {
-    // TEMPORARY, with the band in access.js — says whether the lock
-    // screen's own play button reaches us at all.
-    if (window.TGMNOTE) {
-      window.TGMNOTE('>> startPlaying  current=' + (current ? current.number : 'none')
-        + ' paused=' + (current ? current.audio.paused : '?'));
-    }
     if (!current) {
       var opener = firstPlayable();
       if (opener) opener.audio.play();    // its own play event does the rest
@@ -1182,7 +1173,6 @@
   }
 
   function stopPlaying() {
-    if (window.TGMNOTE) window.TGMNOTE('>> stopPlaying');   // TEMPORARY
     if (current && !current.audio.paused) current.audio.pause();
   }
 
@@ -1264,84 +1254,23 @@
     } catch (e) { /* an older take on the same idea; the rest still works */ }
   }
 
-  // Where the song has got to.
-  //
-  // This used to be told only when the truth changed — a seek, a pause,
-  // a new track — on the reasoning that the phone runs its own clock
-  // from the last reading and a playback rate, so saying it again sixty
-  // times a second was waste. **That reasoning died with the twenty
-  // files, and leaving it in place was the bug.**
-  //
-  // It held while the album was twenty elements, because what we told
-  // the lock screen and what the element itself said were the same
-  // thing: 0:10 of 3:04, both of them. The phone could run our clock
-  // because it was its own clock.
-  //
-  // The album is one 60-minute recording now and the element's clock
-  // says 19:34 of 1:00:25 while we say 0:10 of 3:04. The phone cannot
-  // extrapolate that for us — it has to be TOLD where we are. Told
-  // once and left, its reading simply stops, which is what Eric saw on
-  // 3 October 2026: the song played on and the time sat still, and a
-  // Now Playing panel whose clock has stopped is one iOS eventually
-  // throws away for the generic one.
-  //
-  // So it is now said on every timeupdate, four times a second or so,
-  // which is what players that do this properly have always done.
-  // **Per-track times on a single file require it. Do not optimise
-  // this back out.**
-  /* ---- WHICH CLOCK THE LOCK SCREEN IS GIVEN -------------------------
-     TRUE  = the whole recording's. 45:21 of 1:00:25.
-     FALSE = the song's.            0:14 of 3:45.
-
-     The song's is what a listener wants and what Eric asked for, and it
-     is what this did until 3 October 2026. It also appears to be what
-     iOS cannot live with.
-
-     The element is ONE 60-minute recording. Telling iOS the song's
-     clock means telling it 14.0 of 225.0 while the element itself says
-     2721.5 of 3625.6. Both true; they cannot both be true of one
-     element. While playback simply runs, iOS uses what it is told and
-     all is well — but on a pause-then-play it re-reads the element and
-     gets an elapsed time four times past the duration it was given.
-     That is not a state it can show, so it throws the session away and
-     falls back to Apple Music. Which is the bug, exactly as Eric
-     reported it, down to the timer jumping as the two disagree.
-
-     Set TRUE as a test on 3 October 2026 and **it made no difference**
-     — the two clocks agreed and iOS dropped the session on a resume
-     exactly as before. So the contradiction, however real, is not what
-     kills it, and this is back to FALSE: the song's clock is what Eric
-     wants a listener to see and it costs nothing to give them.
-
-     Kept as a switch rather than deleted, because the reasoning above
-     still describes something true about the two clocks, and the next
-     person to wonder about it should be able to try it in one word
-     instead of rediscovering it. */
-  var ALBUM_WIDE_POSITION = false;
-
-  // The whole recording, when there is one. access.js publishes it.
-  function recording() {
-    return (ALBUM_WIDE_POSITION && window.TGM_RECORDING) || null;
-  }
-
+  // Where the song has got to. The phone runs its own clock from this
+  // and a playback rate, so it wants telling when the truth changes —
+  // a seek, a pause, a new track — rather than sixty times a second.
   function reportPosition() {
     if (!hasMedia || !navigator.mediaSession.setPositionState) return;
-
-    var whole = recording();
     var audio = current && current.audio;
-    var source = whole || audio;
-    var length = source ? source.duration : 0;
-
+    var length = audio ? audio.duration : 0;
     try {
-      if (!source || !isFinite(length) || length <= 0) {
+      if (!audio || !isFinite(length) || length <= 0) {
         navigator.mediaSession.setPositionState();     // nothing to show yet
         return;
       }
       navigator.mediaSession.setPositionState({
         duration: length,
-        playbackRate: source.playbackRate || 1,
+        playbackRate: audio.playbackRate || 1,
         // Clamped: a position past the end is the one thing this throws on.
-        position: Math.min(Math.max(0, source.currentTime), length)
+        position: Math.min(Math.max(0, audio.currentTime), length)
       });
     } catch (e) { /* a browser that disagrees about the numbers */ }
   }
@@ -1363,33 +1292,8 @@
   function wireMediaSession() {
     if (!hasMedia) return;
 
-    /* TEST, 3 October 2026 — play and pause are DELIBERATELY not
-       handled here.
-
-       They used to be: `handle('play', startPlaying)` and
-       `handle('pause', stopPlaying)`, which routed the lock screen's
-       two buttons through the stand-in layer and into the element.
-       That worked — the logs show both arriving and doing exactly the
-       right thing — and the session was dropped on a resume anyway,
-       with every other explanation eliminated.
-
-       Left unregistered, iOS works the element itself, which is the
-       one thing it certainly knows how to do. Nothing is lost by it:
-       the element's own `play` and `pause` events still reach
-       access.js, which still tells the rows, the panel and this file,
-       so the page keeps up exactly as before. The only difference is
-       that our code is no longer standing in the middle of the one
-       part of this it does not need to be in.
-
-       previoustrack, nexttrack and seekto stay — those have no native
-       meaning over one continuous recording, so they must be ours.
-
-       Put `handle('play', startPlaying)` and
-       `handle('pause', stopPlaying)` back to undo it. startPlaying and
-       stopPlaying are still used by the page's own buttons and have
-       not moved. */
-    handle('play', null);
-    handle('pause', null);
+    handle('play', startPlaying);
+    handle('pause', stopPlaying);
 
     // The panel's own two buttons, unchanged — so the three-second
     // rule on Previous is the same rule on the lock screen as it is
@@ -1400,18 +1304,10 @@
     handle('seekto', function (details) {
       var audio = current && current.audio;
       if (!audio || !details || typeof details.seekTime !== 'number') return;
-
-      // Whatever clock the lock screen was GIVEN is the clock its scrub
-      // bar hands back. Read against the other one, a drag would land
-      // somewhere else entirely — so this follows reportPosition().
-      var whole = recording();
-      var source = whole || audio;
-      var length = source.duration;
+      var length = audio.duration;
       var to = Math.max(0, isFinite(length) ? Math.min(details.seekTime, length) : details.seekTime);
-
-      if (details.fastSeek && source.fastSeek) source.fastSeek(to);
-      else source.currentTime = to;
-
+      if (details.fastSeek && audio.fastSeek) audio.fastSeek(to);
+      else audio.currentTime = to;
       scrolledAt = 0;                      // a deliberate move: follow it at once
       sync(true);
       tickTransport();
@@ -1423,16 +1319,6 @@
     // skip-track buttons instead, which is what an album wants.
     handle('seekbackward', null);
     handle('seekforward', null);
-
-    // Coming back from a locked screen, where the page has been out of
-    // sight and may have been left alone for minutes. Everything the
-    // lock screen knows is said again here rather than waited for:
-    // which song, where in it, and whether it is playing.
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden || !current) return;
-      nameNowPlaying(current);
-      reportPlayback();
-    });
   }
 
   /* ---- Carrying the panel on and off --------------------------------- */

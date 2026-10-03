@@ -537,41 +537,6 @@
     if (carriedOn) emit(at, 'play');
   }
 
-  /* ---- Picking the recording back up --------------------------------
-     The network let go part way through a song. Load it again, put the
-     playhead back where it was, and carry on if it was playing — which
-     is the whole of what keeps the lock screen alive, since iOS has no
-     interest in an element that has stopped.
-
-     The same address, deliberately: no cache-buster, so whatever the
-     browser already holds of the album is still good and only what is
-     missing is fetched. load() winds the playhead back to zero, hence
-     the position being taken before it and put back after the file's
-     head has arrived. */
-
-  var recovering = 0;
-
-  function recover() {
-    if (!stream) return;
-
-    var where = stream.currentTime
-      || (activeIndex >= 0 ? startOf(activeIndex) + (positions[activeIndex] || 0) : 0);
-    var wasPlaying = !stream.paused;
-
-    var back = function () {
-      stream.removeEventListener('loadedmetadata', back);
-      try {
-        stream.currentTime = where;
-      } catch (e) { /* the browser will land where it can */ }
-      if (!wasPlaying) return;
-      var going = stream.play();
-      if (going && going.catch) going.catch(showPlayFault);
-    };
-
-    stream.addEventListener('loadedmetadata', back);
-    stream.load();
-  }
-
   /* ---- The one element ---------------------------------------------- */
 
   function buildStream(into) {
@@ -582,12 +547,6 @@
     // at track 15 fetches from track 15 rather than everything before it.
     stream.preload = 'metadata';
     stream.src = albumUrl();
-
-    // The one recording, published for anything that needs the WHOLE
-    // album's clock rather than one song's. The lock screen does — see
-    // reportPosition() in lyrics.js and the note there about the two
-    // clocks contradicting each other.
-    window.TGM_RECORDING = stream;
 
     // On the page on purpose. main.js stops a film talking over a song
     // by pausing any sounding <audio> it can find, and this is one —
@@ -618,7 +577,6 @@
         positions[activeIndex] = within(activeIndex);
         emit(activeIndex, 'timeupdate');
       }
-      heartbeat();                     // TEMPORARY, throttled to once per 5s
     });
 
     // Dragging a row's bar moves the one playhead, so the words keep up
@@ -651,65 +609,12 @@
 
     // No album file at all. Every row says so, rather than twenty rows
     // silently doing nothing.
-    // A failure that happens before anything ever loaded means there is
-    // no album file, and every row should say so. A failure part way
-    // through a song is the network letting go, and is a different
-    // thing entirely.
-    //
-    // This used to make no distinction, and that was the fault behind
-    // the lock screen vanishing on 3 October 2026: the buffer ran out a
-    // second or two after resuming, the request for more came back
-    // wrong, and this turned a wobble into a dead album — all twenty
-    // rows flagged "Soon", startAt() refusing to do anything, and an
-    // element sitting in an error state. An element in an error state
-    // is not playing anything, so iOS threw the Now Playing panel away.
     stream.addEventListener('error', function () {
-      var loaded = isFinite(stream.duration) && stream.duration > 0;
-
-      if (!loaded) {
-        stream.dataset.missing = 'true';
-        for (var i = 0; i < players.length; i++) {
-          players[i].dataset.missing = 'true';
-        }
-        emitAll('error');
-        return;
+      stream.dataset.missing = 'true';
+      for (var i = 0; i < players.length; i++) {
+        players[i].dataset.missing = 'true';
       }
-
-      // It had been playing, so put it back rather than giving up.
-      // Capped, so a file that is genuinely broken cannot put this into
-      // a loop; the count is cleared by sound actually arriving.
-      if (recovering >= 3) return;
-      recovering++;
-      recover();
-    });
-
-    // Sound is arriving again, so whatever went wrong is behind us.
-    stream.addEventListener('playing', function () { recovering = 0; });
-
-    // TEMPORARY — goes out with the block above it. Everything the
-    // element says about loading, on screen, because none of it can be
-    // seen on a handset. `stalled` or `waiting` here means it ran out
-    // of sound and went back to the network; `error` means that went
-    // wrong, which is the thing being chased.
-    ['stalled', 'waiting', 'error', 'emptied', 'abort',
-     'play', 'pause', 'seeking', 'seeked', 'ended', 'ratechange'].forEach(function (type) {
-      stream.addEventListener(type, function () {
-        noteFault(type
-          + '  ready=' + stream.readyState
-          + ' net=' + stream.networkState
-          + ' at=' + stream.currentTime.toFixed(1) + 's'
-          + (stream.error ? ' code=' + stream.error.code : ''));
-      });
-    });
-
-    // `suspend` is left off the list above on purpose: it fires
-    // constantly and said nothing useful in the first reading, and
-    // twelve lines of it would push everything that matters off the
-    // top of the band.
-
-    document.addEventListener('visibilitychange', function () {
-      noteFault('page ' + (document.hidden ? 'HIDDEN' : 'back')
-        + '  playing=' + (stream && !stream.paused));
+      emitAll('error');
     });
 
     // Coming back to the page. A browser is free to have stopped
@@ -723,87 +628,6 @@
     });
   }
 
-  /* ==================================================================
-     TEMPORARY — PUT IN 3 OCTOBER 2026, TO BE TAKEN OUT AGAIN
-
-     Pressing play on a locked iPhone was doing nothing, and the reason
-     was invisible: the refusal arrived as a rejected promise and was
-     thrown away by an empty catch. This puts it on screen instead, so
-     it can be read on the handset itself where there is no console to
-     look at.
-
-     IT IS FOR TESTING AND MUST NOT BE LEFT ON THE LIVE SITE. Deleting
-     this block and changing the one `showPlayFault` back to
-     `function () {}` removes every trace of it; it is deliberately
-     self-contained, with its own styling inline, so that nothing in
-     style.css has to be unpicked afterwards.
-     ================================================================== */
-  var faultLines = [];
-
-  function noteFault(line) {
-    try {
-      var clock = new Date();
-      faultLines.push(
-        ('0' + clock.getMinutes()).slice(-2) + ':' +
-        ('0' + clock.getSeconds()).slice(-2) + '  ' + line);
-      // A rolling window, so it cannot grow over the whole page.
-      while (faultLines.length > 30) faultLines.shift();
-
-      var box = document.getElementById('tgmPlayFault');
-      if (!box) {
-        box = document.createElement('div');
-        box.id = 'tgmPlayFault';
-        box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:999;' +
-          'max-height:46vh;overflow:auto;' +
-          'padding:0.9em 1em;background:#8A3D33;color:#EDE8DD;' +
-          'font-family:monospace;font-size:12px;line-height:1.45;' +
-          'white-space:pre-wrap;word-break:break-word;cursor:pointer';
-        // A press puts it away, so it cannot sit over the album.
-        box.addEventListener('click', function () {
-          box.remove();
-          faultLines = [];
-        });
-        document.body.appendChild(box);
-      }
-      box.textContent = faultLines.join('\n') + '\n(tap to dismiss)';
-    } catch (e) { /* the message is the least important thing here */ }
-  }
-
-  function showPlayFault(err) {
-    noteFault('play() refused — ' + ((err && err.name) || '?')
-      + ': ' + ((err && err.message) || '?'));
-  }
-
-  // So lyrics.js can say when the lock screen's own buttons reach it.
-  // Guarded at every call site, so deleting this block is still the
-  // whole of taking it out.
-  window.TGMNOTE = noteFault;
-
-  // A line every five seconds while anything is playing, so there is a
-  // timeline rather than a handful of unrelated moments — this is the
-  // one that should show what the element was doing at the instant the
-  // lock screen gave up.
-  //
-  // Driven by the sound itself rather than by setInterval, because a
-  // phone with its screen off throttles timers to something like once
-  // a minute and the interesting seconds would simply not be recorded.
-  // Media events survive that far better.
-  var lastBeat = 0;
-
-  function heartbeat() {
-    if (!stream || stream.paused) return;
-    var now = Date.now();
-    if (now - lastBeat < 5000) return;
-    lastBeat = now;
-    noteFault('.. playing'
-      + '  ready=' + stream.readyState
-      + ' net=' + stream.networkState
-      + ' at=' + stream.currentTime.toFixed(1) + 's'
-      + ' state=' + ((window.navigator && navigator.mediaSession
-          && navigator.mediaSession.playbackState) || '?')
-      + (document.hidden ? ' HIDDEN' : ''));
-  }
-
   // Start a song, from wherever it was left. Everything that plays
   // anything comes through here: a row's own button, the panel's, the
   // stage's and the lock screen's.
@@ -814,8 +638,6 @@
     var from = positions[index] || 0;
     if (from >= lengthOf(index) - 0.05) from = 0;   // it had played out
     var wasPlaying = !stream.paused;
-    // Asked before the block below, which is what changes it.
-    var wasActive = activeIndex === index;
 
     if (activeIndex !== index) {
       var left = activeIndex;
@@ -830,21 +652,10 @@
     }
 
     finished[index] = false;
-
-    // Only move the playhead if it is not already where it should be.
-    // Pressing play on a lock screen comes through here, and setting
-    // currentTime is a seek even when it is set to the position it
-    // already holds — which on a locked iPhone can make Safari throw
-    // away what it had buffered and go back to the network for it,
-    // something it may not be able to do with the screen off. So a
-    // resume is a plain play() and nothing else.
-    var want = startOf(index) + from;
-    if (!wasActive || Math.abs(stream.currentTime - want) >= 0.25) {
-      stream.currentTime = want;
-    }
+    stream.currentTime = startOf(index) + from;
 
     var going = stream.play();
-    if (going && going.catch) going.catch(showPlayFault);
+    if (going && going.catch) going.catch(function () {});
 
     // Already playing, so no `play` event is coming to announce the
     // song that has just been jumped to.
