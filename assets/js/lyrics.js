@@ -1102,8 +1102,21 @@
     // And the transport nobody can see. Handing back null at the end of
     // the album greys the button out on the lock screen, the same way
     // the panel's own Next greys out above.
+    //
+    // ONLY at the end of the album. "Nothing has played yet" is a
+    // different thing and must not null it — this runs once at startup
+    // with `current` still null, and until 3 October 2026 that left the
+    // lock screen holding `previoustrack` and nothing else. With a lone
+    // skip handler iOS gives up and offers its ten-second jumps
+    // instead, which is the opposite of what an album wants.
+    //
+    // It only began to show when the album became one long recording.
+    // Twenty short elements meant iOS built its Now Playing afresh at
+    // every play, by which time this had run again with a real
+    // `current`; one element exists from page load, so iOS settles the
+    // buttons while the startup reading is still the only one it has.
     if (hasMedia) {
-      handle('nexttrack', (current && nextPlayable()) ? goNext : null);
+      handle('nexttrack', (!current || nextPlayable()) ? goNext : null);
       reportPlayback();
     }
 

@@ -2034,6 +2034,26 @@ wants. `nexttrack` is also handed `null` at the end of the album, which
 greys it out there the same way the panel's own Next greys out —
 `drawTransport()` does both in the same breath.
 
+**But `nexttrack` must be nulled ONLY at the end of the album, and
+getting that wrong brought the ten-second jumps back.** `drawTransport()`
+runs once at startup with `current` still null, and the old test —
+`(current && nextPlayable())` — read "nothing has played yet" as "there
+is nothing after this" and nulled it. The lock screen was then holding
+`previoustrack` and nothing else, and **with a lone skip handler iOS
+gives up and offers its own jump buttons**, which is precisely what
+declining `seekbackward`/`seekforward` is there to avoid. The test is
+now `(!current || nextPlayable())`.
+
+**It only began to show when the album became one long recording**, and
+that is the part worth remembering. Twenty short elements meant iOS
+built its Now Playing afresh at every play, by which time
+`drawTransport()` had run again with a real `current`; one element
+exists from page load, so iOS settles the buttons while the startup
+reading is still the only one it has. **A startup value that used to be
+harmless because something always overwrote it in time is exactly the
+kind of thing the single element changed.** Eric found it on his phone
+on 3 October 2026.
+
 **`setPositionState` is told when the truth changes, not per frame.** The
 phone runs its own clock from a position and a playback rate, so it needs
 a new reading on a seek, a pause, a new track — and nothing in between.
