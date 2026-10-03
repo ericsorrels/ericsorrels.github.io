@@ -2140,6 +2140,32 @@ harmless because something always overwrote it in time is exactly the
 kind of thing the single element changed.** Eric found it on his phone
 on 3 October 2026.
 
+**KNOWN BUG, ACCEPTED 3 October 2026 — resuming from the lock screen
+loses the lock screen. Do not troubleshoot it again unless Eric asks.**
+Pause from the lock screen, press play there, and the music resumes
+correctly — then a second or two later iOS takes the album's Now
+Playing panel down and shows its own default one, offering music from
+the listener's library. The music keeps playing; only the panel goes.
+Six rounds of changes (v79–v84) were tried on one afternoon and every
+one was reverted; the tree is back at v78 and `6f73b60` is the revert.
+What those rounds established, so nobody repeats them: the worker
+answers a resume correctly (a Range fix was made and proven not to be
+the cause); our code is not seeking on resume, not pausing, not seeing
+an `error` event, and the element reports `readyState 4` and `playing`
+throughout — an event log driven by `timeupdate` showed iOS's own
+buttons arriving and being obeyed, and the panel dying anyway; telling
+iOS the song's clock (14 s of 225) or the album's (2721 of 3625) made
+no difference, so the two-clock contradiction is not it; and leaving
+`play`/`pause` for iOS to work on the element itself was worse, because
+with no pause handler iOS picked the welcome film as its Now Playing
+target and a lock-screen pause started a video behind a locked phone.
+Whatever iOS is reacting to, it does not report it to the page. If it
+is ever picked up again, the only honest next step is an iPhone cabled
+to a Mac with Safari's Web Inspector attached, reading iOS's own
+console — not another guess from here. The one thing not yet tried is
+that `drawTransport()` re-registers `nexttrack` and re-sends the
+playback state on every `play` event, including a resume.
+
 **`setPositionState` is told when the truth changes, not per frame.** The
 phone runs its own clock from a position and a playback rate, so it needs
 a new reading on a seek, a pause, a new track — and nothing in between.
