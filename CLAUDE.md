@@ -864,6 +864,14 @@ the gate in one afternoon, and codes 101 onward would simply not send.
 Resend Pro is $20 for the month it is needed. Going over the Workers
 limit returns Error 1027 rather than a bill.
 
+**Eric took Resend Pro on 3 October 2026 for the launch month**, with
+90 addresses on the guest list and the site going live on Monday
+6 October. The 100-a-day line above is the free plan and does not
+apply while Pro runs; a sign-in per device is one email, and a device
+stays in for 30 days on its cookie. **Worth checking in early November
+whether Pro is still wanted** — once the launch wave has signed in,
+ordinary use is far under the free cap and the free plan is enough.
+
 **The emails' wording lives in `cloudflare/vault-worker.js`, not
 `content.js`.** That is the third deliberate exception to the
 one-rule: this code runs at Cloudflare and has no way to read
