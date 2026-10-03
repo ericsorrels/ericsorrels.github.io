@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=77" />
+  <link rel="stylesheet" href="assets/css/style.css?v=78" />
 </head>
 <body>
 
@@ -151,9 +151,19 @@
        assets/lyrics/ and notes from assets/notes/, labels from
        content.js → "access", and the working parts from
        assets/js/lyrics.js. -->
+  <!-- The handle. The cross at its left end appears only once the panel
+       is open, and is part of the handle rather than a button beside
+       it: the handle is already the thing that opens and closes, so a
+       second button would be a second way to do one job. It says in a
+       mark what the handle has always done, which is the part people
+       were missing. lyrics.js draws it; it is aria-hidden because the
+       button around it is already named and already carries
+       aria-expanded. -->
   <button class="lyrics-tab" id="lyricsTab" type="button" hidden
-          aria-expanded="false" aria-controls="lyricsPanel"
-          data-content="access.panel_button">Liner Notes</button>
+          aria-expanded="false" aria-controls="lyricsPanel">
+    <span class="lyrics-tab__close" id="lyricsTabClose" aria-hidden="true"></span>
+    <span class="lyrics-tab__label" data-content="access.panel_button">Liner Notes</span>
+  </button>
 
   <section class="lyrics" id="lyricsPanel" hidden
            aria-labelledby="lyricsTabWords lyricsTitle">
@@ -180,17 +190,24 @@
           <button class="lyrics__step" id="lyricsPlay" type="button"></button>
           <button class="lyrics__step" id="lyricsNext" type="button" disabled></button>
         </div>
+
+        <!-- Opens the words out to fill the screen, and closes them
+             again. Its icon and its label are set by lyrics.js — the
+             words come from content.js → access.lyrics_expand /
+             lyrics_collapse.
+
+             It sits INSIDE this row rather than beside it, which it
+             did until 3 October 2026. On a computer that changes
+             nothing: it is positioned absolutely against the head,
+             which is the positioned ancestor either way. On a phone it
+             goes static and simply joins the row, which is where it
+             had to be once the full-screen view was opened up to
+             phones as well. -->
+        <button class="lyrics__expand" id="lyricsExpand" type="button"
+                aria-expanded="false" aria-controls="lyricsStage"></button>
       </div>
 
       <h2 class="lyrics__title" id="lyricsTitle" hidden></h2>
-
-      <!-- Opens the words out to fill the screen, and closes them again.
-           Its icon and its label are set by lyrics.js — the words come
-           from content.js → access.lyrics_expand / lyrics_collapse.
-           Hidden under 768px, where the panel is already most of the
-           screen. -->
-      <button class="lyrics__expand" id="lyricsExpand" type="button"
-              aria-expanded="false" aria-controls="lyricsStage"></button>
     </header>
 
     <div class="lyrics__scroll" id="lyricsScroll"
@@ -231,6 +248,15 @@
     <div class="stage__well" id="lyricsStageWell"></div>
 
     <div class="stage__transport">
+      <!-- Empty, and filled only on a phone. The panel's own previous,
+           play and next are LIFTED in here while the stage is up —
+           the same borrowing the panel and the volume slider go
+           through — so the phone gets one row of controls with the
+           scrub bar beneath it, and there is still only one set of
+           buttons on the page driving one <audio>. On a computer this
+           stays empty and the stage's own play button below is used
+           instead. -->
+      <div class="stage__steps" id="lyricsStageSteps"></div>
       <button class="track__play stage__play" id="lyricsStagePlay" type="button"></button>
       <span class="stage__clock" id="lyricsStageElapsed">0:00</span>
       <div class="stage__timeline">
@@ -368,25 +394,25 @@
     </figure>
   </template>
 
-  <script src="content.js?v=77"></script>
-  <script src="assets/js/main.js?v=77"></script>
+  <script src="content.js?v=78"></script>
+  <script src="assets/js/main.js?v=78"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=77"></script>
+  <script src="assets/js/lyrics.js?v=78"></script>
   <!-- Before access.js, for the same reason lyrics.js is: access.js
        asks for window.TGMStorm the moment a code is accepted, and a
        visitor can get that far faster than a script at the end of the
        body would expect. It is a module and nothing else — loading it
        starts no animation and touches no markup. If it is missing
        altogether, access.js lets the visitor in without weather. -->
-  <script src="assets/js/storm-intro.js?v=77"></script>
+  <script src="assets/js/storm-intro.js?v=78"></script>
   <!-- The album sleeve turning over, and opening out over the page.
        After main.js, which is what pours the two pictures' descriptions
        into them from content.js. It touches nothing else on the page,
        and if it is missing both pictures simply show one above the
        other. -->
-  <script src="assets/js/sleeve.js?v=77"></script>
-  <script src="assets/js/access.js?v=77"></script>
+  <script src="assets/js/sleeve.js?v=78"></script>
+  <script src="assets/js/access.js?v=78"></script>
 </body>
 </html>

@@ -1739,7 +1739,22 @@ stands down for four seconds after the listener scrolls it by hand.
 **Layout, all in `style.css`:** one drawer rising from the lower left with the
 Liner Notes tab as its handle — `access.panel_button`, which is deliberately
 a different key from `lyrics_button`: the handle names the whole panel, the
-tab inside names one view of it. At ≥1280px it sits in the margin beside the 720px
+tab inside names one view of it.
+
+**The handle carries a cross at its left end while the panel is open**,
+added 3 October 2026 at Eric's asking. It is **part of the handle, not
+a button beside it**, and that is the point: the handle already opens
+and closes, so a second button would be a second way to do one job —
+and would have to find room to the left of something already sitting at
+the left edge of the screen, where there is none. What people were
+missing was not a control but the knowledge that the handle *was* one,
+and a mark says that better than a word does. It is `aria-hidden`,
+because the button around it is already named and already carries
+`aria-expanded`.
+
+Its one requirement on the markup: **the tab's words live in their own
+`<span>` now**, because `data-content` writes `innerHTML` and would
+otherwise wipe the cross out of the button every time the page loaded. At ≥1280px it sits in the margin beside the 720px
 album column; from 621–1279px it docks along the bottom, its right edge held
 clear of the volume slider by `right: calc(var(--lyrics-edge) + 4.25rem)`
 (13px of daylight at the tightest point, 621px); at ≤620px it's a full-width
@@ -1803,9 +1818,49 @@ with `Permissions check failed`, so only the refused path can be tested
 here, and that is not a fault to chase. Leaving full screen by any route (Escape, F11, the
 browser's own control) closes the stage, but only if it ever got in —
 `wasFullscreen` guards that, because a refused request fires no event at all
-and the stage is meant to survive it. Desktop only: the button is
-`display: none` below 768px, and pulling the window narrower than that while
-expanded closes the stage, since the way out would go with it.
+and the stage is meant to survive it.
+
+**On every width since 3 October 2026.** It was a computer's affair
+until then — the button was `display: none` below 768px, and pulling
+the window narrower closed the stage because the way out would have
+gone with it. **Eric asked for it on phones too**, so the button is
+everywhere, the width gate is gone from `expand()`, and nothing
+collapses on a resize any more: there is no longer a width at which the
+way out disappears. On a phone the button leaves the head's corner and
+becomes the last item in the tab row, which is the only place it fits —
+the corner is where the transport already is.
+
+**iOS will refuse true full screen**, since it grants it to video
+elements only. That is the already-handled path: the stage is a
+full-viewport overlay regardless, and `askForFullscreen()` swallows the
+refusal. So the phone gets the view without the browser's chrome going
+away, which is what it was always going to get.
+
+**The stage's head is laid out the phone's way below 620px**, and
+getting there cost two bugs that looked unrelated and were one.
+
+The stage centres its tabs and drops the track number out of the flow
+to the left, which is right where there is room beside them. At 375px
+there is none and the number landed on top of LYRICS — so down here the
+head is simply the panel's own: tabs, number, then the way out at the
+far right. Opening the words out should not rearrange the one row that
+was already familiar.
+
+Then: **`.stage .lyrics__tab` shortens `padding-bottom` to 0.6em, and
+on a phone that shortening breaks the underline and the number at
+once.** The phone has already made these a 1.1rem tap target and moved
+the active underline to `bottom: 0.82rem`, so it sits just beneath the
+words instead of at the foot of the target. Shorten the box under it
+and that 0.82rem stops being below the text and starts being *through*
+it — **a line struck across LYRICS**. The same shortening leaves the
+padding lopsided, 1.1rem over 0.6em, so the words sit low in their own
+box while the number centres on the box itself: **both were centred, on
+different things**, which is why the number read as off its line.
+
+Symmetric padding fixes both. **Measured after: 4.5px of clearance
+below the words, and the number's centre and the words' centre at the
+same 46.9.** Eric found both from his phone; neither shows at any width
+a desktop browser is likely to be at.
 
 Expanded, Escape leaves, Space stops and starts, and ←/→ step 5 seconds —
 skipped when a button or slider already has the caret, which answers for
@@ -1925,11 +1980,29 @@ them under it, so the play button changed rows as a window was resized.
 Its negative left margin is optical — it brings the first icon's edge
 over the L of LYRICS instead of its button's box, which is 6.5px wider.
 
-**`.stage .lyrics__transport` is `display: none`, and that is
-load-bearing.** The stage does not draw its own copy of the panel; it
-*lifts the panel into itself*, so without that rule these buttons would
-travel in and sit above the stage's own transport. The stage is
-otherwise untouched.
+**`.stage .lyrics__head .lyrics__transport` is `display: none`, and
+that is load-bearing.** The stage does not draw its own copy of the
+panel; it *lifts the panel into itself*, so without that rule these
+buttons would travel in and sit above the stage's own transport.
+
+**Scoped to the head, and that scoping is the whole of how the phone's
+full-screen view works.** Down there the same three buttons are lifted
+a second time — out of the head and down to the foot of the stage,
+above the scrub bar, which is where a thumb expects them and where a
+bar belongs in relation to the buttons it answers to. `placeSteps()`
+does it, through the same `lift()` the panel and the volume slider go
+through, so there is still one set of buttons on the page driving one
+`<audio>` and nothing to keep in step. The stage's own play button
+hides while they are down there: one play button, not two.
+
+**The stylesheet keys off `stage--steps`, a class, never off the
+width.** The class says what the arrangement actually is; a width query
+would be a guess at it, and the two can disagree — **turning a handset
+on its side takes it past 620px with the buttons still at the foot**.
+`placeSteps()` is therefore asked again on every width change, not only
+on opening. Tested by expanding at 375px and widening to 812: the
+buttons go home, the stage's own play button comes back, and the head's
+copy is hidden by the rule above. One set of controls either way.
 
 That 1280px override, like the phone ones, must sit **after** the base
 rule in the file. Same specificity, and a media query adds none, so

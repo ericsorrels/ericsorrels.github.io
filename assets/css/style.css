@@ -1800,15 +1800,26 @@ img {
   outline-offset: 3px;
 }
 
-/* A touch screen cannot hover, so on one the marks are simply there —
-   held well back, because a sleeve should still read as a sleeve. The
-   alternative is a control nobody can see: swiping is the natural
-   gesture down here, but nothing on screen would say the picture had
-   another side, and the two dots alone are a hint rather than an
-   invitation. */
+/* A touch screen cannot hover, so these were briefly shown outright on
+   one — held back, but there. **Eric asked for them gone on 3 October
+   2026**, and he is right: the picture is the thing, and three marks
+   sitting on it permanently made an album sleeve look like a slideshow.
+
+   Nothing about what the sleeve DOES changes. Opacity hides a mark; it
+   does not stop the button under it receiving a tap, so the left, right
+   and middle of the picture go on turning and opening it exactly as
+   before, and the swipe is on the frame and never involved the marks at
+   all. **The dots below stay visible, and down here they are the whole
+   of what says the picture has another side** — so don't hide those
+   too, and don't let them shrink into decoration.
+
+   A keyboard still brings a mark back, through the focus-visible rule
+   above, which outranks this one on specificity. That is deliberate:
+   somebody tabbing needs to see where they are, and they are not who
+   this is for. */
 @media (hover: none) {
   .sleeve--live .sleeve__mark {
-    opacity: 0.55;
+    opacity: 0;
     transform: none;
   }
 }
@@ -2408,6 +2419,40 @@ html.lightbox-open body {
               background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
+/* The cross at the handle's left end, and the words beside it.
+
+   It appears only once the panel is open, because shut it would be
+   offering to close something that is already closed. It is part of
+   the handle rather than a button of its own: the handle already
+   opens and closes, and a second button would be a second way to do
+   one job — and would have to find room to the left of something
+   already sitting at the left edge of the screen. What people were
+   missing was not a control but the knowledge that the handle was one,
+   and a mark says that better than a word.
+
+   Smaller and thinner than the letters next to it on purpose: it is
+   explaining the handle, not competing with it. */
+.lyrics-tab__close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.85em;
+  opacity: 0.8;
+}
+
+.lyrics-tab__close svg { display: block; }
+
+.lyrics-tab__label { display: block; }
+
+html.lyrics-open .lyrics-tab__close { display: inline-flex; }
+
+/* The big left padding is there to answer the space letterspacing
+   leaves after the last letter, so the WORDS sit centred. Open, the
+   cross is holding that side instead and the padding comes back in. */
+html.lyrics-open .lyrics-tab {
+  padding-left: 1.1em;
+}
+
 .lyrics-tab:hover {
   border-color: rgba(237, 232, 221, 0.4);
 }
@@ -2533,8 +2578,12 @@ html.lyrics-settling .lyrics-tab {
 
 /* Opens the words out to fill the screen. Left off below 768px, where
    the panel already takes most of it and there is nothing to gain. */
+/* Opens the words out to fill the screen. On every width since
+   3 October 2026 — it was a computer's affair until then, on the
+   reasoning that a phone's panel is already most of the screen, and
+   Eric asked for it down there too. */
 .lyrics__expand {
-  display: none;
+  display: inline-flex;
   position: absolute;
   top: 1.1em;
   right: 1.2em;
@@ -2550,9 +2599,6 @@ html.lyrics-settling .lyrics-tab {
   transition: color 0.3s ease, border-color 0.3s ease;
 }
 
-@media (min-width: 768px) {
-  .lyrics__expand { display: inline-flex; }
-}
 
 .lyrics__expand:hover {
   color: var(--paper);
@@ -2653,7 +2699,13 @@ html.lyrics-settling .lyrics-tab {
   align-items: center;
 }
 
-.stage .lyrics__transport {
+/* Scoped to the HEAD, which matters. The stage does not draw its own
+   copy of the panel, it lifts the panel into itself — so without this
+   the transport would travel in and sit above the stage's own.
+   Scoping it to the head leaves the phone free to lift those same
+   three buttons DOWN to the foot of the stage, where they stand above
+   the scrub bar; see .stage--steps below. */
+.stage .lyrics__head .lyrics__transport {
   display: none;
 }
 
@@ -2695,9 +2747,19 @@ html.lyrics-settling .lyrics-tab {
    rules above, not up with the panel's other phone rules: same
    specificity, so source order is what decides. */
 @media (max-width: 620px) {
-  /* The expand button is gone down here, so the room it was keeping in
-     the corner goes to the transport instead. */
   .lyrics__head { padding: 0.5em 0.9em 0.95em; }
+
+  /* Down here the expand button leaves the corner and joins the row,
+     at the end of it. Absolute positioning was holding it against the
+     head; static, it simply becomes the last thing in the line after
+     the three transport buttons — which is the only place it fits,
+     the corner being where the transport already is. */
+  .lyrics__expand {
+    position: static;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+  }
 
   .lyrics__tab { padding: 1.1rem 0; }
   .lyrics__tab::after { bottom: 0.82rem; }
@@ -3181,6 +3243,99 @@ html.stage-open .stage .lyrics {
 .stage__play {
   width: 46px;
   height: 46px;
+}
+
+/* ---- The phone's arrangement of the foot ---------------------------
+   Previous, play and next on their own line, with the scrub bar
+   directly beneath them — which is what a thumb expects and where the
+   bar belongs in relation to the buttons it answers to.
+
+   Keyed off `stage--steps`, a class lyrics.js sets when it has
+   actually lifted the buttons down here, rather than off the width.
+   The class says what the arrangement IS; a width query would be a
+   guess at it, and the two could disagree — turning a handset on its
+   side takes it past 620px with the buttons still at the foot. */
+
+.stage__steps {
+  display: none;
+}
+
+.stage--steps .stage__transport {
+  flex-wrap: wrap;
+  row-gap: 0.1rem;
+}
+
+.stage--steps .stage__steps {
+  display: flex;
+  flex: 1 1 100%;
+  justify-content: center;
+  order: -1;                   /* above the bar, whatever the source order */
+}
+
+/* The three buttons, carried down from the head. The left margin is
+   the head's optical nudge and has no business here, where they are
+   centred on their own line. */
+.stage--steps .lyrics__transport {
+  margin-left: 0;
+  gap: 1.6em;
+}
+
+/* One play button, not two. The stage's own is the one that goes. */
+.stage--steps .stage__play {
+  display: none;
+}
+
+/* ---- The stage's head, on a phone ----------------------------------
+   On a wide screen the tabs are centred and the track number drops out
+   of the flow to the left, where there is plenty of room beside them.
+   At 375px there is none: the centred tabs reach almost to the edge
+   and the number lands on top of LYRICS.
+
+   So down here the head is simply laid out the way the panel's own
+   head is — tabs, then the number, then the way out at the far right.
+   Which is also the better answer for its own sake: opening the words
+   out should not rearrange the one row that was already familiar.
+
+   After the .stage rules above, not before: same specificity, and a
+   media query adds none, so source order is the whole of it. */
+@media (max-width: 620px) {
+  .stage .lyrics__tabs {
+    justify-content: flex-start;
+    gap: 0 1.1em;
+  }
+
+  /* The phone's padding back, both sides of it, and this fixes two
+     things that looked unrelated.
+
+     `.stage .lyrics__tab` shortens padding-bottom to 0.6em, which is
+     right on a wide screen. Down here the phone has already made these
+     a 1.1rem tap target and moved the active underline to
+     `bottom: 0.82rem` so it sits just beneath the words rather than at
+     the foot of the target. Shorten the box under it and that 0.82rem
+     stops being below the text and starts being THROUGH it — the line
+     struck across LYRICS.
+
+     The same shortening made the padding lopsided, 1.1rem over 0.6em,
+     so the words sat low in their own box while the track number
+     centred on the box itself. That is why the number read as off its
+     line: both were centred, on different things.
+
+     Symmetric padding puts the words back in the middle of their box —
+     so the number lines up with them — and puts the box bottom back
+     where the underline was measured from. */
+  .stage .lyrics__tab {
+    padding: 1.1rem 0;
+  }
+
+  .stage .lyrics__num {
+    position: static;
+    transform: none;
+    margin-left: 0;
+  }
+
+  .stage .lyrics__expand {
+    margin-left: auto;
+  }
 }
 
 /* A fixed column each, so the numbers changing never shifts the line. */

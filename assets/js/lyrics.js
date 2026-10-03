@@ -28,6 +28,9 @@
   var A = C.access || {};
 
   var tab = document.getElementById('lyricsTab');
+  // The cross at the handle's left end, drawn once below and shown by
+  // the stylesheet only while the panel is open.
+  var tabClose = document.getElementById('lyricsTabClose');
   var panel = document.getElementById('lyricsPanel');
   if (!tab || !panel) return;
 
@@ -61,6 +64,9 @@
   var stage = document.getElementById('lyricsStage');
   var well = document.getElementById('lyricsStageWell');
   var stageVolume = document.getElementById('lyricsStageVolume');
+  // Where the phone's three buttons go while the stage is up — empty
+  // on a computer, which uses the stage's own play button instead.
+  var stageSteps = document.getElementById('lyricsStageSteps');
   var stagePlay = document.getElementById('lyricsStagePlay');
   var stageSeek = document.getElementById('lyricsStageSeek');
   var stageElapsed = document.getElementById('lyricsStageElapsed');
@@ -107,7 +113,13 @@
   var wideEnough = window.matchMedia('(min-width: 1280px)');
   // Expanding is a desktop affair; on a phone the panel is already
   // most of the screen, and there is no room to spare for a second one.
-  var roomToExpand = window.matchMedia('(min-width: 768px)');
+  // Opening the words out used to be a computer's affair only, on the
+  // reasoning that a phone's panel is already most of the screen.
+  // **Eric asked for it on phones too on 3 October 2026**, and the
+  // width gate is gone with it: the button is on every screen now, so
+  // there is no longer a width at which the way out would disappear.
+  // What the phone gets instead is its own arrangement of the
+  // controls — see placeSteps().
   // The phone sheet: full width, no volume slider, no way to the track
   // list without shutting the panel. All three touch affordances below
   // — the transport, tap-to-hide and swipe-to-hide — live only here.
@@ -958,6 +970,14 @@
     'stroke="currentColor" stroke-width="1.6" stroke-linecap="square">' +
     '<path d="M3 9h6V3M21 9h-6V3M3 15h6v6M21 15h-6v6"/></svg>';
 
+  // The cross on the handle. Thinner-stroked than the expand marks and
+  // smaller than the words beside it: it is telling you what pressing
+  // the handle does, not competing with it.
+  var CLOSE_ICON =
+    '<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="square">' +
+    '<path d="M5 5l14 14M19 5L5 19"/></svg>';
+
   // The album's own marks. Written as paths drawn at whatever size is
   // asked for, so the stage's button and the phone's are the one button
   // at two sizes rather than two sets of the same drawing.
@@ -974,6 +994,7 @@
   var NEXT_PATH = 'M15.8 5H18v14h-2.2zM5 5v14l9.4-7z';
 
   var borrowed = [];       // the way back for everything carried onto the stage
+  var stepsLifted = null;  // and the way back for the phone's three buttons
   var wasFullscreen = false;
   var scrubbing = false;   // true while the stage's handle is under a finger
 
@@ -1353,12 +1374,42 @@
     sync(true);
   }
 
+  /* ---- The phone's three buttons, on the stage ----------------------
+     On a phone the previous, play and next buttons are LIFTED out of
+     the panel's head and set above the scrub bar at the foot of the
+     stage, which is where a thumb expects them and where the bar can
+     sit directly beneath them. The same borrowing the panel and the
+     volume slider go through, so there is still one set of buttons on
+     the page driving one <audio>, and nothing to keep in step.
+
+     Asked again whenever the width changes, not only on opening,
+     because turning a phone on its side takes it over 620px — the
+     buttons would otherwise be left at the foot with the phone's
+     arrangement no longer applying to them.
+
+     The stage is marked `stage--steps` while they are down there, and
+     the stylesheet keys off THAT rather than the width: the class says
+     what the arrangement actually is, and cannot disagree with it. */
+  function placeSteps() {
+    var wanted = isExpanded && onPhone.matches && hasTransport && !!stageSteps;
+
+    if (wanted && !stepsLifted) {
+      stepsLifted = lift(transport, stageSteps);
+      stage.classList.add('stage--steps');
+    } else if (!wanted && stepsLifted) {
+      stepsLifted();
+      stepsLifted = null;
+      stage.classList.remove('stage--steps');
+    }
+  }
+
   function expand() {
-    if (isExpanded || !canExpand || !roomToExpand.matches) return;
+    if (isExpanded || !canExpand) return;
     isExpanded = true;
 
     borrowed = [lift(panel, well)];
     if (volumePanel) borrowed.push(lift(volumePanel, stageVolume));
+    placeSteps();           // after the panel, so the buttons travel from it
 
     document.documentElement.classList.add('stage-open');
     setAside(vault, true);
@@ -1394,6 +1445,10 @@
     wasFullscreen = false;
 
     document.documentElement.classList.remove('stage-open');
+    // The three buttons go home first, while the panel they belong to
+    // is still on the stage — then the panel itself is carried back and
+    // takes them with it.
+    placeSteps();
     while (borrowed.length) borrowed.pop()();
     setAside(vault, false);
     setAside(tab, false);
@@ -1453,13 +1508,11 @@
       document.addEventListener(type, onFullscreenChange);
     });
 
-    // If the window is pulled narrower than the stage is meant for, come
-    // back down: the way out would go with the room for it.
-    var onWidthChange = function () {
-      if (isExpanded && !roomToExpand.matches) collapse(false);
-    };
-    if (roomToExpand.addEventListener) roomToExpand.addEventListener('change', onWidthChange);
-    else if (roomToExpand.addListener) roomToExpand.addListener(onWidthChange);
+    // Nothing to do on a change of width any more. This used to come
+    // back down below 768px, because the expand button was hidden there
+    // and the way out would have gone with it. The button is on every
+    // screen now, so the stage can simply stay up and rearrange —
+    // which is placeSteps()'s job, called from onWidth() below.
 
     // Escape leaves; Space stops and starts; the arrows step through the
     // song. A control already under the caret answers for itself.
@@ -1737,6 +1790,9 @@
   // is simply dropped.
   function onWidth() {
     if (drag) { endDrag(false); }
+    // Turning a handset on its side takes it over 620px, so where the
+    // three buttons belong can change while the stage is still up.
+    if (canExpand) placeSteps();
     refreshWaiting();
     drawTransport();
   }
@@ -1757,6 +1813,10 @@
 
     tab.hidden = false;
     panel.hidden = false;
+
+    // The cross on the handle. Drawn once; the stylesheet decides when
+    // it is seen, which is only while the panel is open.
+    if (tabClose) tabClose.innerHTML = CLOSE_ICON;
 
     // Whichever view was last read. The words are the default, and what
     // a first-time visitor gets.
