@@ -1167,6 +1167,12 @@
   // and a toggle there would stop a song that a stray `play` arrived
   // for. Same work, told apart.
   function startPlaying() {
+    // TEMPORARY, with the band in access.js — says whether the lock
+    // screen's own play button reaches us at all.
+    if (window.TGMNOTE) {
+      window.TGMNOTE('>> startPlaying  current=' + (current ? current.number : 'none')
+        + ' paused=' + (current ? current.audio.paused : '?'));
+    }
     if (!current) {
       var opener = firstPlayable();
       if (opener) opener.audio.play();    // its own play event does the rest
@@ -1176,6 +1182,7 @@
   }
 
   function stopPlaying() {
+    if (window.TGMNOTE) window.TGMNOTE('>> stopPlaying');   // TEMPORARY
     if (current && !current.audio.paused) current.audio.pause();
   }
 

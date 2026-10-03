@@ -612,6 +612,7 @@
         positions[activeIndex] = within(activeIndex);
         emit(activeIndex, 'timeupdate');
       }
+      heartbeat();                     // TEMPORARY, throttled to once per 5s
     });
 
     // Dragging a row's bar moves the one playhead, so the words keep up
@@ -684,7 +685,8 @@
     // seen on a handset. `stalled` or `waiting` here means it ran out
     // of sound and went back to the network; `error` means that went
     // wrong, which is the thing being chased.
-    ['stalled', 'waiting', 'error', 'emptied', 'abort', 'suspend'].forEach(function (type) {
+    ['stalled', 'waiting', 'error', 'emptied', 'abort',
+     'play', 'pause', 'seeking', 'seeked', 'ended', 'ratechange'].forEach(function (type) {
       stream.addEventListener(type, function () {
         noteFault(type
           + '  ready=' + stream.readyState
@@ -692,6 +694,16 @@
           + ' at=' + stream.currentTime.toFixed(1) + 's'
           + (stream.error ? ' code=' + stream.error.code : ''));
       });
+    });
+
+    // `suspend` is left off the list above on purpose: it fires
+    // constantly and said nothing useful in the first reading, and
+    // twelve lines of it would push everything that matters off the
+    // top of the band.
+
+    document.addEventListener('visibilitychange', function () {
+      noteFault('page ' + (document.hidden ? 'HIDDEN' : 'back')
+        + '  playing=' + (stream && !stream.paused));
     });
 
     // Coming back to the page. A browser is free to have stopped
@@ -729,7 +741,7 @@
         ('0' + clock.getMinutes()).slice(-2) + ':' +
         ('0' + clock.getSeconds()).slice(-2) + '  ' + line);
       // A rolling window, so it cannot grow over the whole page.
-      while (faultLines.length > 12) faultLines.shift();
+      while (faultLines.length > 30) faultLines.shift();
 
       var box = document.getElementById('tgmPlayFault');
       if (!box) {
@@ -754,6 +766,36 @@
   function showPlayFault(err) {
     noteFault('play() refused — ' + ((err && err.name) || '?')
       + ': ' + ((err && err.message) || '?'));
+  }
+
+  // So lyrics.js can say when the lock screen's own buttons reach it.
+  // Guarded at every call site, so deleting this block is still the
+  // whole of taking it out.
+  window.TGMNOTE = noteFault;
+
+  // A line every five seconds while anything is playing, so there is a
+  // timeline rather than a handful of unrelated moments — this is the
+  // one that should show what the element was doing at the instant the
+  // lock screen gave up.
+  //
+  // Driven by the sound itself rather than by setInterval, because a
+  // phone with its screen off throttles timers to something like once
+  // a minute and the interesting seconds would simply not be recorded.
+  // Media events survive that far better.
+  var lastBeat = 0;
+
+  function heartbeat() {
+    if (!stream || stream.paused) return;
+    var now = Date.now();
+    if (now - lastBeat < 5000) return;
+    lastBeat = now;
+    noteFault('.. playing'
+      + '  ready=' + stream.readyState
+      + ' net=' + stream.networkState
+      + ' at=' + stream.currentTime.toFixed(1) + 's'
+      + ' state=' + ((window.navigator && navigator.mediaSession
+          && navigator.mediaSession.playbackState) || '?')
+      + (document.hidden ? ' HIDDEN' : ''));
   }
 
   // Start a song, from wherever it was left. Everything that plays
