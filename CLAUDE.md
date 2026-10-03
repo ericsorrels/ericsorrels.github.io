@@ -1996,8 +1996,20 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (1 October 2026)
 
-**`?v=73` is committed and waiting for Eric to push.** `?v=69` is the
-last one confirmed live, checked against graymanmusical.com.
+**`?v=73` is live and everything is pushed**, confirmed against
+graymanmusical.com on 2 October 2026: both pages at v73, the branch in
+sync, and the live `content.js` carrying `audio_version: 4`,
+`lyrics_version: 5`, `notes_version: 2`, `downloads_version: 1`, the
+booklet's new filename and track 15's three-performer credit.
+
+**The notes were checked publicly, specifically because of the ignore
+hole that morning.** `assets/notes/01.txt` and `07.txt` both 404 at
+graymanmusical.com, as do `assets/lyrics/01.lrc`, `assets/audio/01.mp3`
+and the booklet. The vault answers 401 for `session` and 404 for
+`admin`, both downloads, `notes/07.txt`, `audio/16.mp3` and
+`lyrics/16.lrc` to anyone without a cookie. **Re-run that public check
+after any `.gitignore` change** — it is the one that would have caught
+the near miss from the far side.
 
 **A vault 404 is not cached anywhere, which is worth knowing when a
 file seems not to have arrived.** Worker responses bypass Cloudflare's
