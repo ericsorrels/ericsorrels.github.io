@@ -537,6 +537,41 @@
     if (carriedOn) emit(at, 'play');
   }
 
+  /* ---- Picking the recording back up --------------------------------
+     The network let go part way through a song. Load it again, put the
+     playhead back where it was, and carry on if it was playing — which
+     is the whole of what keeps the lock screen alive, since iOS has no
+     interest in an element that has stopped.
+
+     The same address, deliberately: no cache-buster, so whatever the
+     browser already holds of the album is still good and only what is
+     missing is fetched. load() winds the playhead back to zero, hence
+     the position being taken before it and put back after the file's
+     head has arrived. */
+
+  var recovering = 0;
+
+  function recover() {
+    if (!stream) return;
+
+    var where = stream.currentTime
+      || (activeIndex >= 0 ? startOf(activeIndex) + (positions[activeIndex] || 0) : 0);
+    var wasPlaying = !stream.paused;
+
+    var back = function () {
+      stream.removeEventListener('loadedmetadata', back);
+      try {
+        stream.currentTime = where;
+      } catch (e) { /* the browser will land where it can */ }
+      if (!wasPlaying) return;
+      var going = stream.play();
+      if (going && going.catch) going.catch(showPlayFault);
+    };
+
+    stream.addEventListener('loadedmetadata', back);
+    stream.load();
+  }
+
   /* ---- The one element ---------------------------------------------- */
 
   function buildStream(into) {
@@ -609,12 +644,54 @@
 
     // No album file at all. Every row says so, rather than twenty rows
     // silently doing nothing.
+    // A failure that happens before anything ever loaded means there is
+    // no album file, and every row should say so. A failure part way
+    // through a song is the network letting go, and is a different
+    // thing entirely.
+    //
+    // This used to make no distinction, and that was the fault behind
+    // the lock screen vanishing on 3 October 2026: the buffer ran out a
+    // second or two after resuming, the request for more came back
+    // wrong, and this turned a wobble into a dead album — all twenty
+    // rows flagged "Soon", startAt() refusing to do anything, and an
+    // element sitting in an error state. An element in an error state
+    // is not playing anything, so iOS threw the Now Playing panel away.
     stream.addEventListener('error', function () {
-      stream.dataset.missing = 'true';
-      for (var i = 0; i < players.length; i++) {
-        players[i].dataset.missing = 'true';
+      var loaded = isFinite(stream.duration) && stream.duration > 0;
+
+      if (!loaded) {
+        stream.dataset.missing = 'true';
+        for (var i = 0; i < players.length; i++) {
+          players[i].dataset.missing = 'true';
+        }
+        emitAll('error');
+        return;
       }
-      emitAll('error');
+
+      // It had been playing, so put it back rather than giving up.
+      // Capped, so a file that is genuinely broken cannot put this into
+      // a loop; the count is cleared by sound actually arriving.
+      if (recovering >= 3) return;
+      recovering++;
+      recover();
+    });
+
+    // Sound is arriving again, so whatever went wrong is behind us.
+    stream.addEventListener('playing', function () { recovering = 0; });
+
+    // TEMPORARY — goes out with the block above it. Everything the
+    // element says about loading, on screen, because none of it can be
+    // seen on a handset. `stalled` or `waiting` here means it ran out
+    // of sound and went back to the network; `error` means that went
+    // wrong, which is the thing being chased.
+    ['stalled', 'waiting', 'error', 'emptied', 'abort', 'suspend'].forEach(function (type) {
+      stream.addEventListener(type, function () {
+        noteFault(type
+          + '  ready=' + stream.readyState
+          + ' net=' + stream.networkState
+          + ' at=' + stream.currentTime.toFixed(1) + 's'
+          + (stream.error ? ' code=' + stream.error.code : ''));
+      });
     });
 
     // Coming back to the page. A browser is free to have stopped
@@ -643,26 +720,40 @@
      self-contained, with its own styling inline, so that nothing in
      style.css has to be unpicked afterwards.
      ================================================================== */
-  function showPlayFault(err) {
+  var faultLines = [];
+
+  function noteFault(line) {
     try {
+      var clock = new Date();
+      faultLines.push(
+        ('0' + clock.getMinutes()).slice(-2) + ':' +
+        ('0' + clock.getSeconds()).slice(-2) + '  ' + line);
+      // A rolling window, so it cannot grow over the whole page.
+      while (faultLines.length > 12) faultLines.shift();
+
       var box = document.getElementById('tgmPlayFault');
       if (!box) {
         box = document.createElement('div');
         box.id = 'tgmPlayFault';
         box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:999;' +
+          'max-height:46vh;overflow:auto;' +
           'padding:0.9em 1em;background:#8A3D33;color:#EDE8DD;' +
-          'font-family:monospace;font-size:13px;line-height:1.5;' +
+          'font-family:monospace;font-size:12px;line-height:1.45;' +
           'white-space:pre-wrap;word-break:break-word;cursor:pointer';
         // A press puts it away, so it cannot sit over the album.
-        box.addEventListener('click', function () { box.remove(); });
+        box.addEventListener('click', function () {
+          box.remove();
+          faultLines = [];
+        });
         document.body.appendChild(box);
       }
-      box.textContent = 'play() refused\n'
-        + ((err && err.name) || '(no name)') + '\n'
-        + ((err && err.message) || '(no message)')
-        + '\nat ' + (stream ? stream.currentTime.toFixed(2) : '?') + 's'
-        + '\n(tap to dismiss)';
+      box.textContent = faultLines.join('\n') + '\n(tap to dismiss)';
     } catch (e) { /* the message is the least important thing here */ }
+  }
+
+  function showPlayFault(err) {
+    noteFault('play() refused — ' + ((err && err.name) || '?')
+      + ': ' + ((err && err.message) || '?'));
   }
 
   // Start a song, from wherever it was left. Everything that plays

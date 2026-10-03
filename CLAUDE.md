@@ -1598,6 +1598,19 @@ the harder way round.
 - **Every row knows its length at once**, because that is now
   arithmetic on the track list rather than something to fetch. The
   twenty metadata probes are gone with the twenty players.
+- **An `error` on the element means two completely different things,
+  and treating them alike cost a day.** Before anything has loaded it
+  means there is no album file, and every row should say "Soon". Part
+  way through a song it means the network let go — and marking all
+  twenty rows "Soon" there, which is what this did until 3 October
+  2026, turns a wobble into a dead album: `startAt()` then refuses to
+  do anything, and the element sits in an error state for good.
+  **On a locked phone that is also what killed the lock screen**, since
+  iOS has no interest in an element that has stopped. Told apart by
+  whether a duration was ever known. `recover()` reloads the same
+  address — no cache-buster, so what the browser already holds is still
+  good — puts the playhead back, and carries on. Capped at three
+  attempts, cleared by sound actually arriving.
 
 #### Rebuilding the recording
 
