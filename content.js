@@ -795,7 +795,13 @@ window.SITE_CONTENT = {
     // 2 October 2026 downloads were the one thing without it — so
     // replacing a PDF used to mean renaming the file as well. It no
     // longer does: the same name is now safe.
-    downloads_version: 1,
+    //
+    // Moved to 2 on 3 October 2026 for the new listening guide, which
+    // keeps the name listening-guide.pdf. This is exactly the case the
+    // number exists for: same address, different file, and without the
+    // bump anyone who had opened the old one would go on being handed
+    // it for up to an hour with nothing to show anything was wrong.
+    downloads_version: 2,
 
     // A vertical bar  |  inside a label starts a new line at that point,
     // so you can control where a long button title breaks.
