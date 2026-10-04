@@ -2557,6 +2557,19 @@ and a named vocalist for every track. Each has its own section above.
 
 **Unfinished, in rough order of how much they matter.**
 
+- **All three downloads have their files, as of 3 October 2026 — the
+  item below is history.** `about-the-world.pdf` arrived as a 15.5 MB
+  master (`about-the-world-master.pdf`, four US-letter pages: two of
+  text, two of captioned photographs) and went in at **5.2 MB, 34%**,
+  through `tools/shrink-pdf.swift` at 0.92 in under three seconds.
+  Indistinguishable from the master at 3x on a photograph. The two
+  text pages keep every character selectable (1,897 and 2,642); **the
+  two photograph pages lose their captions' selectability** (158 and
+  131 characters), the known flattening of text over artwork. No
+  `downloads_version` bump: the address had never served a file, and a
+  vault 404 is not cached. **Eric uploads it to the bucket himself** —
+  check `downloads/about-the-world.pdf` is inside the folder, not at
+  the root, if the button still 404s.
 - **One of the three download buttons still leads nowhere.** Lyric
   Booklet and Listening Guide are both done — see The downloads above.
   **About the World** is named in `content.js` but has no file yet, so
@@ -2604,9 +2617,15 @@ and a named vocalist for every track. Each has its own section above.
   stamp inside its song. **That sweep is only worth believing because
   the checker was first proved against a deliberately broken file** —
   a clean result from an untested checker is not evidence of anything.
+- **Every track has liner notes, as of 3 October 2026.** 19 and 20
+  were added that evening and 16 was revised, `notes_version` to 3.
+  The two bonus notes are prose only, with no credit block — 19 opens
+  "Oh right, the bonus tracks!" and 20 is a single line with no line
+  ending at all, which the reader handles. So "No notes for this
+  track" has no live example on the album any more. What follows was
+  written when only 01–18 existed.
 - **Tracks 01–18 have liner notes**, added 2 October 2026 as `.txt`.
-  The two bonus tracks, 19 and 20, have none and read "No notes for
-  this track". Each note is a credit block — Words and Music,
+  The two bonus tracks, 19 and 20, had none at the time. Each note is a credit block — Words and Music,
   Arrangement, Featured Performers — then prose about the song. All
   eighteen are UTF-8, with no headings, rules or emphasis markup in
   any of them, so the reader renders paragraphs and line breaks and

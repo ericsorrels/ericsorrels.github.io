@@ -661,11 +661,13 @@ window.SITE_CONTENT = {
 
     // Raise this by one whenever you add or change a notes file, the
     // same way as lyrics_version just above.
-    // Moved to 2 on 2 October 2026, when notes arrived for tracks 01–18.
+    // Moved to 2 on 2 October 2026, when notes arrived for tracks 01–18,
+    // and to 3 on 3 October for a revised 16 and new notes for the two
+    // bonus tracks, 19 and 20. Every track has notes now.
     //
     // They may be .md or .txt — whichever you save, the page reads it
     // the same way. TextEdit writes .txt, so there is nothing to rename.
-    notes_version: 2,
+    notes_version: 3,
 
     /* ---- The album's cover ----
        The picture above the track list. Nobody reads these words: they
