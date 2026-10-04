@@ -705,6 +705,51 @@ load-bearing:** the main page's contact section carries the same
 Journey. Checked after the change — index's contact is still 90px and
 its two `--from-paper` sections still 139.86px.
 
+**The welcome film sits on the turn from paper to ink, and the
+downloads follow close under it.** Eric asked for both on 3 October
+2026. Before it the film sat on flat paper, then 144px of the paper
+section's bottom padding, then the ink section's 240px fade behind
+200px of padding: **344px from the foot of the film to the word
+DOWNLOADS, now 92** (93 on a phone). The fade needs that room when
+words have to keep out of it; a film is a picture with its own edge,
+so the fade runs behind it instead.
+
+How it is built, in `style.css` beside `.vault__welcome`:
+
+- The fade is on the **paper** section, 420px up from its foot
+  (`--welcome-fade`), ending at full ink exactly where the section
+  does. It starts 45% down the film on a computer and 29% on a phone,
+  so the heading is always on clean paper. The album section below
+  drops its own fade and most of its top padding.
+- **Both rules hang on `:has(.video:not([hidden]))`.** With the film
+  emptied in `content.js`, or hidden because its file failed, the
+  section is a label and a heading, and a fade from its foot would put
+  ink words on a dark ground. Then neither rule applies and the page
+  is exactly as it was. Tested by hiding the figure: 144px and 200px
+  come back, and the ink section's own fade with them. A browser
+  without `:has()` gets that same older arrangement.
+- **The album section is pulled up one pixel over the paper one, and
+  that is load-bearing.** The two meet at a fraction of a pixel
+  (924.22), each is drawn part-way into the row they share, and what
+  is left of the row shows the body's background — paper. Between
+  paper and ink that never showed, because the fade *began* on paper.
+  With ink on both sides it was a pale hairline right across the page.
+  `margin-top: -1px` covers the row; the padding gives the pixel back.
+  **The same thing may be true of the album → closing-film join**,
+  also ink on ink at a fractional height (3262.81); it has not been
+  seen there and was left alone.
+- **`--welcome-fade` is read by two scripts.** The volume panel
+  (`access.js`) and the Liner Notes handle (`lyrics.js`) flip from
+  their paper dress to their ink one where the paper section ends —
+  which is now the *dark* end of a fade, so they sat as pale chips on
+  near-black for the last of the scroll. Both subtract half the fade
+  (`fadeMiddle()`, a three-line copy in each) and flip at its middle.
+  Unset means 0, which is the old behaviour. Change the 420 and both
+  follow without being told.
+
+Scoped under `#vault`; the main page's sections were measured after
+and are untouched.
+
 **The behind-the-scenes film carries a Carolina Theatre Workshop mark
 burned into its corner.** The main page's teaser credits them properly
 through `credit.text` / `credit.url`. This one's credit fields are

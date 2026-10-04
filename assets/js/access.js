@@ -331,9 +331,23 @@
     if (paper) {
       var ticking = false;
 
+      // The paper section ends in a fade to ink behind the welcome film
+      // (style.css, --welcome-fade), so "over paper" stops being true
+      // at the middle of that fade rather than at the section's foot —
+      // otherwise this would sit there as a pale panel on near-black
+      // for the last of the scroll. Read each time, because the fade
+      // goes away if the film does; with no fade it is 0 and this is
+      // the section's own foot, as it always was. lyrics.js asks the
+      // same question of the same number for the handle.
+      var fadeMiddle = function () {
+        var fade = parseFloat(
+          window.getComputedStyle(paper).getPropertyValue('--welcome-fade'));
+        return (isFinite(fade) && fade > 0) ? fade / 2 : 0;
+      };
+
       var matchBackdrop = function () {
         var middle = window.scrollY + window.innerHeight / 2;
-        var overPaper = middle < paper.offsetTop + paper.offsetHeight;
+        var overPaper = middle < paper.offsetTop + paper.offsetHeight - fadeMiddle();
         panel.classList.toggle('volume--on-paper', overPaper);
       };
 

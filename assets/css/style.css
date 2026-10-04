@@ -3677,6 +3677,60 @@ html.stage-open .stage .lyrics {
   margin-top: 2.6em;
 }
 
+/* The turn from paper to ink happens BEHIND the welcome film, and the
+   downloads follow close under it. Eric asked for both on 3 October
+   2026.
+
+   Before this the film sat on flat paper, then 144px of the paper
+   section's own bottom padding, then the ink section's 240px fade with
+   200px of padding to clear it: 344px between the foot of the film and
+   the word DOWNLOADS, most of it nothing. The fade needs that room when
+   words have to stay out of it. Here nothing does — the film is a
+   picture with an edge of its own — so the fade can run behind it and
+   the room can go.
+
+   So the fade moves up into the paper section and ends, at full ink,
+   exactly where that section does. The album section below then starts
+   on plain ink with only a little air above its label.
+
+   --welcome-fade is how tall the fade is, measured up from the foot of
+   the section. At 420px it starts a little under halfway down the film
+   on a computer (45%) and a little under a third down on a phone
+   (29%), so the heading and the top of the film are always on clean
+   paper. On a phone the film is nearly the width of the screen, so
+   the fade is seen only in the margins either side of it. access.js
+   and lyrics.js read the same number, to decide when the volume panel
+   and the Liner Notes handle turn from their paper dress to their ink
+   one — at the middle of the fade rather than at the foot of it, where
+   they would be pale chips on near-black for the last of the scroll.
+
+   Both rules hang on the film actually being there. With no film —
+   emptied in content.js, or hidden because its file failed — the
+   section is a label and a heading, and a 420px fade from its foot
+   would put ink words on a dark ground. Then neither rule applies and
+   the page is as it was: paper above, the ordinary fade below. A
+   browser too old for :has() gets that same older arrangement. */
+#vault .section--paper:has(.video:not([hidden])) {
+  --welcome-fade: 420px;
+  background: linear-gradient(to bottom,
+    var(--paper) calc(100% - var(--welcome-fade)), var(--ink) 100%);
+  padding-bottom: clamp(44px, 6vh, 72px);
+}
+
+/* The one pixel of overlap is not tidiness. Where two sections meet at
+   a fraction of a pixel, each is drawn part-way into the row they
+   share, and what is left of that row shows the page's own background
+   — which is paper. Between a paper section and an ink one that was
+   never visible, because the fade began on paper. Here both sides of
+   the join are ink, and it showed as a pale hairline right across the
+   page. Drawing this section one pixel up over the foot of the last
+   covers the row whole; the padding gives the pixel back. */
+#vault .section--paper:has(.video:not([hidden])) + .section--from-paper {
+  background: var(--ink);
+  margin-top: -1px;
+  padding-top: calc(clamp(40px, 5.5vh, 64px) + 1px);
+}
+
 /* The closing film and its thank-you, after the bonus tracks. The film
    centres and caps its own width through .video; these only supply the
    air around them, since .section--contact has no bottom padding of its

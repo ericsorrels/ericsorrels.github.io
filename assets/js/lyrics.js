@@ -153,12 +153,23 @@
   // the volume panel does. Set once the album is built.
   var paperSection = null;
 
+  // The paper section ends in a fade to ink behind the welcome film
+  // (style.css, --welcome-fade), so the handle changes its dress at the
+  // middle of that fade, not at the section's foot. The same reading
+  // access.js takes for the volume panel; 0 when there is no fade.
+  function fadeMiddle() {
+    var fade = parseFloat(
+      window.getComputedStyle(paperSection).getPropertyValue('--welcome-fade'));
+    return (isFinite(fade) && fade > 0) ? fade / 2 : 0;
+  }
+
   function matchBackdrop() {
     if (!paperSection) return;
     var tabBox = tab.getBoundingClientRect();
     tab.classList.toggle(
       'lyrics-tab--on-paper',
-      tabBox.top + tabBox.height / 2 < paperSection.getBoundingClientRect().bottom
+      tabBox.top + tabBox.height / 2
+        < paperSection.getBoundingClientRect().bottom - fadeMiddle()
     );
   }
 
