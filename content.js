@@ -23,11 +23,14 @@ window.SITE_CONTENT = {
   },
 
   /* ---- Menu at the top of the page ------------------------------------ */
+  // Keep these short: all five have to sit on one line across a phone.
+  // The last one leaves this page for the album's own page.
   nav: {
     about: "About",
     music: "Music",
-    news: "News",
+    news: "Journey",
     contact: "Contact",
+    access: "Early Access",
   },
 
   /* ---- Opening screen (the "poster") ----------------------------------- */
@@ -140,6 +143,17 @@ window.SITE_CONTENT = {
       //
       // Emptying it ("") removes the line.
       terms: "All sales are final.",
+    },
+
+    // Under the button above: the way in for someone who has already
+    // bought the album, so they are not left thinking they must buy it
+    // again. The first line is plain words; the second is the link,
+    // and takes them to the album's own page.
+    //
+    // Emptying  link  ("") removes the whole line.
+    have_access: {
+      line: "Already have access?",
+      link: "Enter here.",
     },
   },
 

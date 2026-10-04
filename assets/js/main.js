@@ -324,6 +324,16 @@
       cta.hidden = false;
     }
 
+    // The way in, under that button, for someone who already has
+    // access. Its words are ordinary slots and were poured in above;
+    // all this does is the empty-string rule — no words for the link,
+    // no line, rather than a question left standing with no answer.
+    var haveAccess = document.getElementById('haveAccess');
+    if (haveAccess) {
+      var enter = haveAccess.querySelector('.cta__enter');
+      if (!enter || !enter.textContent.trim()) haveAccess.hidden = true;
+    }
+
     // The same offer on the access page's gate, for someone who arrived
     // without a password. It borrows the shop address from the button
     // above rather than holding its own, so there is only one to keep

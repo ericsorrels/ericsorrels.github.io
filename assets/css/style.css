@@ -332,6 +332,47 @@ img {
   color: var(--ink);
 }
 
+/* Five items on a phone. Four fitted at the site's full tracking; the
+   fifth, EARLY ACCESS, is as long as two of the others together, and
+   at 375px it broke onto a second line with the row running from one
+   edge of the glass to the other.
+
+   So down here the menu closes up: a little smaller, a good deal less
+   tracked, and spread evenly across whatever width there is rather
+   than by a fixed gap — which is what lets one rule answer for every
+   handset instead of one per width. Still capitals, still letterspaced;
+   it is the same menu standing closer together. `nowrap` is the part
+   that must not go: a label that wraps makes the bar two lines tall.
+
+   The right padding is smaller than the left by the tracking, because
+   letterspacing leaves its gap after the last letter too and the row
+   would otherwise sit a hair left of centre. */
+@media (max-width: 520px) {
+  .site-nav {
+    justify-content: space-between;
+    gap: 0;
+    padding-left: 1.2rem;
+    /* 0.16em of a 0.56rem letter. */
+    padding-right: calc(1.2rem - 0.09rem);
+  }
+
+  .site-nav a {
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+}
+
+/* The narrowest handset still about. At 320px the five words were left
+   4px apart; giving up some of the margin puts air back between them,
+   which is where it is needed more. */
+@media (max-width: 340px) {
+  .site-nav {
+    padding-left: 0.7rem;
+    padding-right: calc(0.7rem - 0.09rem);
+  }
+}
+
 /* --------------------------------------------------------------------
    Content sections — alternating paper and ink, joined by slow
    gradient crossfades so each one emerges from the last like fog.
@@ -686,6 +727,45 @@ img {
   font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--gray-mid);
+}
+
+/* "Already have access? Enter here." — under the button and its small
+   print, for someone who has bought the album and must not be left
+   thinking they have to buy it again. A line of words with a link in
+   it, deliberately not a second button: the filled one above is the
+   one thing this page asks a new visitor to do, and a second box
+   beside it would make two equal choices out of a first and a second.
+
+   Sentence case like the terms above it — it is a question, and reads
+   as one — and set apart from them by more air than they have from
+   each other, because it is talking to a different person. */
+.cta__have {
+  margin: 2.4em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--gray-mid);
+}
+
+/* Underlined, the way the gate's quiet second choices are, so it reads
+   as somewhere to go without being boxed. The padding is the tap
+   target: the words are small, and a thumb needs more than the words. */
+.cta__enter {
+  display: inline-block;
+  padding: 0.9em 0.3em;
+  margin: -0.9em 0;
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 0.35em;
+  text-decoration-color: rgba(237, 232, 221, 0.5);
+  transition: color 0.3s ease, text-decoration-color 0.3s ease;
+}
+
+.cta__enter:hover,
+.cta__enter:focus-visible {
+  color: #fff;
+  text-decoration-color: var(--paper);
 }
 
 /* The same line under the gate's buy button. On paper rather than ink,

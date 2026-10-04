@@ -140,9 +140,38 @@ Representation is the one exception, because it's a plain business heading
 and shouldn't be dressed up.
 
 **The nav labels deliberately do not match the section headings.** The menu
-reads About / Music / News / Contact while the sections read The Legend /
-The Music / The Journey / Representation. Eric was shown this and said to
-leave it — short menu words scan faster. It is not a bug; don't "fix" it.
+reads About / Music / Journey / Contact / Early Access while the sections
+read The Legend / The Music / The Journey / Representation. Eric was shown
+this and said to leave it — short menu words scan faster. It is not a bug;
+don't "fix" it. (He changed "News" to "Journey" himself on 3 October 2026,
+so that one now does match; the key in `content.js` is still `nav.news`
+and the section's id is still `#news`, which is not worth churning.)
+
+**The menu has a fifth item, Early Access, and it is the one that leaves
+the page** — it goes to `access.html`. Added 3 October 2026 with the
+line under the buy button (see below). It sits last, after Contact, the
+way a sign-in ends any menu, so the four that move about the page stay
+together.
+
+**Five items needed the menu closed up on a phone.** At the site's full
+tracking EARLY ACCESS broke onto a second line at 375px and the row ran
+from one edge of the glass to the other. Below 520px the links drop to
+0.56rem and 0.16em tracking with `white-space: nowrap`, and are spread
+by `justify-content: space-between` rather than a fixed gap — one rule
+for every handset rather than one per width. Measured: one row at 375
+(18px between words), at 320 (8px, after a 340px rule gives up some
+margin), and at 520/521 either side of the switch. **`nowrap` is the
+part that must not go.** A sixth item will not fit a phone; a label
+much longer than "Early Access" will not either.
+
+**"Already have access? Enter here." sits under the buy button in the
+Music section**, `#haveAccess`, words from `music.have_access`. It is a
+line with a link in it and deliberately not a second button — the
+filled button is the one thing the page asks a new visitor to do. It
+is the other half of the gate's "No invitation?", so each door points
+at the other. Outside `#earlyAccess` on purpose: that block hides when
+there is no shop address, and the way in does not depend on a shop.
+Emptying `have_access.link` hides the whole line (`main.js`).
 
 When writing new copy, match the register. When in doubt, write the plainer
 line and let Eric make it stranger.
@@ -760,7 +789,10 @@ spelled out in words as well as in the corner of the picture.
 
 ## Early access page (`access.html`)
 
-Unlinked from the main site and `noindex`. **The album is not part of this
+`noindex`, and **linked from the main page since 3 October 2026** — a
+fifth menu item and a line under the buy button; until then it was
+unlinked. That costs nothing: the gate is what protects the album, not
+the address being hard to find. **The album is not part of this
 website.** Its audio, words, notes and downloads live in a private
 Cloudflare R2 bucket, `grayman-vault`, which has no public address of its
 own, and the only way to them is a Worker — `cloudflare/vault-worker.js` —

@@ -51,7 +51,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=81" />
+  <link rel="stylesheet" href="assets/css/style.css?v=82" />
 </head>
 <body>
 
@@ -63,10 +63,15 @@
   <nav class="site-nav" aria-label="Site">
     <a href="#about" data-content="nav.about">About</a>
     <a href="#music" data-content="nav.music">Music</a>
-    <a href="#news" data-content="nav.news">News</a>
+    <a href="#news" data-content="nav.news">Journey</a>
     <!-- Points at Track the Storm, which sits directly above the
          representation details, so both are in view on arrival. -->
     <a href="#storm" data-content="nav.contact">Contact</a>
+    <!-- The one item that leaves the page: the album's own page, for
+         someone who already has access. Last, the way a sign-in sits
+         at the end of any menu, so the four that move about this page
+         stay together. -->
+    <a href="access.html" data-content="nav.access">Early Access</a>
   </nav>
 
   <section class="hero texture-grain texture-halftone">
@@ -192,6 +197,19 @@
              entirely if that line is left empty. -->
         <p class="cta__terms"></p>
       </div>
+
+      <!-- The way in for someone who has already bought it, so nobody
+           arrives at the button above and thinks they must buy again.
+           The other half of the pairing on the album page's gate, which
+           says "No invitation?" and points back here. Words from
+           content.js → music.have_access; emptying the link's words
+           removes the whole line. Deliberately outside the block above:
+           that one hides when there is no shop address, and the way in
+           does not depend on there being a shop. -->
+      <p class="cta__have" id="haveAccess">
+        <span data-content="music.have_access.line">Already have access?</span>
+        <a class="cta__enter" href="access.html" data-content="music.have_access.link">Enter here.</a>
+      </p>
     </div>
   </section>
 
@@ -313,9 +331,9 @@
     </footer>
   </section>
 
-  <script src="content.js?v=81"></script>
-  <script src="assets/js/main.js?v=81"></script>
-  <script src="assets/js/weather.js?v=81"></script>
-  <script src="assets/js/storm-track.js?v=81"></script>
+  <script src="content.js?v=82"></script>
+  <script src="assets/js/main.js?v=82"></script>
+  <script src="assets/js/weather.js?v=82"></script>
+  <script src="assets/js/storm-track.js?v=82"></script>
 </body>
 </html>
