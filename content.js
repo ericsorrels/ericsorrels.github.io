@@ -828,7 +828,10 @@ window.SITE_CONTENT = {
     // number exists for: same address, different file, and without the
     // bump anyone who had opened the old one would go on being handed
     // it for up to an hour with nothing to show anything was wrong.
-    downloads_version: 2,
+    //
+    // Moved to 3 on 4 October 2026 for a corrected about-the-world.pdf,
+    // the same case again: a typo fixed, the name kept.
+    downloads_version: 3,
 
     // A vertical bar  |  inside a label starts a new line at that point,
     // so you can control where a long button title breaks.

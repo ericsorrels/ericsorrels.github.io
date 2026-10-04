@@ -2659,6 +2659,15 @@ and a named vocalist for every track. Each has its own section above.
   vault 404 is not cached. **Eric uploads it to the bucket himself** —
   check `downloads/about-the-world.pdf` is inside the folder, not at
   the root, if the button still 404s.
+  **Replaced on 4 October 2026 for a typo**, same name, and this time
+  `downloads_version` went to 3 — the address had served a file by
+  then, which is exactly the case the number is for. Same result from
+  the same settings: 15.5 MB to 5.2 MB, four pages, the same two pages
+  keeping their text. **The way to confirm a corrected master actually
+  carries the correction** is to pull the text out of the old web copy
+  and the new one with PDFKit and `diff` them word by word; it showed
+  the one reworded line on page 3 and nothing else, which is better
+  evidence than a matching file size.
 - **One of the three download buttons still leads nowhere.** Lyric
   Booklet and Listening Guide are both done — see The downloads above.
   **About the World** is named in `content.js` but has no file yet, so
