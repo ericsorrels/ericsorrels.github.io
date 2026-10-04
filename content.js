@@ -142,7 +142,11 @@ window.SITE_CONTENT = {
       // the vault still takes access away on a refund or dispute.
       //
       // Emptying it ("") removes the line.
-      terms: "All sales are final.",
+      //
+      // Emptied on 3 October 2026 — it read "All sales are final." and
+      // you asked for it gone from both pages. To put a line back, type
+      // it between the quotation marks and it returns in both places.
+      terms: "",
     },
 
     // Under the button above: the way in for someone who has already

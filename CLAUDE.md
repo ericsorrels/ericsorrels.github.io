@@ -1387,6 +1387,18 @@ Under the password form, between it and the back link, the gate offers
 to go other than away. It shows on the wrong-password screen too, which is
 when it is most use.
 
+**There is no terms line on either page, as of 3 October 2026.** It
+read "All sales are final." under both buy buttons; Eric asked for it
+gone from both, and `music.early_access.terms` is now `""`, which
+removes the element in both places rather than leaving an empty
+paragraph. Checked in the preview: no `.cta__terms` on the main page,
+no `#gateTerms` at the gate, and the buy button and its note are
+untouched. **This is the site no longer saying it — whatever refund
+policy is set in Gumroad is unchanged**, and the vault still takes
+access away on a refund or dispute. The machinery below is all still
+there; typing a line back between the quotation marks restores it in
+both places.
+
 **Neither the shop address nor the terms are written twice.** `#gateBuy`
 takes its `href` from `music.early_access.url` and `#gateTerms` its
 words from `music.early_access.terms` — the same two the main page's
