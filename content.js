@@ -532,9 +532,16 @@ window.SITE_CONTENT = {
       },
       play_label: "Play the behind-the-scenes film",
     },
-    // A vertical bar  |  starts a new line at that point.
+    // A vertical bar  |  starts a new line at that point, on every
+    // screen — so the four lines below break exactly where the bars are.
+    //
+    // To make some of the words a link, put the words in square
+    // brackets and the web address straight after in round ones:
+    //     [pre-save the album](https://the.address)
+    // The address must begin with https:// and have no spaces in it.
+    // It opens in a new tab, so nobody is taken away from the album.
     thanks:
-      "Thank you for supporting *The Gray Man*! Be sure to pre-save the album on Spotify or Apple Music, and spread the word…|a hurricane is coming!",
+      "Thank you for supporting *The Gray Man*!|Be sure to [pre-save the album](https://distrokid.com/hyperfollow/ericsorrels/the-gray-man?ref=release)|And spread the word…|A HURRICANE IS COMING!",
 
     /* ---- The album tracks ------------------------------------------------ */
     // The album is ONE recording — see the block just below — and the

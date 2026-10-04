@@ -64,6 +64,25 @@
         el.innerHTML = el.innerHTML.replace(/\|/g, '<br>');
       }
 
+      // Opt in to links:  [the words](https://the.address)  becomes
+      // those words, linked. Opt-in for the same reason the breaks are
+      // — format() runs on every slot on both pages, and square
+      // brackets are ordinary punctuation everywhere else.
+      //
+      // The text has already been escaped by format(), so nothing in
+      // content.js can become markup of its own; this adds the one tag.
+      // Only a full http(s) address is accepted, and one with a
+      // quotation mark, a space or an angle bracket in it is not an
+      // address — which is also what keeps it from breaking out of the
+      // attribute it is written into. Anything that doesn't match is
+      // simply left on the page as it was typed.
+      if (el.hasAttribute('data-content-links')) {
+        el.innerHTML = el.innerHTML.replace(
+          /\[([^\]\[]+)\]\((https?:\/\/[^\s)"'<>]+)\)/g,
+          '<a class="prose-link" href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+      }
+
       if (el.hasAttribute('data-email')) {
         el.setAttribute('href', 'mailto:' + value);
       }

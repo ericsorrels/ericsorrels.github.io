@@ -3825,6 +3825,50 @@ html.stage-open .stage .lyrics {
   text-align: center;
 }
 
+/* The four lines break where content.js says and nowhere else, on a
+   phone as on a computer. Eric set the breaks himself on 4 October
+   2026, and at the ordinary size the first line is 331px wide — 16
+   more than a 375px phone has — so it broke a second time and left
+   MAN! alone on a row of its own.
+
+   So the type gives a little on a narrow screen instead of the line
+   breaking. The longest line is 21.76 times the font size wide and the
+   column is 84% of the screen, which puts the largest size that still
+   fits at 3.86vw; 3.75vw leaves a few pixels to spare. `min()` means
+   this only ever bites below about 405px — everywhere wider the first
+   value wins and the size is exactly what the rest of the prose uses.
+
+   If the words change, the 21.76 changes with them. A longer first
+   line needs a smaller number here; measure it rather than guess. */
+.vault__thanks p {
+  font-size: min(clamp(0.95rem, 1.15vw, 1.05rem), 3.75vw);
+}
+
+/* And the title never splits, whatever else happens — a larger text
+   size set on the phone, a longer line. If something has to wrap, it
+   wraps before THE GRAY MAN rather than through it. */
+.vault__thanks .show-title {
+  white-space: nowrap;
+}
+
+/* A link inside a line of prose, made by main.js from the square-
+   bracket convention in content.js. Dressed exactly as .contact-link
+   and .video__credit-link are — the site's one way of setting a link
+   on ink — so a third kind of link does not look like a third thing. */
+.prose-link {
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgba(237, 232, 221, 0.35);
+  transition: text-decoration-color 0.3s ease;
+}
+
+.prose-link:hover,
+.prose-link:focus-visible {
+  text-decoration-color: var(--paper);
+}
+
 /* The gap between the last bonus track and the closing film.
 
    It was 230px: two sections' padding meeting, 140 below the track list

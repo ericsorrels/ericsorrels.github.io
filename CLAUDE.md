@@ -119,6 +119,18 @@ Helper conventions inside `content.js`:
   Nothing in an ordinary slot can be HTML — `format()` escapes the
   string before it does anything else — so `data-content-breaks` is how
   a line break gets into copy at all.
+- **`[words](https://address)` makes a link, but only in an element
+  carrying `data-content-links`** — opt-in for the same reason the
+  breaks are: `format()` runs on every slot on both pages, and square
+  brackets are ordinary punctuation everywhere else. Added 4 October
+  2026 for the pre-save link in `access.thanks`, the only slot that
+  uses it. The text is escaped by `format()` first, so nothing in
+  `content.js` can become markup; `main.js` then adds the one tag. Only
+  a full `http(s)` address with no space, quotation mark or angle
+  bracket in it is accepted, which is also what keeps it from breaking
+  out of the `href` it is written into; anything else is left on the
+  page as typed. It opens in a new tab and is dressed as `.prose-link`,
+  a copy of `.contact-link`.
 - An empty string `""` hides whatever it controls — a video, a button, a
   contact line. Nothing on the site ever shows a link that leads nowhere.
 
@@ -778,6 +790,26 @@ How it is built, in `style.css` beside `.vault__welcome`:
 
 Scoped under `#vault`; the main page's sections were measured after
 and are untouched.
+
+**The thank-you under the closing film is four lines, broken where
+Eric put the bars, on every screen.** Set 4 October 2026: the thanks,
+"Be sure to pre-save the album" with those last words linked to the
+DistroKid pre-save page, "And spread the word…", and A HURRICANE IS
+COMING! in capitals he typed himself. The earlier wording named
+Spotify and Apple Music with nothing to tap; this is that gap closed.
+
+**Holding four lines on a phone took a rule, because the first line
+did not fit.** At the prose's ordinary 15.2px it is 331px wide and a
+375px phone has 315, so it broke again and left MAN! on a row alone.
+`.vault__thanks p` now takes `min(<the usual clamp>, 3.75vw)`: the
+longest line is 21.76 × the font size and the column is 84% of the
+screen, so 3.86vw is the most that fits and 3.75 leaves a few pixels.
+It bites only below about 405px. Measured: four rows at 320 (12px),
+375 (14.06px), 430 and 1280 (15.2px, untouched). The title also
+carries `white-space: nowrap` so that if anything ever does wrap, it
+wraps before THE GRAY MAN rather than through it. **If the words
+change, the 21.76 changes with them — measure the new longest line
+rather than guess.**
 
 **The behind-the-scenes film carries a Carolina Theatre Workshop mark
 burned into its corner.** The main page's teaser credits them properly
