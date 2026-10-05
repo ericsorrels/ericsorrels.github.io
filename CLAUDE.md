@@ -1216,6 +1216,14 @@ undisturbed), ticks surviving the sort, cleared by an Add, the default
 order restored, and the choice still there when the page was reopened.
 One row at 430px with no sideways scroll.
 
+**Deployed by Eric and checked the same day, 5 October 2026**: the
+usual handful — `session` 401, the admin page and its list 404 to
+anyone without his session, every vault file 404, the doorbell 404 on
+a wrong secret, a malformed address 400. **That check proves the paste
+went in whole; it cannot show the sort itself**, which sits behind his
+sign-in. Until he has said it looks right on the real page, describe
+it as deployed and tested against a stand-in, not as seen working.
+
 **Its wording is hardcoded, not in `content.js`** — a tool of Eric's,
 like `tools/lyric-timer.html`. No visitor sees it and it must work with
 no site around it, so it loads no fonts and no libraries.
