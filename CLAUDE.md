@@ -1273,6 +1273,59 @@ in Gumroad's own settings fires on sales only; `refund`, `dispute`,
 disputes** button does that, so it never needs a terminal. Registering
 twice is harmless.
 
+**A sale that did not reach the list by itself, 5 October 2026 —
+investigated, and it was not the referrer.** A buyer who arrived from a
+link on Instagram (`referrer: https://l.instagram.com/`, paid by Link,
+with a discount code and a tip) bought at 16:11:54Z and was not on the
+list two hours later; Eric added him by hand. He asked whether
+Instagram had broken the ping. **It had not, and cannot.** What was
+established, and how:
+
+- **Our worker reads one field of a ping, `email`.** A ping built to
+  Gumroad's own shape with the Instagram referrer, `url_params[fbclid]`
+  and the rest was run through the worker's source beside an ordinary
+  one: both added the buyer. The real sale's JSON matches
+  `GUMROAD_PRODUCT` and counts.
+- **Gumroad sends the ping the same way whatever the referrer** — read
+  from its public source (`antiwork/gumroad`): the referrer is one
+  more field in the form, and a tracked link adds a `url_params` hash.
+  The ping goes out **10 seconds after the purchase commits**, so "the
+  sale was not visible yet" is unlikely; the sales API's `email`
+  filter is a plain database query, not a search index.
+- **Cloudflare let both shapes through to the worker** when posted
+  from here with Ruby-style user agents — though Gumroad's servers are
+  data-centre addresses and may be treated differently, so this does
+  not rule out a block. **Cloudflare → Security → Events is the place
+  to look** for one around the time of a missed sale.
+
+**The real weakness is ours, and it is not about Instagram:
+`handleGumroad` says 200 before it has done anything, then tries
+once.** If that one try fails — Gumroad's API answering 500 or 429, a
+D1 write refused — the buyer is not added, nothing is logged, and
+because Gumroad was told "got it" it never sends the ping again. All
+three were reproduced against stand-ins. **Which of them happened on
+5 October cannot be known**: the worker keeps no record. Gumroad's
+side: 5-second timeout, retries only on 499/500/502/503/504 and
+connection failures, at +1, +3 and +10 minutes, and **drops any other
+answer (a 403, a 404) with no retry at all**.
+
+**Nobody was locked out by it**, which is the part to tell Eric first:
+the backup path below asks Gumroad when an unlisted address requests a
+code, so that buyer would have been let in the moment he tried. What
+lags is the *list on the admin page*, not the door.
+
+**The fix that fits, offered and awaiting Eric's word:** do the lookup
+before answering (it takes well under the 5 seconds), and answer 503
+when it could not be completed or when a ping that claims a live sale
+finds none — so Gumroad's own retries do the waiting. The ping stays a
+rumour: its claim only decides whether to ask again, never what is
+written. **In passing:** `hasLiveSale` checks `sale.chargebacked`, but
+the sales API's field is `chargedback`. Harmless — `disputed` with
+`dispute_won` false is the same condition and is checked on the next
+line — but worth correcting when the worker is next touched.
+(`access_revoked` is confirmed as the real name of the revoked field;
+the raw dump showed it.)
+
 **The backup path is what makes a missed webhook survivable.** If
 somebody asks for a code and is not on the list, `postCode()` asks
 Gumroad about them before giving up, and lets them in if they have a
