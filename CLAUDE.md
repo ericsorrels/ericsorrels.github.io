@@ -1184,6 +1184,38 @@ appears below, filled and pre-selected. Tested by making both
 There is nothing odd about sending yourself the announcement, and it is
 the easiest way to see what everyone else got.
 
+**The list can be put in order of last sign-in, added 5 October 2026 at
+Eric's asking.** Two quiet words above the table, *Date added* and
+*Last signed in*. The second puts the most recent sign-in at the top
+and everybody who has never signed in at the bottom.
+
+- **It sorts in the page, on a copy.** The worker still sends the list
+  newest-added first and that order is kept exactly as it arrived, so
+  *Date added* is always there to go back to. No route changed and
+  nothing new is asked of D1.
+- **It sorts on the full moment, not the day the table shows**, so two
+  people who signed in on the same day are still in the right order.
+  Those who have never signed in keep the order they had, newest-added
+  first — the sort is stable and returns 0 for a pair of nevers.
+- **A change of order keeps the ticks; a change of who is on the list
+  still clears them.** `show(keepTicks)` is the difference. Sorting is
+  the one redraw where losing a half-made selection would be a
+  nuisance with no reason behind it; Add and Remove clear them as they
+  always have, for the reason given above.
+- **The choice is remembered** in `localStorage` under
+  `tgm_admin_order`, in that browser only.
+- **Words above the table rather than arrows on the column headings**,
+  because the Added column is hidden at ≤620px and its heading would
+  go with it, leaving a phone with no way back to the default order.
+
+Tested by writing the admin page into the preview pane with a stand-in
+`fetch` — the way to exercise this page from here, since the real one
+needs Eric's session: seven rows in the worker's order, then by
+sign-in (two on the same day in the right order, the nevers last and
+undisturbed), ticks surviving the sort, cleared by an Add, the default
+order restored, and the choice still there when the page was reopened.
+One row at 430px with no sideways scroll.
+
 **Its wording is hardcoded, not in `content.js`** — a tool of Eric's,
 like `tools/lyric-timer.html`. No visitor sees it and it must work with
 no site around it, so it loads no fonts and no libraries.
@@ -1392,10 +1424,12 @@ only a real ping carries the real secret. The proof is the next
 genuine sale appearing on the admin page tagged GUMROAD without help;
 until one has, describe this as deployed, not as verified.
 
-**The two comments in the worker that date this change say 6 October;
-it was the 5th.** Left as deployed, because correcting a comment would
-make the repo differ from what is running for the sake of a date. Put
-them right the next time the worker is pasted in for a real reason.
+**The two comments in the worker that dated this change said
+6 October; it was the 5th.** They were left as deployed at first,
+because correcting a comment would have made the repo differ from what
+was running for the sake of a date, and were put right later the same
+day when the worker next changed for a real reason — the admin page's
+sort order.
 
 **The backup path is what makes a missed webhook survivable.** If
 somebody asks for a code and is not on the list, `postCode()` asks

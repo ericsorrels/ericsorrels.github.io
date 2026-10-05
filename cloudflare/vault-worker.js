@@ -674,7 +674,7 @@ async function handleGumroad(request, env, ctx, tail) {
   if (!email) return json({ ok: true }, 200);
 
   // THE LOOKING-UP NOW HAPPENS BEFORE THE ANSWER, and the answer says
-  // whether it worked. Until 6 October 2026 this replied 200 at once
+  // whether it worked. Until 5 October 2026 this replied 200 at once
   // and then tried a single time in the background: if that one try
   // failed — Gumroad's API having a bad moment, the guest list refusing
   // a write — the buyer was not added, nothing recorded it, and Gumroad
@@ -850,7 +850,7 @@ async function hasLiveSale(env, email) {
     if (!mine) return false;
 
     // Gumroad's sales API spells it `chargedback`. This looked for
-    // `chargebacked` until 6 October 2026, a name it uses elsewhere but
+    // `chargebacked` until 5 October 2026, a name it uses elsewhere but
     // not here, so the test never fired. No harm came of it: a
     // chargeback also sets `disputed`, which the next line has always
     // caught. Both spellings are kept, since the old one costs nothing.
@@ -1305,6 +1305,14 @@ const ADMIN_PAGE = `<!doctype html>
   #pickedOut[data-open] { display:block; }
   .x { border:none; color:var(--gray); font-size:.62rem; padding:.35rem .5rem; letter-spacing:.14em; }
   .x:hover:not(:disabled) { background:transparent; color:var(--ink); text-decoration:underline; }
+  /* Which order the list is in. Two quiet words rather than arrows on
+     the column headings, because the Added column is hidden on a phone
+     and its heading would go with it — leaving no way back. */
+  .sort { display:flex; gap:.2rem; align-items:center; flex-wrap:wrap; margin:1.4rem 0 .1rem; }
+  .sort__label { font-size:.62rem; letter-spacing:.18em; text-transform:uppercase;
+                 color:var(--faint); font-weight:600; margin-right:.4rem; }
+  .sort__by[aria-pressed=true] { color:var(--ink); text-decoration:underline;
+                                 text-underline-offset:.3em; }
   .note { font-size:.82rem; color:var(--faint); margin:.6rem 0 0; }
   code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem;
          background:#fff; border:1px solid var(--edge); border-radius:2px;
@@ -1341,6 +1349,12 @@ const ADMIN_PAGE = `<!doctype html>
     of it. BCC keeps each person's address to themselves. Tick the box at the top
     of the table to take the lot.</p>
   <textarea id="pickedOut" readonly rows="4"></textarea>
+
+  <div class="sort" role="group" aria-label="Order of the list">
+    <span class="sort__label">Sort by</span>
+    <button class="x sort__by" id="sortAdded" aria-pressed="true">Date added</button>
+    <button class="x sort__by" id="sortSeen" aria-pressed="false">Last signed in</button>
+  </div>
 
   <table>
     <thead><tr>
@@ -1428,6 +1442,76 @@ const ADMIN_PAGE = `<!doctype html>
   }
 
   var you = '';
+
+  /* ------------------------------------------------------------------
+     The order of the list.
+
+     The worker sends it newest-added first, and that order is kept
+     exactly as it arrived — sorting works on a copy, so "Date added"
+     is always there to go back to.
+
+     "Last signed in" puts the most recent sign-in at the top and
+     everybody who has never signed in at the bottom. It sorts on the
+     full moment, not the day shown in the table, so two people who
+     signed in on the same day are still in the right order. Those who
+     have never signed in keep the order they had, newest-added first.
+     ------------------------------------------------------------------ */
+
+  var members = [];
+  var order = 'added';              // or 'seen'
+  var ORDER_KEY = 'tgm_admin_order';
+
+  try {
+    if (window.localStorage.getItem(ORDER_KEY) === 'seen') order = 'seen';
+  } catch (e) { /* private browsing; the default will do */ }
+
+  function when(iso) {
+    var t = iso ? Date.parse(iso) : NaN;
+    return isNaN(t) ? null : t;
+  }
+
+  function inOrder() {
+    if (order !== 'seen') return members;
+    return members.slice().sort(function (a, b) {
+      var x = when(a.last_login);
+      var y = when(b.last_login);
+      if (x !== null && y !== null) return y - x;
+      if (x !== null) return -1;       // a has signed in, b never has
+      if (y !== null) return 1;
+      return 0;                        // neither has: leave them be
+    });
+  }
+
+  // keepTicks is for a change of order only. Anything that changes who
+  // is ON the list still clears the ticks, as it always has, so the box
+  // at the top never speaks for a list it is no longer describing.
+  function show(keepTicks) {
+    var kept = keepTicks ? chosen() : [];
+
+    draw(inOrder());
+
+    if (kept.length) {
+      picks().forEach(function (box) {
+        if (kept.indexOf(box.getAttribute('data-email')) > -1) box.checked = true;
+      });
+      tally();
+    }
+
+    $('sortAdded').setAttribute('aria-pressed', order === 'added' ? 'true' : 'false');
+    $('sortSeen').setAttribute('aria-pressed', order === 'seen' ? 'true' : 'false');
+  }
+
+  function setOrder(next) {
+    if (order === next) return;
+    order = next;
+    try {
+      window.localStorage.setItem(ORDER_KEY, order);
+    } catch (e) { /* nothing to do */ }
+    show(true);
+  }
+
+  $('sortAdded').addEventListener('click', function () { setOrder('added'); });
+  $('sortSeen').addEventListener('click', function () { setOrder('seen'); });
 
   function draw(list) {
     $('count').textContent = list.length === 1 ? '1 person' : list.length + ' people';
@@ -1561,7 +1645,8 @@ const ADMIN_PAGE = `<!doctype html>
       }
       you = r.you;
       $('who').textContent = 'Signed in as ' + r.you;
-      draw(r.members);
+      members = r.members || [];
+      show(false);
     });
   }
 
