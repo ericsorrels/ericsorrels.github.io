@@ -1314,7 +1314,7 @@ the backup path below asks Gumroad when an unlisted address requests a
 code, so that buyer would have been let in the moment he tried. What
 lags is the *list on the admin page*, not the door.
 
-**Fixed 6 October 2026, at Eric's word: the lookup happens before the
+**Fixed 5 October 2026, at Eric's word: the lookup happens before the
 answer, and the answer says whether it worked.** `handleGumroad` now
 awaits `reconcile()` for up to `PING_PATIENCE_MS` (3.5s, inside
 Gumroad's 5) and replies:
@@ -1374,13 +1374,28 @@ silence it replaces.
 **Not known, and said so to Eric:** that Gumroad never penalises an
 address for answering 503. Its public source shows only the three
 retries and no disabling — but that is the repository, read on
-6 October 2026, not a promise about what runs.
+5 October 2026, not a promise about what runs.
 
 **This is a worker change and nothing else.** No `?v=` bump: no part
 of the site knows about it. It is live only once Eric pastes
 `cloudflare/vault-worker.js` into Cloudflare; run the usual
 post-deploy check after. **The doorbell cannot be tested from outside
 without the secret** — a wrong one must still 404.
+
+**Deployed by Eric and checked the same day, 5 October 2026.**
+`session` 401; `admin`, `admin/list`, the album, a lyric, a note and
+both PDFs 404; the doorbell 404 on a wrong secret, an empty one, a GET
+and a full ping-shaped POST; a malformed address 400 `bad-email`; a
+two-digit code 401 `wrong` (refused before the brake, so it spends
+nothing). **What that check cannot show is the fix itself working** —
+only a real ping carries the real secret. The proof is the next
+genuine sale appearing on the admin page tagged GUMROAD without help;
+until one has, describe this as deployed, not as verified.
+
+**The two comments in the worker that date this change say 6 October;
+it was the 5th.** Left as deployed, because correcting a comment would
+make the repo differ from what is running for the sake of a date. Put
+them right the next time the worker is pasted in for a real reason.
 
 **The backup path is what makes a missed webhook survivable.** If
 somebody asks for a code and is not on the list, `postCode()` asks
