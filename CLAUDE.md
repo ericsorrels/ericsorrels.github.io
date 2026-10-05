@@ -1314,17 +1314,73 @@ the backup path below asks Gumroad when an unlisted address requests a
 code, so that buyer would have been let in the moment he tried. What
 lags is the *list on the admin page*, not the door.
 
-**The fix that fits, offered and awaiting Eric's word:** do the lookup
-before answering (it takes well under the 5 seconds), and answer 503
-when it could not be completed or when a ping that claims a live sale
-finds none — so Gumroad's own retries do the waiting. The ping stays a
-rumour: its claim only decides whether to ask again, never what is
-written. **In passing:** `hasLiveSale` checks `sale.chargebacked`, but
-the sales API's field is `chargedback`. Harmless — `disputed` with
-`dispute_won` false is the same condition and is checked on the next
-line — but worth correcting when the worker is next touched.
-(`access_revoked` is confirmed as the real name of the revoked field;
-the raw dump showed it.)
+**Fixed 6 October 2026, at Eric's word: the lookup happens before the
+answer, and the answer says whether it worked.** `handleGumroad` now
+awaits `reconcile()` for up to `PING_PATIENCE_MS` (3.5s, inside
+Gumroad's 5) and replies:
+
+| What happened | Answer | So Gumroad… |
+|---|---|---|
+| records agree with the ping, or the ping claims nothing | 200 | is done |
+| could not find out — API error, D1 threw | **503** | re-sends at +1, +3, +10 min |
+| still working when patience ran out | **503** | re-sends; the first try finishes in `waitUntil` regardless |
+| records disagree with the ping — sale not listed yet, refund not landed | **503** | re-sends, by when they agree |
+
+**The ping is still a rumour.** `pingClaims()` reads `refunded`,
+`disputed` and `dispute_won` out of it for ONE purpose — deciding
+whether to ask again — and nothing in a ping is ever written anywhere.
+`reconcile()` decides who is on the list, from records the worker
+fetched itself, exactly as before.
+
+**`pingClaims()` returning `null` is load-bearing, three times over.**
+Gumroad pings this address for *every* sale on Eric's account, so a
+sale of some other product would otherwise disagree with the records
+for ever and earn three pointless retries each time. It returns null —
+"no reason to expect anything", answer 200 — for a ping about another
+product, for Gumroad's own test ping (`test=true`), and for Eric
+buying his own product, which carries the same flag. **A second
+product on the account is exactly when this matters; don't simplify it
+away.**
+
+**`sameProduct()` is now the one place a product is matched** — the
+sales lookup, the admin page's check and the ping all call it, where
+there were two hand-copied tests before and would have been three.
+
+**`chargedback`, not `chargebacked`.** The sales API's field is the
+former; the worker looked for the latter, which Gumroad uses in its
+licence JSON but not here, so the test never fired. No harm came of
+it — a chargeback also sets `disputed`, caught on the next line — and
+both spellings are now checked. `access_revoked` is confirmed as the
+real name of the revoked field; the raw dump showed it.
+
+**Tested against stand-ins, 25 doorbell cases plus 15 regressions**, by
+the same method as before — the worker's own source run in the preview
+pane with a fake D1 and `fetch`. The ones that were silently lost
+before now answer 503 and succeed on the re-send: sale not on record
+yet, API 500, a refused write, a refund not yet landed. A 5-second API
+answers 503 at 3.5s **and the buyer is still added by the attempt left
+running**. Unchanged: wrong secret and GET → 404; no email or an
+unreadable body → 200; a refund never removes someone Eric added by
+hand; a partial refund leaves the sale standing; the gate still gives
+every address `{ok:true}`.
+
+**Two cases answer 503 with nothing to wait for, and that is
+accepted.** `GUMROAD_PRODUCT` set to the shop's custom name (the known
+trap) and a sale ping re-sent for a sale since revoked both disagree
+with the records permanently, so each earns its three retries and then
+stops. Harmless, and for the first it is arguably better than the
+silence it replaces.
+
+**Not known, and said so to Eric:** that Gumroad never penalises an
+address for answering 503. Its public source shows only the three
+retries and no disabling — but that is the repository, read on
+6 October 2026, not a promise about what runs.
+
+**This is a worker change and nothing else.** No `?v=` bump: no part
+of the site knows about it. It is live only once Eric pastes
+`cloudflare/vault-worker.js` into Cloudflare; run the usual
+post-deploy check after. **The doorbell cannot be tested from outside
+without the secret** — a wrong one must still 404.
 
 **The backup path is what makes a missed webhook survivable.** If
 somebody asks for a code and is not on the list, `postCode()` asks

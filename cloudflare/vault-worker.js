@@ -635,6 +635,13 @@ async function sendEmail(env, { to, subject, text }) {
    paid for, because an API had a bad minute, is the one outcome here
    worth going out of the way to prevent.
 
+   AND IT ASKS TO BE TOLD AGAIN WHEN IT COULD NOT FINISH. The lookup is
+   done before Gumroad is answered. If it could not be completed, or if
+   Gumroad's records do not yet show what the ping is about, the answer
+   is a 503, which Gumroad retries at one, three and ten minutes. So a
+   bad moment costs a minute's delay rather than a buyer missing from
+   the list. See handleGumroad.
+
    AND IT NEVER OVERRULES ERIC. Only rows whose source is 'gumroad' are
    ever removed. Somebody he added by hand stays added, whatever Gumroad
    says about them — a comped listener may well have no sale at all.
@@ -661,12 +668,118 @@ async function handleGumroad(request, env, ctx, tail) {
 
   const email = normalizeEmail(form.get('email') || '');
 
-  // Always 200, and always at once. Gumroad retries anything else, and
-  // a queue of retries is not worth earning over a mistyped address.
-  // The looking-up happens after this reply has gone.
-  if (email) ctx.waitUntil(reconcile(env, email));
+  // Nothing to look up, so nothing to ask again about. Gumroad retries
+  // certain answers, and a queue of retries is not worth earning over a
+  // ping with no usable address in it.
+  if (!email) return json({ ok: true }, 200);
 
-  return json({ ok: true }, 200);
+  // THE LOOKING-UP NOW HAPPENS BEFORE THE ANSWER, and the answer says
+  // whether it worked. Until 6 October 2026 this replied 200 at once
+  // and then tried a single time in the background: if that one try
+  // failed — Gumroad's API having a bad moment, the guest list refusing
+  // a write — the buyer was not added, nothing recorded it, and Gumroad
+  // never sent the ping again, because it had been told "got it". A
+  // real sale went missing from the list that way on 5 October.
+  //
+  // The attempt is kept alive with waitUntil whatever happens to the
+  // reply, so running out of patience below does not abandon it. A
+  // throw in it counts as "could not tell", the same as a null.
+  const attempt = reconcile(env, email).then(
+    (live) => live,
+    () => null
+  );
+  ctx.waitUntil(attempt);
+
+  const settled = await Promise.race([
+    attempt.then((live) => ({ live })),
+    sleep(PING_PATIENCE_MS).then(() => null),
+  ]);
+
+  // Still working when patience ran out, or could not find out at all.
+  // Ask to be told again; by then the answer will be there to give.
+  if (!settled || settled.live === null) return tryAgainLater();
+
+  // It worked, and what the ping was about agrees with what Gumroad's
+  // own records now say — or the ping made no claim worth checking.
+  const claimed = pingClaims(env, form);
+  if (claimed === null || claimed === settled.live) {
+    return json({ ok: true }, 200);
+  }
+
+  // The ping says one thing and the records say another: a sale that
+  // is not listed yet, or a refund that has not landed. The records
+  // are what was acted on — the ping is still only a rumour, and
+  // nothing in it was written anywhere. All its disagreement earns is
+  // being asked again in a minute, when the two have had time to agree.
+  return tryAgainLater();
+}
+
+// How long a ping's lookup may take before Gumroad is simply asked to
+// send it again. Gumroad hangs up after five seconds; this leaves room
+// to answer properly before it does.
+const PING_PATIENCE_MS = 3500;
+
+// 503 is one of the handful of answers Gumroad retries — at one, three
+// and ten minutes. Most others (a 403, a 404) it drops on the spot.
+function tryAgainLater() {
+  return json({ ok: false, again: true }, 503);
+}
+
+/* What a ping says has happened, as a hint and nothing more: true for
+   "this address should have a live sale", false for "it should not",
+   and null for "this ping gives no reason to expect either".
+
+   It is used for ONE thing — deciding whether to ask Gumroad to send
+   the ping again when its own records disagree. It never decides who
+   is on the guest list; reconcile() does that, from records fetched
+   over a connection this worker opened itself.
+
+   Null matters as much as the other two. Gumroad pings this address
+   for EVERY sale on Eric's account, whatever the product, and a sale
+   of something else leaves this vault's answer at "no live sale" for
+   good. Asking again about those would earn three pointless retries
+   per sale, for ever. The same goes for Gumroad's own test pings and
+   for Eric buying his own product. */
+function pingClaims(env, form) {
+  const said = (name) => {
+    const value = form.get(name);
+    return typeof value === 'string' ? value : '';
+  };
+
+  if (said('test') === 'true') return null;
+
+  const wanted = env.GUMROAD_PRODUCT;
+  const ours =
+    sameProduct(wanted, said('product_permalink'), said('product_id'), said('short_product_id')) ||
+    sameProduct(wanted, said('permalink'), '', '');
+  if (!ours) return null;
+
+  const refunded = said('refunded') === 'true';
+  // A dispute that Eric won leaves the sale standing.
+  const disputed = said('disputed') === 'true' && said('dispute_won') !== 'true';
+
+  return !(refunded || disputed);
+}
+
+/* Is this the product that grants access? Eric may have set either the
+   permalink out of the shop address or the product's id, and both are
+   matched, so neither is a wrong answer to give. One function, because
+   the sales lookup, the admin page's check and the ping all ask it and
+   must never disagree. */
+function sameProduct(wanted, permalinkOrUrl, productId, shortId) {
+  const want = String(wanted || '').trim().toLowerCase();
+  if (!want) return false;
+
+  const permalink = String(permalinkOrUrl || '').toLowerCase();
+  const id = String(productId || '').toLowerCase();
+  const short = String(shortId || '').toLowerCase();
+
+  return (
+    permalink === want ||
+    id === want ||
+    short === want ||
+    permalink.endsWith('/' + want)
+  );
 }
 
 /* Asks Gumroad what is true for one address and makes the guest list
@@ -725,25 +838,24 @@ async function hasLiveSale(env, email) {
     return null;
   }
 
-  const wanted = String(env.GUMROAD_PRODUCT).trim().toLowerCase();
-
   return sales.some((sale) => {
     if (normalizeEmail(sale.email || '') !== email) return false;
 
-    // Eric may have set either the permalink out of the shop address or
-    // the product's id, and both are matched, so neither is a wrong
-    // answer to give.
-    const permalink = String(sale.product_permalink || '').toLowerCase();
-    const id = String(sale.product_id || '').toLowerCase();
-    const short = String(sale.short_product_id || '').toLowerCase();
-    const mine =
-      permalink === wanted ||
-      id === wanted ||
-      short === wanted ||
-      permalink.endsWith('/' + wanted);
+    const mine = sameProduct(
+      env.GUMROAD_PRODUCT,
+      sale.product_permalink,
+      sale.product_id,
+      sale.short_product_id
+    );
     if (!mine) return false;
 
-    if (sale.refunded === true || sale.chargebacked === true) return false;
+    // Gumroad's sales API spells it `chargedback`. This looked for
+    // `chargebacked` until 6 October 2026, a name it uses elsewhere but
+    // not here, so the test never fired. No harm came of it: a
+    // chargeback also sets `disputed`, which the next line has always
+    // caught. Both spellings are kept, since the old one costs nothing.
+    if (sale.refunded === true) return false;
+    if (sale.chargedback === true || sale.chargebacked === true) return false;
     // A dispute that Eric won leaves the sale standing.
     if (sale.disputed === true && sale.dispute_won !== true) return false;
     if (revoked(sale)) return false;
@@ -805,18 +917,17 @@ async function gumroadLookup(env, email) {
   };
 
   const describe = (sale) => {
-    const permalink = String(sale.product_permalink || '').toLowerCase();
-    const id = String(sale.product_id || '').toLowerCase();
-    const short = String(sale.short_product_id || '').toLowerCase();
-    const matches =
-      !!wanted &&
-      (permalink === wanted || id === wanted || short === wanted ||
-        permalink.endsWith('/' + wanted));
+    const matches = sameProduct(
+      wanted,
+      sale.product_permalink,
+      sale.product_id,
+      sale.short_product_id
+    );
 
     let verdict;
     if (!matches) verdict = 'a different product — this is why it was ignored';
     else if (sale.refunded === true) verdict = 'refunded';
-    else if (sale.chargebacked === true) verdict = 'charged back';
+    else if (sale.chargedback === true || sale.chargebacked === true) verdict = 'charged back';
     else if (sale.disputed === true && sale.dispute_won !== true) verdict = 'disputed';
     else if (revoked(sale)) verdict = 'access revoked';
     else verdict = 'counts — this one grants access';
