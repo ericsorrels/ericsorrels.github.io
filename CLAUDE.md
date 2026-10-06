@@ -1504,15 +1504,28 @@ which would look exactly like a real answer.
 
 A second, parallel way to buy, begun 6 October 2026 from a written
 brief of Eric's. **Stage 2 of 4 is done: built, tested against
-stand-ins, committed. It is NOT deployed, and nothing here has met the
-real Stripe.** Describe it that way until Stage 3 has run.
+stand-ins, deployed with no Stripe secrets set. Nothing here has met
+the real Stripe.** Describe it that way until Stage 3 has run.
 
 | Stage | What | Where it stands |
 |---|---|---|
 | 1 | the plan, and Eric's rulings | done |
-| 2 | build, stand-in tests, Gumroad regressions | **done, 6 October 2026** |
+| 2 | build, stand-in tests, Gumroad regressions | **done, pushed and deployed 6 October 2026** |
 | 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | waits on Eric's dashboard steps |
 | 4 | live keys, one real purchase, then switch the buy buttons | not begun |
+
+**Pushed and deployed by Eric the same day, and checked**: both pages
+at v86 with the buyer's line live and the buy button still Gumroad's;
+`session` 401; `admin`, `admin/list` and the three new admin routes
+404; the album, a lyric, a note and both PDFs 404; the Gumroad
+doorbell 404 on a wrong secret, an empty one and a GET; **the Stripe
+webhook 404 unsigned, with a made-up signature, and on a GET — the
+same "Not found" body as the doorbell**; a mistyped address 400; a
+two-digit code 401. **That check proves the paste went in whole. It
+cannot tell the new worker from the old one**, because with no Stripe
+secret set the two answer identically from outside — which is the
+design. The proof it is the new one is Eric seeing the Stripe panel on
+the admin page.
 
 **Three hard rules from the brief. They outlast this task.**
 
