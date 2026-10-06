@@ -232,10 +232,15 @@ anything is missing it says so by name.
 
 ## How Stripe connects
 
-Stripe is a second way to buy, beside Gumroad. **It was built and
-tested against stand-ins on 6 October 2026 and has not yet met the real
-Stripe** — until it has, both buy buttons on the site still go to
-Gumroad, and nothing about Gumroad has changed.
+Stripe is where the site's buy buttons go, as of 6 October 2026. It
+was tested that day in Stripe's sandbox — a purchase, a part refund, a
+full refund, a dispute and a win, somebody added by hand, and one
+address held in both shops — and then with one real purchase.
+
+**Gumroad is still connected.** Everybody who bought there keeps their
+access, a Gumroad refund still takes it away, and the old Gumroad shop
+page still works for anyone who has its address. Only the buttons
+moved.
 
 When someone pays through your Stripe payment link, Stripe tells the
 vault, and their address joins the list tagged **STRIPE**. A full

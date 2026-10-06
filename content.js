@@ -120,14 +120,22 @@ window.SITE_CONTENT = {
     // ---- The "buy early access" button ----
     // Sits underneath the concept album box.
     //
-    // Paste the web address of your Gumroad product between the quotes
-    // below. It looks something like:
-    //     https://ericsorrels.gumroad.com/l/graymanearly
+    // The web address of the shop page goes between the quotes below.
+    // Since 6 October 2026 it is your Stripe payment link, which looks
+    // like  https://buy.stripe.com/…  — and it must be the LIVE one:
+    // a link with  test_  in it takes no real money and lets nobody in.
+    //
+    // THIS ONE ADDRESS FEEDS BOTH BUY BUTTONS — the one here on the main
+    // page and the one on the access page's gate, under "No invitation?".
+    //
+    // The Gumroad page it pointed at before still works, and anybody
+    // who bought there still has their access; only the buttons moved.
+    // That address was  https://sorrels7.gumroad.com/l/earlyaccess .
     //
     // While "url" is left empty ("") the button does not appear at all,
     // so the page never shows a link that goes nowhere.
     early_access: {
-      url: "https://sorrels7.gumroad.com/l/earlyaccess",
+      url: "https://buy.stripe.com/7sYfZibiQ685bZ78bi5J600",
       label: "Purchase Early Digital Access",
       note: "Hear the concept album before release.",
 
@@ -136,9 +144,10 @@ window.SITE_CONTENT = {
       // line, the same way the address is shared, so the two can never
       // say different things.
       //
-      // This is the site saying it. The policy itself is a setting in
-      // Gumroad, and saying it here does not set it there. Nor does
-      // either stop a card issuer allowing a chargeback — which is why
+      // This is the site saying it. Whether you refund is decided in
+      // the shop — in Stripe now, and in Gumroad for anybody who
+      // bought there — and saying it here sets nothing in either. Nor
+      // does it stop a card issuer allowing a chargeback, which is why
       // the vault still takes access away on a refund or dispute.
       //
       // Emptying it ("") removes the line.

@@ -1503,16 +1503,25 @@ which would look exactly like a real answer.
 ### Stripe
 
 A second, parallel way to buy, begun 6 October 2026 from a written
-brief of Eric's. **Stage 2 of 4 is done: built, tested against
-stand-ins, deployed with no Stripe secrets set. Nothing here has met
-the real Stripe.** Describe it that way until Stage 3 has run.
+brief of Eric's and **live the same day: all four stages are done.**
+Both buy buttons go to Stripe. Gumroad is still connected and still
+works for everybody who bought there.
+
+**What "tested" rests on, so it is not overstated.** The purchase,
+part refund, full refund, dispute, win, hand-added and both-shops
+paths were each run by Eric against the real Stripe in a sandbox, and
+Claude saw his reports of them, not the screens. The live side rests
+on **his word that "everything is tested and works"** after one real
+purchase — the details of that run were not reported, and the
+capital-letters fix was confirmed deployed only by that same sentence.
+The post-deploy check passed after the live secrets went in.
 
 | Stage | What | Where it stands |
 |---|---|---|
 | 1 | the plan, and Eric's rulings | done |
 | 2 | build, stand-in tests, Gumroad regressions | **done, pushed and deployed 6 October 2026** |
-| 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | **under way** — see Stage 3 so far |
-| 4 | live keys, one real purchase, then switch the buy buttons | not begun |
+| 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | **done, 6 October 2026** — five tests, see Stage 3 |
+| 4 | live keys, one real purchase, then switch the buy buttons | **done, 6 October 2026** — `?v=88` |
 
 **Pushed and deployed by Eric the same day, and checked**: both pages
 at v86 with the buyer's line live and the buy button still Gumroad's;
@@ -1533,9 +1542,21 @@ the admin page.
   route, secret or admin section was removed, renamed or changed, and
   none may be. Removing Gumroad is a separate task Eric will start
   himself — don't offer it.
-- **Both buy buttons stay on Gumroad** — `music.early_access.url` does
-  not change until Eric has made a real Stripe purchase and says to.
+- ~~Both buy buttons stay on Gumroad until Eric says.~~ **He said,
+  on 6 October 2026**, after his live purchase. `music.early_access.url`
+  is his live payment link, `https://buy.stripe.com/7sYfZibiQ685bZ78bi5J600`
+  — public, not a secret — and `?v=88` carries it. **That one address
+  feeds both buttons**, the main page's and the gate's; he asked for
+  "the buy buttons on the main page" and was told the gate's follows,
+  as his own brief set out. No link on either page goes to Gumroad
+  now (checked in the preview). **A payment link with `test_` in it
+  must never go in that box** — it takes no money and, with live
+  secrets set, lets nobody in.
 - **Stop after each stage.** He asked for it in so many words.
+- **The old Gumroad shop page still takes orders** at
+  `sorrels7.gumroad.com/l/earlyaccess` for anybody who has the
+  address, and the vault still honours them. Whether to unpublish it
+  is part of removing Gumroad, which is his to start.
 
 #### How it works
 
@@ -1749,7 +1770,7 @@ email you purchased with, and an access code will be sent to it."
   last one means "I added them by hand" is only true of a row that
   says `manual`.
 
-#### Stage 3 so far (6 October 2026)
+#### Stage 3, the test-mode run (6 October 2026)
 
 Eric set up a **sandbox** rather than the older test-mode switch —
 Stripe's own pages warn that settings changed in test mode can carry
@@ -1792,9 +1813,17 @@ So Cloudflare lets Stripe through, the four Read permissions are
 enough, and a restricted key may expand on these calls.
 
 **And one unknown came back the wrong way — see Capital letters,
-next.** The worker was changed for it the same evening; **that change
-has to be pasted in and the lookup tried again before Stage 3 can be
-called finished**, and the test rows are still on the list.
+next.** The worker was changed for it the same evening.
+
+**Loose ends Eric was told about and has not reported on.** Don't
+assume any of them is done:
+
+- the sandbox test rows (`+hand`, `+dispute`, `+both`) removed by hand;
+- the sandbox's webhook destination deleted, since the vault now
+  refuses its messages and Stripe may email him about the failures;
+- receipts on and a support email and statement descriptor set on the
+  live account;
+- whether he refunded his own live purchase.
 
 **Stripe's test cards and how to settle a test dispute**, read from
 its testing page on 6 October 2026: `4242 4242 4242 4242` pays;
@@ -3187,11 +3216,11 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (6 October 2026)
 
-**`?v=87` is the buyer's line at the gate in Eric's own words**,
-committed 6 October 2026 during Stage 3 of the Stripe work — see
-Stripe above. `?v=86` was the line's first appearance, with Stage 2.
-It changes nothing a visitor sees unless they arrive at
-`access.html?paid`. The worker at Cloudflare is the one in the repo.
+**`?v=88` moves both buy buttons to Stripe**, committed 6 October
+2026 at Eric's word after his live purchase — see Stripe above. It is
+one line of `content.js`. `?v=87` was the buyer's line at the gate in
+his own words, and `?v=86` that line's first appearance. The worker at
+Cloudflare is the one in the repo, on his report.
 
 What follows is older, newest first.
 
