@@ -1767,13 +1767,29 @@ begin `rk_test_`, so nothing in the worker knows the difference.
   through Cloudflare and being acted on unaided; the code arrived and
   the album opened.
 
-So three of the unknowns below are answered for the purchase path:
-Cloudflare lets Stripe through, the four Read permissions are enough
-to fold the items and the charge into a receipt, and a restricted key
-may expand on these calls. **Still to run:** a part refund then a full
-one, a hand-added address that buys and refunds, a dispute and a win,
-a purchase under a capitalised address, and an address held in both
-shops.
+- **Test 2, a part refund then the rest, passed.** $1.00 back left the
+  row standing, tagged STRIPE; refunding the remainder removed it
+  within seconds, and the private window with the album open dropped
+  back to the gate on reload. **This is the refund path proven against
+  the real thing — which Gumroad's never was.**
+- **Test 3, somebody added by hand, passed.** An address added on the
+  admin page bought at Stripe and stayed MANUAL; the purchase was then
+  refunded in full and the row was still there, still MANUAL.
+- Every webhook delivery in Stripe's own list showed 200.
+
+So three of the unknowns below are answered: Cloudflare lets Stripe
+through, the four Read permissions are enough to fold the items and
+the charge into a receipt, and a restricted key may expand on these
+calls. **Still to run:** a dispute and a win, a purchase under a
+capitalised address, and an address held in both shops.
+
+**Stripe's test cards and how to settle a test dispute**, read from
+its testing page on 6 October 2026: `4242 4242 4242 4242` pays;
+`4000 0000 0000 0259` pays and is at once disputed as fraudulent;
+`4000 0000 0000 1976` raises an inquiry instead. To settle one, open
+the dispute, **Counter dispute**, and type `winning_evidence` or
+`losing_evidence` into **Additional information** before **Submit
+evidence**.
 
 **How the walk-through is given matters.** Eric asked for clearer
 instructions after the first list of dashboard steps, which named
