@@ -1501,6 +1501,14 @@ img {
   display: none;
 }
 
+/* The buyer's line names the show. If it has to wrap, it wraps before
+   THE GRAY MAN rather than through it — the same promise the thank-you
+   under the closing film makes. A browser that balances its lines does
+   this by itself; one that does not would leave MAN! on a row alone. */
+.gate__hint .show-title {
+  white-space: nowrap;
+}
+
 /* The hint on the code step follows a paragraph rather than the title,
    so it needs far less air above it than the email step's does. */
 .gate__hint--code {

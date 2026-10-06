@@ -1511,7 +1511,7 @@ the real Stripe.** Describe it that way until Stage 3 has run.
 |---|---|---|
 | 1 | the plan, and Eric's rulings | done |
 | 2 | build, stand-in tests, Gumroad regressions | **done, pushed and deployed 6 October 2026** |
-| 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | waits on Eric's dashboard steps |
+| 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | **under way** — see Stage 3 so far |
 | 4 | live keys, one real purchase, then switch the buy buttons | not begun |
 
 **Pushed and deployed by Eric the same day, and checked**: both pages
@@ -1711,9 +1711,24 @@ walk through to the vault.
 sees it and it lets nobody in. **So the Payment Link must send buyers
 to `https://graymanmusical.com/access.html?paid`**, not the bare page.
 
-**The wording is Claude's suggestion and Eric has not approved it** —
-he said to put it in the test and he would review. Don't describe it
-as his.
+**The wording is Eric's own, as of 6 October 2026 (`?v=87`).** He saw
+Claude's first suggestion on the live page during the Stage 3 test and
+replaced it: "Thank you for supporting *The Gray Man*! | Enter the
+email you purchased with, and an access code will be sent to it."
+
+- **The bar is a line break**, so the paragraph carries
+  `data-content-breaks` — the opt-in the thank-you under the closing
+  film uses, for the reason given under The one rule.
+- **The title is in stars**, following what was done with the same
+  words in `access.thanks`. He typed "the Gray Man" plainly; the
+  show-title dress sets it in capitals either way. Told to him, with
+  how to take it off.
+- **`.gate__hint .show-title` is `white-space: nowrap`**, so a browser
+  that does not balance its lines cannot leave MAN! on a row alone.
+  Checked with balancing switched off at 320, 375, 430 and 1280.
+- One row and two on a desktop; two and three at 375, where the first
+  line breaks before THE GRAY MAN; six rows at 320 with the button
+  still on screen. No sideways scroll anywhere.
 
 #### Eric's rulings, 6 October 2026
 
@@ -1733,6 +1748,40 @@ as his.
   it always has — `addMembers()` is `DO NOTHING` on a conflict. That
   last one means "I added them by hand" is only true of a row that
   says `manual`.
+
+#### Stage 3 so far (6 October 2026)
+
+Eric set up a **sandbox** rather than the older test-mode switch —
+Stripe's own pages warn that settings changed in test mode can carry
+into the live account, and a sandbox is sealed off. Its keys still
+begin `rk_test_`, so nothing in the worker knows the difference.
+
+- **The admin panel read clean on the first try**: key in TEST mode,
+  webhook secret set, product set as a product id, the key able to
+  read receipts and disputes. That also settled which worker is
+  running, which the post-deploy check could not.
+- **Test 1, a purchase and a sign-in, passed in every part.** Paid
+  with Stripe's test card from a private window; landed on the gate
+  with the buyer's line; **the row was on the admin page tagged STRIPE
+  before any code was asked for**, which is the webhook arriving
+  through Cloudflare and being acted on unaided; the code arrived and
+  the album opened.
+
+So three of the unknowns below are answered for the purchase path:
+Cloudflare lets Stripe through, the four Read permissions are enough
+to fold the items and the charge into a receipt, and a restricted key
+may expand on these calls. **Still to run:** a part refund then a full
+one, a hand-added address that buys and refunds, a dispute and a win,
+a purchase under a capitalised address, and an address held in both
+shops.
+
+**How the walk-through is given matters.** Eric asked for clearer
+instructions after the first list of dashboard steps, which named
+what to make but not where to click. What worked: numbered steps,
+one screen at a time, the exact words on the buttons taken from
+Stripe's own help pages, a table of which secret comes from which
+step and what it begins with, two tests to a message at most, and
+"tell me what you see" rather than "confirm".
 
 #### Not knowable until Stage 3 — say so, don't guess
 
@@ -3051,12 +3100,11 @@ granted path works in Chrome and Safari; don't chase it.
 
 ## Where things stand (6 October 2026)
 
-**`?v=86` is the buyer's line at the gate, committed 6 October 2026
-with Stage 2 of the Stripe work** — see Stripe above. It changes
-nothing a visitor sees unless they arrive at `access.html?paid`. The
-worker in the repo is ahead of the one at Cloudflare until Eric pastes
-it; with no Stripe secrets set it behaves exactly as the deployed one
-does, which the Gumroad tests were re-run to show.
+**`?v=87` is the buyer's line at the gate in Eric's own words**,
+committed 6 October 2026 during Stage 3 of the Stripe work — see
+Stripe above. `?v=86` was the line's first appearance, with Stage 2.
+It changes nothing a visitor sees unless they arrive at
+`access.html?paid`. The worker at Cloudflare is the one in the repo.
 
 What follows is older, newest first.
 

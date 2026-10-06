@@ -439,7 +439,10 @@ window.SITE_CONTENT = {
     // It is a greeting, not a receipt: anybody who types that address
     // sees it, and it lets nobody in. Leave it empty ("") and a buyer
     // simply sees the ordinary line above.
-    gate_paid: "Thank you for your purchase. Enter the email address you paid with, and a six-digit code will be sent to it.",
+    //
+    // The | starts a new line, here as in the thank-you under the
+    // closing film, and the *stars* give the title its usual dress.
+    gate_paid: "Thank you for supporting *The Gray Man*!|Enter the email you purchased with, and an access code will be sent to it.",
 
     gate_placeholder: "Email address",      // read aloud by screen readers
     gate_button: "Send My Code",

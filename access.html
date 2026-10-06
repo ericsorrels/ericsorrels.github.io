@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=86" />
+  <link rel="stylesheet" href="assets/css/style.css?v=87" />
 </head>
 <body>
 
@@ -45,9 +45,12 @@
       <!-- For somebody who has just paid: shown in place of the line
            above when the shop sends them back to access.html?paid.
            access.js puts gate--paid on the gate and the stylesheet does
-           the rest, so with JavaScript off this simply never appears. -->
-      <p class="gate__hint gate__hint--paid" data-content="access.gate_paid">
-        Thank you for your purchase. Enter the email address you paid with, and a six-digit code will be sent to it.
+           the rest, so with JavaScript off this simply never appears.
+           data-content-breaks is what lets the | in the line start a
+           new row. -->
+      <p class="gate__hint gate__hint--paid" data-content="access.gate_paid" data-content-breaks>
+        Thank you for supporting The Gray Man!<br />
+        Enter the email you purchased with, and an access code will be sent to it.
       </p>
 
       <!-- novalidate is load-bearing. type="email" is what gives a phone
@@ -404,25 +407,25 @@
     </figure>
   </template>
 
-  <script src="content.js?v=86"></script>
-  <script src="assets/js/main.js?v=86"></script>
+  <script src="content.js?v=87"></script>
+  <script src="assets/js/main.js?v=87"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=86"></script>
+  <script src="assets/js/lyrics.js?v=87"></script>
   <!-- Before access.js, for the same reason lyrics.js is: access.js
        asks for window.TGMStorm the moment a code is accepted, and a
        visitor can get that far faster than a script at the end of the
        body would expect. It is a module and nothing else — loading it
        starts no animation and touches no markup. If it is missing
        altogether, access.js lets the visitor in without weather. -->
-  <script src="assets/js/storm-intro.js?v=86"></script>
+  <script src="assets/js/storm-intro.js?v=87"></script>
   <!-- The album sleeve turning over, and opening out over the page.
        After main.js, which is what pours the two pictures' descriptions
        into them from content.js. It touches nothing else on the page,
        and if it is missing both pictures simply show one above the
        other. -->
-  <script src="assets/js/sleeve.js?v=86"></script>
-  <script src="assets/js/access.js?v=86"></script>
+  <script src="assets/js/sleeve.js?v=87"></script>
+  <script src="assets/js/access.js?v=87"></script>
 </body>
 </html>
