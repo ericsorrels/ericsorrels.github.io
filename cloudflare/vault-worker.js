@@ -1309,6 +1309,11 @@ const ADMIN_PAGE = `<!doctype html>
      the column headings, because the Added column is hidden on a phone
      and its heading would go with it — leaving no way back. */
   .sort { display:flex; gap:.2rem; align-items:center; flex-wrap:wrap; margin:1.4rem 0 .1rem; }
+  /* How many have signed in and how many never have, under the heading
+     that says how many there are altogether. Its height is held open
+     so the page does not jump when the list arrives. */
+  .seen { font-size:.9rem; color:var(--soft); margin:-.35rem 0 1.1rem; min-height:1.4rem; }
+  .seen b { color:var(--ink); }
   .sort__label { font-size:.62rem; letter-spacing:.18em; text-transform:uppercase;
                  color:var(--faint); font-weight:600; margin-right:.4rem; }
   .sort__by[aria-pressed=true] { color:var(--ink); text-decoration:underline;
@@ -1339,6 +1344,7 @@ const ADMIN_PAGE = `<!doctype html>
   </div>
 
   <h2>On the list — <span id="count">…</span></h2>
+  <p class="seen" id="seenCount">&nbsp;</p>
 
   <div class="picked">
     <button id="copyBtn" disabled>Copy selected addresses</button>
@@ -1513,8 +1519,25 @@ const ADMIN_PAGE = `<!doctype html>
   $('sortAdded').addEventListener('click', function () { setOrder('added'); });
   $('sortSeen').addEventListener('click', function () { setOrder('seen'); });
 
+  // How many have signed in, and how many never have. Counted by the
+  // same test the table uses to print "never" — day() of the last
+  // sign-in — so the two can never disagree about a row. The two
+  // numbers always add up to the count in the heading above them.
+  function countSeen(list) {
+    var box = $('seenCount');
+    if (!list.length) { box.innerHTML = '&nbsp;'; return; }
+
+    var signedIn = list.filter(function (m) { return !!day(m.last_login); }).length;
+    var never = list.length - signedIn;
+
+    box.innerHTML =
+      '<b>' + signedIn + '</b> ' + (signedIn === 1 ? 'has' : 'have') + ' signed in' +
+      ' · <b>' + never + '</b> never ' + (never === 1 ? 'has' : 'have');
+  }
+
   function draw(list) {
     $('count').textContent = list.length === 1 ? '1 person' : list.length + ' people';
+    countSeen(list);
     if (!list.length) {
       $('rows').innerHTML = '<tr><td colspan="6" class="never">Nobody yet.</td></tr>';
       tally();

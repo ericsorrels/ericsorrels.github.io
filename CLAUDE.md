@@ -1216,6 +1216,20 @@ undisturbed), ticks surviving the sort, cleared by an Add, the default
 order restored, and the choice still there when the page was reopened.
 One row at 430px with no sideways scroll.
 
+**Under the heading there is a count of who has signed in and who
+never has, added 6 October 2026 at Eric's asking**: "**62** have signed
+in · **28** never have", beneath "On the list — 90 people".
+`countSeen()` uses the same test the table uses to print "never" —
+`day()` of the last sign-in — so the line and the rows cannot disagree,
+and the two numbers always add up to the heading's. It is drawn inside
+`draw()`, so it moves with every Add and Remove and is untouched by a
+change of order. Singulars are handled ("1 has", "1 never has"), and an
+empty list shows nothing rather than two noughts. Counted in the page
+from the list already fetched; no route changed. Tested with the same
+stand-in as the sort: 7 people as 5 and 2, matching two rows reading
+"never"; 8 as 5 and 3 after an Add; back to 5 and 2 after removing a
+never; one person each way; an empty list.
+
 **Deployed by Eric and checked the same day, 5 October 2026**: the
 usual handful — `session` 401, the admin page and its list 404 to
 anyone without his session, every vault file 404, the doorbell 404 on
