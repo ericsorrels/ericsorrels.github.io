@@ -55,31 +55,42 @@
     const report = [];
     let moved = 0;
 
+    // Compared case by case, by what each line is ABOUT — the part before
+    // the arrow — and never by position, so that adding a case in the
+    // middle does not make every line after it look as though it moved.
+    const about = (line) => String(line).split('  ->  ')[0].split(': ')[0];
+
     for (const [key, title, run] of sets) {
       const now = await run();
       results[key] = now;
-      const was = expected[key] || [];
+
+      const was = new Map((expected[key] || []).map((line) => [about(line), line]));
       const lines = [];
       let same = 0;
+      let added = 0;
 
-      for (let i = 0; i < Math.max(now.length, was.length); i++) {
-        if (now[i] === was[i]) { same++; lines.push('   ' + now[i]); }
+      for (const line of now) {
+        const id = about(line);
+        if (!was.has(id)) { added++; lines.push('++ NEW: ' + line); }
+        else if (was.get(id) === line) { same++; lines.push('   ' + line); }
         else {
           moved++;
-          lines.push('!! NOW: ' + now[i]);
-          lines.push('!! WAS: ' + was[i]);
+          lines.push('!! NOW: ' + line);
+          lines.push('!! WAS: ' + was.get(id));
         }
+        was.delete(id);
       }
+      for (const line of was.values()) { moved++; lines.push('!! GONE: ' + line); }
 
       report.push(title + ' — ' + now.length + ' cases, ' + same + ' as recorded, ' +
-        (now.length - same) + ' different');
+        added + ' new, ' + (now.length - same - added) + ' different');
       report.push(lines.join('\n'));
       report.push('');
     }
 
     report.unshift(moved
       ? 'SOMETHING MOVED: ' + moved + ' line(s) differ from expected.json. Marked !! below.\n'
-      : 'ALL AS RECORDED.\n');
+      : 'ALL AS RECORDED. (A line marked ++ is a case added since the answers were recorded.)\n');
 
     out.textContent = report.join('\n');
     window.__RESULTS = results;

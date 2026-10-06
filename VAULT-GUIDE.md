@@ -309,6 +309,21 @@ words, whether each one counts.
 What it shows about a receipt is cut down on purpose: no name, no
 postal address, no amount and no card.
 
+**Capital letters.** Stripe keeps an address exactly as the buyer
+typed it, and its own search is exact about capitals — somebody who
+paid as `Pat@Example.com` is not found by asking it for
+`pat@example.com`. The vault allows for this. It looks under the
+address as you type it, again in small letters, and then through your
+latest hundred receipts for the same address in any capitals, and it
+shows each receipt with the spelling Stripe holds.
+
+**Nobody is taken off the list because nothing was found.** A person
+who arrived through Stripe is only removed when the vault has looked at
+their receipt and seen it refunded or lost to a dispute. If **Make the
+list match** says Stripe has no receipt for someone tagged STRIPE, it
+leaves them alone and tells you so; if they really should come off,
+press **Remove** on their row.
+
 > ⚠️ **Test mode and live mode are two separate worlds.** Stripe gives
 > the product, the payment link, the key and the webhook secret a
 > different value in each. Moving from testing to real sales means

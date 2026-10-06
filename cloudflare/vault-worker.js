@@ -146,7 +146,13 @@ async function handleRequestCode(request, env, ctx) {
 
   // Everything from here is done after the answer has been sent, so the
   // reply's timing carries no news about whether the address is known.
-  ctx.waitUntil(postCode(env, email));
+  //
+  // The address goes along a second time AS IT WAS TYPED, capitals and
+  // all, for one purpose only: Stripe's search by address is exact
+  // about capital letters, so somebody who paid as Pat@Example.com is
+  // not found by asking for pat@example.com. See stripeSpellings.
+  const typed = typeof body.email === 'string' ? body.email.trim() : '';
+  ctx.waitUntil(postCode(env, email, typed));
 
   return json({ ok: true }, 200);
 }
@@ -154,7 +160,7 @@ async function handleRequestCode(request, env, ctx) {
 // Decides whether there is anybody to write to, and writes to them. Its
 // answer goes nowhere: the browser was told "on its way" some
 // milliseconds ago, whatever happens in here.
-async function postCode(env, email) {
+async function postCode(env, email, typed) {
   await sweep(env);
 
   let member = await findMember(env, email);
@@ -183,7 +189,7 @@ async function postCode(env, email) {
   // somebody the list already knows.
   if (!member && env.STRIPE_SECRET_KEY) {
     try {
-      if ((await reconcileStripe(env, email)) === true) {
+      if ((await reconcileStripe(env, email, null, typed)) === true) {
         member = await findMember(env, email);
       }
     } catch (e) {
@@ -1343,12 +1349,28 @@ async function stripeEvent(env, type, about) {
       cannot be asked, nothing changes and the answer is null — Stripe
       re-sends, and the question is put again.
 
-   A 'manual' row is never touched by either rule. */
-async function reconcileStripe(env, email, known) {
-  const live = await stripeLive(env, email, known);
-  if (live === null) return null;
+   A 'manual' row is never touched by either rule.
 
-  if (live) {
+   AND NOBODY IS REMOVED BECAUSE NOTHING WAS FOUND. A 'stripe' row
+   comes off only on the evidence of a receipt that was looked at and
+   found refunded or lost to a dispute — never because a search came
+   back empty. Stripe's search by address is exact about capital
+   letters (see stripeSpellings), so an empty answer may only mean the
+   receipt is filed under a spelling nobody thought to ask for. That
+   case is null, with the reason said, and the row is left alone. */
+async function reconcileStripe(env, email, known, typed, deep) {
+  return (await settleStripe(env, email, known, typed, deep)).live;
+}
+
+/* reconcileStripe's working, with the reason for a null alongside it:
+   'unreachable' when a shop could not be asked, 'no-receipt' when a
+   'stripe' row has no receipt to judge it by. The admin page reads the
+   reason; everything else only wants the answer. */
+async function settleStripe(env, email, known, typed, deep) {
+  const read = await stripeRead(env, email, known, typed, deep);
+  if (read.live === null) return { live: null, why: 'unreachable' };
+
+  if (read.live) {
     await env.MEMBERS.prepare(
       'INSERT INTO members (email, source, added_at) VALUES (?, ?, ?) ' +
         "ON CONFLICT(email) DO UPDATE SET source = 'stripe' " +
@@ -1356,16 +1378,19 @@ async function reconcileStripe(env, email, known) {
     )
       .bind(email, 'stripe', new Date().toISOString().replace(/\.\d+Z$/, 'Z'))
       .run();
-    return true;
+    return { live: true, why: null };
   }
 
   // No live sale at Stripe. That only matters to a row Stripe put there.
   const row = await findMember(env, email);
-  if (!row || row.source !== 'stripe') return false;
+  if (!row || row.source !== 'stripe') return { live: false, why: null };
+
+  // Absence is not evidence.
+  if (!read.seen) return { live: null, why: 'no-receipt' };
 
   if (env.GUMROAD_TOKEN && env.GUMROAD_PRODUCT) {
     const elsewhere = await hasLiveSale(env, email);
-    if (elsewhere === null) return null;
+    if (elsewhere === null) return { live: null, why: 'unreachable' };
 
     if (elsewhere) {
       await env.MEMBERS.prepare(
@@ -1373,7 +1398,7 @@ async function reconcileStripe(env, email, known) {
       )
         .bind(email)
         .run();
-      return false;
+      return { live: false, why: null };
     }
   }
 
@@ -1385,22 +1410,36 @@ async function reconcileStripe(env, email, known) {
     env.MEMBERS.prepare('DELETE FROM codes WHERE email = ?').bind(email),
   ]);
 
-  return false;
+  return { live: false, why: null };
 }
 
 /* true / false / null, as hasLiveSale answers for Gumroad. Looks for
    at least one receipt for the right product, to this address, that
-   was paid and has not been fully refunded or lost to a dispute.
+   was paid and has not been fully refunded or lost to a dispute. */
+async function stripeLive(env, email, known, typed, deep) {
+  return (await stripeRead(env, email, known, typed, deep)).live;
+}
+
+/* stripeLive's working: { live, seen }, where `seen` is how many
+   receipts FOR OUR PRODUCT, to this address, were actually looked at —
+   live or not. settleStripe needs that to tell "their receipt is
+   refunded" from "no receipt was found at all".
 
    `known` is a receipt already in hand — the one a message was about.
-   It is judged alongside whatever the search by address returns, so
-   the sale that rang the bell is always among those looked at, however
-   Stripe's search treats the spelling of an address. */
-async function stripeLive(env, email, known) {
-  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRODUCT) return null;
+   It is judged alongside whatever the search returns, so the sale that
+   rang the bell is always among those looked at.
 
-  const found = await stripeSessionsFor(env, email, false);
-  if (!found) return null;
+   `deep` is for the admin page only. When the search by address finds
+   no receipt of ours, it goes on to read the latest hundred receipts
+   whatever address they were paid under, and keeps any whose address
+   is this one in ANY capitals. That is too much to do for every
+   stranger at the gate, and exactly right for Eric asking about one
+   person. */
+async function stripeRead(env, email, known, typed, deep) {
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRODUCT) return { live: null, seen: 0 };
+
+  const found = await stripeSessionsFor(env, stripeSpellings(email, known, typed), false);
+  if (!found) return { live: null, seen: 0 };
 
   const receipts = found.sessions.slice();
   if (known && !receipts.some((one) => one && one.id === known.id)) {
@@ -1411,24 +1450,69 @@ async function stripeLive(env, email, known) {
   // something a real buyer does. If it ever happens and none of those
   // seen counts, the honest answer is "could not tell", not "no".
   let unsure = !found.all;
+  let seen = 0;
+
+  const counts = async (session) => {
+    if (!session || normalizeEmail(stripeEmail(session)) !== email) return false;
+
+    const verdict = await stripeJudge(env, session);
+    if (verdict.ours) seen++;
+    if (verdict.counts === null) unsure = true;
+    return verdict.counts === true;
+  };
 
   for (const session of receipts) {
-    if (!session || normalizeEmail(stripeEmail(session)) !== email) continue;
-
-    const seen = await stripeJudge(env, session);
-    if (seen.counts === true) return true;
-    if (seen.counts === null) unsure = true;
+    if (await counts(session)) return { live: true, seen };
   }
 
-  return unsure ? null : false;
+  if (deep && !seen) {
+    const more = await stripeSessionsLately(env, email, receipts);
+    if (!more) {
+      unsure = true;
+    } else {
+      for (const session of more) {
+        if (await counts(session)) return { live: true, seen };
+      }
+    }
+  }
+
+  return { live: unsure ? null : false, seen };
 }
 
-/* What one receipt is worth: { counts, why, refund, disputes }, where
-   counts is true, false, or null for "could not tell". The sales
+/* Every spelling of one address worth asking Stripe about.
+
+   STRIPE'S SEARCH BY ADDRESS IS EXACT ABOUT CAPITAL LETTERS — found
+   out in the test run of 6 October 2026, when a purchase made as
+   Name+DISPUTE@… could not be found by asking for name+dispute@… .
+   The guest list holds every address in small letters, so asking
+   Stripe for the list's spelling alone misses anybody who typed, or
+   whose browser filled in, a capital.
+
+   So it is asked for the small-letter spelling AND every other
+   spelling there is any reason to know: the one on the receipt a
+   message was about, and the one typed at the gate or on the admin
+   page. Each must come down to the same address, so this can never be
+   used to ask about somebody else. */
+function stripeSpellings(email, known, typed) {
+  const out = [email];
+
+  for (const one of [known ? stripeEmail(known) : '', typed]) {
+    const spelt = typeof one === 'string' ? one.trim() : '';
+    if (spelt && out.indexOf(spelt) < 0 && normalizeEmail(spelt) === email) {
+      out.push(spelt);
+    }
+  }
+
+  return out;
+}
+
+/* What one receipt is worth: { counts, ours, why, refund, disputes },
+   where counts is true, false, or null for "could not tell", and ours
+   says whether it was for the product that grants access at all. The sales
    lookup and the admin page's check both ask this, so they can never
    disagree about a receipt. */
 async function stripeJudge(env, session) {
-  const seen = { counts: false, why: '', refund: 'none', disputes: [] };
+  const seen = { counts: false, ours: false, why: '', refund: 'none', disputes: [] };
   const unsure = (why) => {
     seen.counts = null;
     seen.why = 'could not be judged — ' + why;
@@ -1441,6 +1525,7 @@ async function stripeJudge(env, session) {
     seen.why = 'a different product — this is why it was ignored';
     return seen;
   }
+  seen.ours = true;
 
   if (session.status !== 'complete') {
     seen.why = session.status === 'expired'
@@ -1620,17 +1705,53 @@ async function stripeSessionForPayment(env, intent) {
   return got.data.data[0] || false;
 }
 
-// Every receipt under one address — finished ones only, unless the
-// admin page is asking and wants to see the abandoned ones too.
-// Answers { sessions, all }, or null if Stripe could not be asked.
-async function stripeSessionsFor(env, email, anyStatus) {
-  const params = [['customer_details[email]', email], ['limit', '100']];
-  if (!anyStatus) params.push(['status', 'complete']);
+// Every receipt under one address, asked for under each spelling in
+// turn — finished ones only, unless the admin page is asking and wants
+// to see the abandoned ones too. Answers { sessions, all }, or null if
+// Stripe could not be asked.
+async function stripeSessionsFor(env, spellings, anyStatus) {
+  const sessions = [];
+  let all = true;
 
-  const got = await stripeAsk(env, 'checkout/sessions', params.concat(stripeExpand('data.')));
+  for (const spelt of spellings) {
+    const params = [['customer_details[email]', spelt], ['limit', '100']];
+    if (!anyStatus) params.push(['status', 'complete']);
+
+    const got = await stripeAsk(env, 'checkout/sessions', params.concat(stripeExpand('data.')));
+    if (!got.ok || !Array.isArray(got.data.data)) return null;
+    if (got.data.has_more === true) all = false;
+
+    for (const one of got.data.data) {
+      if (one && !sessions.some((had) => had.id === one.id)) sessions.push(one);
+    }
+  }
+
+  return { sessions, all };
+}
+
+// The latest hundred finished receipts, whoever paid, kept only where
+// the address is this one in any capitals and it is not one already in
+// hand. Read bare, then each keeper is fetched whole. An array, or
+// null if Stripe could not be asked.
+async function stripeSessionsLately(env, email, have) {
+  const got = await stripeAsk(env, 'checkout/sessions', [
+    ['status', 'complete'],
+    ['limit', '100'],
+  ]);
   if (!got.ok || !Array.isArray(got.data.data)) return null;
 
-  return { sessions: got.data.data, all: got.data.has_more !== true };
+  const out = [];
+  for (const one of got.data.data) {
+    if (!one || normalizeEmail(stripeEmail(one)) !== email) continue;
+    if (have.some((had) => had && had.id === one.id)) continue;
+
+    const id = stripeId(one.id);
+    const whole = id ? await stripeSessionById(env, id) : null;
+    if (!whole) return null;
+    out.push(whole);
+  }
+
+  return out;
 }
 
 /* One question put to Stripe. Answers { ok, status, data } and never
@@ -1768,10 +1889,17 @@ async function stripeStatus(env) {
    of it leaves this function: only the address that was asked about,
    the ids of what was bought, and the state of the payment.
 
+   IT LOOKS UNDER EVERY SPELLING IT CAN. Stripe's search is exact about
+   capital letters, so it is asked for the address in small letters and
+   as it was typed on the admin page; and if neither turns up a
+   finished receipt, the latest hundred receipts are read through for
+   the same address in any capitals. Each receipt is shown with the
+   spelling Stripe holds, so a capital somebody paid with can be seen.
+
    When nothing is found for the address, the most recent receipts are
    listed instead — with NO address on them at all — so the ids Eric's
    products actually use are there to compare with STRIPE_PRODUCT. */
-async function stripeLookup(env, email) {
+async function stripeLookup(env, email, typed) {
   if (!env.STRIPE_SECRET_KEY) {
     return { ok: false, why: 'No STRIPE_SECRET_KEY is set.' };
   }
@@ -1791,18 +1919,32 @@ async function stripeLookup(env, email) {
     return at > 0 ? new Date(at * 1000).toISOString().replace(/\.\d+Z$/, 'Z') : null;
   };
 
-  const first = await stripeAsk(
-    env,
-    'checkout/sessions',
-    [['customer_details[email]', email], ['limit', '100']].concat(stripeExpand('data.'))
-  );
-  if (!first.ok || !Array.isArray(first.data.data)) {
-    return { ok: false, why: stripeWhy(first) };
+  // Asked one spelling at a time, here rather than through
+  // stripeSessionsFor, so that a refusal can be reported with its
+  // reason instead of as a bare "could not tell".
+  const mine = [];
+  for (const spelt of stripeSpellings(email, null, typed)) {
+    const got = await stripeAsk(
+      env,
+      'checkout/sessions',
+      [['customer_details[email]', spelt], ['limit', '100']].concat(stripeExpand('data.'))
+    );
+    if (!got.ok || !Array.isArray(got.data.data)) {
+      return { ok: false, why: stripeWhy(got) };
+    }
+    for (const session of got.data.data) {
+      if (!session || normalizeEmail(stripeEmail(session)) !== email) continue;
+      if (!mine.some((had) => had.id === session.id)) mine.push(session);
+    }
   }
 
-  const mine = first.data.data.filter(
-    (session) => session && normalizeEmail(stripeEmail(session)) === email
-  );
+  // No finished receipt under either spelling: read the latest hundred
+  // for the same address in any capitals.
+  if (!mine.some((session) => session.status === 'complete')) {
+    const more = await stripeSessionsLately(env, email, mine);
+    if (!more) return { ok: false, why: 'Stripe could not be asked for its latest receipts.' };
+    for (const session of more) mine.push(session);
+  }
 
   if (mine.length) {
     const found = [];
@@ -1986,7 +2128,8 @@ async function handleAdminApi(request, env, action) {
     const body = await readJson(request);
     const email = normalizeEmail(body.email);
     if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
-    return json(await stripeLookup(env, email), 200);
+    const typed = typeof body.email === 'string' ? body.email.trim() : '';
+    return json(await stripeLookup(env, email, typed), 200);
   }
 
   // "Make the list match", for both shops at once — what the button on
@@ -2008,12 +2151,18 @@ async function handleAdminApi(request, env, action) {
     if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
 
     const stripeOn = !!env.STRIPE_SECRET_KEY;
+    const typed = typeof body.email === 'string' ? body.email.trim() : '';
 
     try {
       let stripe = null;
       if (stripeOn) {
-        stripe = await reconcileStripe(env, email);
-        if (stripe === null) return json({ ok: true, email, stripeOn, held: true }, 200);
+        // The thorough look, under every spelling: this is Eric asking
+        // about one person, not a stranger at the gate.
+        const settled = await settleStripe(env, email, null, typed, true);
+        stripe = settled.live;
+        if (stripe === null) {
+          return json({ ok: true, email, stripeOn, held: true, why: settled.why }, 200);
+        }
       }
 
       const gumroad = await reconcile(env, email);
@@ -2280,6 +2429,12 @@ const ADMIN_PAGE = `<!doctype html>
     different ids for everything, so it changes when the key does. What is shown
     about a Stripe receipt is cut down on purpose: no name, no postal address,
     no amount and no card.</p>
+  <p class="note"><b>Stripe's own search is exact about capital letters.</b>
+    Somebody who paid as <code>Pat@Example.com</code> is not found by asking it
+    for <code>pat@example.com</code>. So this looks under the address as you
+    type it, again in small letters, and then through your latest hundred
+    receipts for the same address in any capitals. Each receipt is shown with
+    the spelling Stripe holds.</p>
 
   <h2>Check the post</h2>
   <div class="row">
@@ -2807,6 +2962,11 @@ const ADMIN_PAGE = `<!doctype html>
   // all, the words are exactly the ones this button has always used.
   function matchSaid(r) {
     if (!r || !r.ok) return 'That did not work.';
+    if (r.held && r.why === 'no-receipt') {
+      return 'Nothing changed. They are on the list through Stripe, but Stripe shows no receipt ' +
+        'for that address at all — not even a refunded one — and nobody is taken off on a guess. ' +
+        'If they should come off, press Remove on their row.';
+    }
     if (r.held) return 'Nothing changed — a shop could not be asked just now. Try again in a minute.';
 
     if (!r.stripeOn) {

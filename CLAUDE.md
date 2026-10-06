@@ -1567,8 +1567,8 @@ for a receipt Stripe does not have, and it adds nobody.
 
 | | Stripe | Gumroad's twin |
 |---|---|---|
-| true / false / null | `stripeLive()` | `hasLiveSale()` |
-| make the list agree | `reconcileStripe()` | `reconcile()` |
+| true / false / null | `stripeLive()`, over `stripeRead()` | `hasLiveSale()` |
+| make the list agree | `reconcileStripe()`, over `settleStripe()` | `reconcile()` |
 | is it our product | `stripeOurs()` | `sameProduct()` |
 | what is one receipt worth | `stripeJudge()` | (inline) |
 | the admin page's check | `stripeLookup()` | `gumroadLookup()` |
@@ -1777,11 +1777,24 @@ begin `rk_test_`, so nothing in the worker knows the difference.
   refunded in full and the row was still there, still MANUAL.
 - Every webhook delivery in Stripe's own list showed 200.
 
-So three of the unknowns below are answered: Cloudflare lets Stripe
-through, the four Read permissions are enough to fold the items and
-the charge into a receipt, and a restricted key may expand on these
-calls. **Still to run:** a dispute and a win, a purchase under a
-capitalised address, and an address held in both shops.
+- **Test 4, a dispute and a win, passed.** Paid with the dispute test
+  card under an address typed with capitals: not on the list while the
+  dispute stood; countered with `winning_evidence`; on the list
+  afterwards, in small letters, tagged STRIPE.
+- **Test 5, one address in both shops, passed.** A free Gumroad
+  purchase put it on as GUMROAD; buying at Stripe with the same
+  address re-tagged it STRIPE with its date unchanged; refunding the
+  Stripe purchase in full put it back to GUMROAD rather than removing
+  it. **That is the two-shop rule working against both real APIs.**
+- Every webhook delivery showed 200 throughout.
+
+So Cloudflare lets Stripe through, the four Read permissions are
+enough, and a restricted key may expand on these calls.
+
+**And one unknown came back the wrong way — see Capital letters,
+next.** The worker was changed for it the same evening; **that change
+has to be pasted in and the lookup tried again before Stage 3 can be
+called finished**, and the test rows are still on the list.
 
 **Stripe's test cards and how to settle a test dispute**, read from
 its testing page on 6 October 2026: `4242 4242 4242 4242` pays;
@@ -1799,16 +1812,70 @@ Stripe's own help pages, a table of which secret comes from which
 step and what it begins with, two tests to a message at most, and
 "tell me what you see" rather than "confirm".
 
+#### Capital letters — found in Stage 3, and what was done
+
+**Stripe's search by address is exact about capital letters, and it
+keeps an address as the buyer typed it.** Test 4, step 4: a purchase
+made as `Name+DISPUTE@…` and looked up as `name+dispute@…` came back
+"Stripe has no receipt at all for that address". The guest list holds
+every address in small letters, so asking Stripe for the list's own
+spelling misses anybody who typed a capital or whose browser filled
+one in.
+
+That was a worse fault than the gate's backup missing somebody. As
+first written, **an empty search was read as "no live sale"**, so:
+
+- a buyer who paid with capitals, bought a second time and refunded
+  one would have been **removed while holding a live receipt**;
+- **"Make the list match" on such a buyer would have taken them off.**
+
+Neither happened to anybody — it was found in a sandbox. Three things
+changed, all in the worker:
+
+1. **Every spelling there is reason to know is asked for**
+   (`stripeSpellings()`): the small-letter one, the one on the receipt
+   a message was about, and the one typed at the gate or on the admin
+   page. `handleRequestCode` hands the address to `postCode()` a
+   second time, as typed, for this and nothing else. Each spelling
+   must come down to the same address, so it cannot be used to ask
+   about anybody else.
+2. **Nobody is removed because nothing was found.** `stripeRead()`
+   counts the receipts *for our product* it actually looked at
+   (`seen`), and `settleStripe()` removes a `stripe` row only when at
+   least one was seen and none counts. A `stripe` row with no receipt
+   at all is **null, `why: 'no-receipt'`** — left alone, and the admin
+   page says so and points at Remove. A webhook can never land there:
+   the receipt it is about is always among those looked at.
+3. **The admin page looks harder** (`deep`): when the search by
+   address finds no receipt of ours, it reads the latest hundred
+   finished receipts bare and keeps any whose address is this one in
+   any capitals. The lookup shows each receipt with the spelling
+   Stripe holds. **The gate never does this** — it is one more
+   question per stranger, and test H13 pins it at one.
+
+**That `stripe` rows made in the sandbox can no longer be removed by
+"Make the list match" once the keys go live is this rule working**,
+not a fault: the live side has no receipt for them. Remove them by
+hand — it is on the Stage 3 tidy-up list.
+
+**Known and accepted, both rare twice over:**
+
+- Paid as `Pat@Example.com`, webhook missed for three days, and then
+  typed in small letters at the gate: the backup does not find them
+  (H13). Most people's browsers fill in the same spelling both times.
+- The same person buying twice under **two different** spellings and
+  refunding one: the other is not found, and they come off (C13). The
+  gate's backup re-adds them if they type the spelling they paid
+  under.
+
+The honest cure for both is to remember the spelling Stripe holds,
+which means a new column. Not built: the brief says to store nothing
+new, and it would be a migration for a case nobody has met.
+
 #### Not knowable until Stage 3 — say so, don't guess
 
-- **Whether Stripe's search by email minds capital letters.** The
-  webhook is safe either way, because the receipt that rang the bell
-  is always judged alongside the search results (`known`). The gate's
-  backup is not: paid as `Buyer@Example.com`, asked for as
-  `buyer@example.com`, and an exact search finds nothing (test H13).
-  **Buy with a capitalised address in test mode and see.** If it
-  matters, the fix is to pass the gate's as-typed spelling along as a
-  second thing to search for.
+- ~~Whether Stripe's search by email minds capital letters.~~ **It
+  does.** See Capital letters above.
 - **Whether Cloudflare lets Stripe's servers through.** Bot Fight Mode
   has blocked webhooks elsewhere. Security → Events, around the time
   of a test purchase. Stripe publishes the addresses it sends from.
@@ -1866,15 +1933,19 @@ python3 tools/preview-server.py 8423
 
 then `localhost:8423/tools/worker-tests/` in the pane. About twenty
 seconds; the page says **ALL AS RECORDED** or marks what moved with
-`!!`. `window.__RESULTS` holds the lines if the baseline has to be
+`!!`, and a case added since the answers were recorded with `++`.
+**Lines are matched by what they are about, never by position** — the
+first version compared by position, and one case added in the middle
+made a hundred lines look as though they had moved. `window.__RESULTS` holds the lines if the baseline has to be
 recorded again — after a deliberate change, and only after reading
 what changed. Stop the server afterwards, and never use 8420.
 
-- **129 Stripe cases** (`stripe-cases.js`): the signature (20),
-  failures (9), refunds (11), disputes (11), other products (9), kinds
-  of payment (8), both shops (8), the gate (15), what is sent to
-  Stripe (3), the admin panel (8), the lookup (10), make-the-list-match
-  (16), patience (1).
+- **141 Stripe cases** (`stripe-cases.js`): the signature (20),
+  failures (9), refunds (13), disputes (11), other products (9), kinds
+  of payment (8), both shops (8), the gate (18), what is sent to
+  Stripe (3), the admin panel (8), the lookup (13), make-the-list-match
+  (20), patience (1). Twelve were added for capital letters; the 129
+  before them gave the same answers after that change as before it.
 - **The 40 Gumroad cases first run on 5 October 2026**, kept as they
   were run with stand-in product ids. **All 40 gave the same answers
   after the Stripe work as before it** — with Stripe not set up, and

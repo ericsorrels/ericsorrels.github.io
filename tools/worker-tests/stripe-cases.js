@@ -76,6 +76,10 @@ window.__STRIPE_CASES = async function () {
   w = new W(); s = w.buy(); w.refund(s, 'full'); r = await w.send('charge.refunded', s); r2 = await w.send('checkout.session.completed', s); line('C09', 'out of order: the refund arrives BEFORE the purchase', r2, w, 'refund answered ' + r.status);
   w = new W(); s = w.buy(); await w.send('checkout.session.completed', s); await w.send('checkout.session.completed', s); r = await w.send('checkout.session.completed', s); line('C10', 'the same purchase delivered three times', r, w, 'rows: ' + w.members.size);
   w = new W({ members: [[B, 'stripe']] }); s = w.buy(); w.refund(s, 'full'); await w.send('charge.refunded', s); r = await w.send('charge.refunded', s); line('C11', 'the same refund delivered twice', r, w);
+  // Capitals. Stripe's search by address is exact about them — found in the
+  // real test run of 6 October 2026 — and the guest list is all small letters.
+  w = new W({ members: [[B, 'stripe']] }); s = w.buy({ email: 'Buyer@Example.COM' }); w.buy({ email: 'Buyer@Example.COM' }); w.refund(s, 'full'); r = await w.send('charge.refunded', s); line('C12', 'bought twice as Buyer@Example.COM, one refunded in full', r, w);
+  w = new W({ members: [[B, 'stripe']] }); s = w.buy({ email: 'Buyer@Example.COM' }); w.buy({ email: 'BUYER@example.com' }); w.refund(s, 'full'); r = await w.send('charge.refunded', s); line('C13', 'bought twice under two different spellings, one refunded (KNOWN LIMIT: the other is not found)', r, w);
 
   /* D — disputes ----------------------------------------------------- */
   w = new W({ members: [[B, 'stripe']] }); s = w.buy(); w.dispute(s, 'needs_response'); r = await w.send('charge.dispute.created', s); line('D01', 'dispute opened', r, w);
@@ -139,8 +143,11 @@ window.__STRIPE_CASES = async function () {
   w = new W({ stripe: false, sales: [H.gsale()] }); r = await w.gate(B); g('H10', 'Stripe not set up at all: Gumroad buyer', r, w, B, 'asked Stripe ' + w.stripe.calls.length + 'x');
   w = new W({ stripe: false }); r = await w.gate('stranger@example.com'); g('H11', 'Stripe not set up at all: stranger', r, w, 'stranger@example.com', 'asked Stripe ' + w.stripe.calls.length + 'x');
   w = new W({ gumroad: false }); w.buy(); w.failWrites = true; r = await w.gate(B); g('H12', 'Stripe buyer, the guest list refuses the write (Gumroad off)', r, w, B);
-  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); r = await w.gate(B); g('H13', 'paid as Buyer@Example.COM, asks in small letters, search exact about capitals (KNOWN LIMIT)', r, w, B);
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); r = await w.gate(B); g('H13', 'paid as Buyer@Example.COM, asks in small letters, search exact about capitals (KNOWN LIMIT)', r, w, B, 'asked Stripe ' + w.stripe.calls.length + 'x — the gate never reads the latest hundred');
   w = new W(); w.stripe.caseSensitive = false; w.buy({ email: 'Buyer@Example.COM' }); r = await w.gate(B); g('H14', 'same, if Stripe search is not exact about capitals', r, w, B);
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); r = await w.gate('Buyer@Example.COM'); g('H16', 'paid as Buyer@Example.COM and types it the same way at the gate', r, w, B, 'asked Stripe ' + w.stripe.calls.length + 'x');
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); r = await w.gate('  Buyer@Example.COM '); g('H17', 'same, with stray spaces round it', r, w, B);
+  w = new W(); w.buy({ email: 'someone.else@example.com' }); r = await w.gate('Buyer@Example.COM'); g('H18', 'types capitals at the gate, but the receipt is somebody else\'s', r, w, B);
   r = await new W().gate('not an address'); out.push('H15  mistyped address  ->  ' + r.status + ' ' + r.body);
 
   /* I — what the worker sends Stripe -------------------------------- */
@@ -181,6 +188,9 @@ window.__STRIPE_CASES = async function () {
   w = new W({ stripe: false }); a = await w.admin('stripe-check', { email: B }); out.push('K08  Stripe not set up  ->  ' + a.text);
   a = await new W().admin('stripe-check', { email: 'nope' }); out.push('K09  not an address  ->  ' + a.status + ' ' + a.text);
   w = new W({ sales: [H.gsale(), H.gsale({ refunded: true })] }); a = await w.admin('gumroad-check', { email: B }); out.push('K10  gumroad-check, as before  ->  ' + a.data.found.map(function (f) { return f.verdict; }).join(' / '));
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); a = await w.admin('stripe-check', { email: 'Buyer@Example.COM' }); out.push('K11  paid with capitals, looked up with the same capitals  ->  found ' + a.data.found.length + ' | as Stripe spells it: ' + a.data.found.map(function (f) { return f.email; }).join(',') + ' | ' + a.data.found.map(function (f) { return f.verdict; }).join(' / '));
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); a = await w.admin('stripe-check', { email: B }); out.push('K12  paid with capitals, looked up in small letters (found by reading the latest hundred)  ->  found ' + a.data.found.length + ' | as Stripe spells it: ' + a.data.found.map(function (f) { return f.email; }).join(',') + ' | ' + a.data.found.map(function (f) { return f.verdict; }).join(' / '));
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); w.buy({ email: 'someone.else@example.com' }); a = await w.admin('stripe-check', { email: B }); out.push('K13  same, with somebody else\'s receipt among the latest  ->  found ' + a.data.found.length + ' | somebody else\'s address in it: ' + (a.text.indexOf('someone.else') > -1) + ' | leaks: [' + leak(a.text) + ']');
 
   /* L — "Make the list match", both shops --------------------------- */
   var seen = '2026-09-20T10:00:00Z';
@@ -205,6 +215,10 @@ window.__STRIPE_CASES = async function () {
   w = new W({ stripe: false, sales: [H.gsale()] }); a = await w.admin('match', { email: B }); m('L14', 'Stripe NOT SET UP: live Gumroad sale, not listed', a, w);
   w = new W({ members: [[B, 'stripe', seen]] }); s = w.buy(); w.refund(s, 'full'); w.failWrites = true; a = await w.admin('match', { email: B }); m('L15', 'the guest list refuses the write', a, w);
   w = new W({ members: [[B, 'gumroad', seen]], sales: [H.gsale({ refunded: true })] }); a = await w.admin('gumroad-sync', { email: B }); out.push('L16  the old gumroad-sync route, untouched  ->  ' + a.text + ' | list: ' + w.on());
+  w = new W({ members: [[B, 'stripe', seen]] }); a = await w.admin('match', { email: B }); m('L17', 'stripe row, and Stripe has NO receipt for that address at all', a, w, 'why: ' + (a.data || {}).why);
+  w = new W({ members: [[B, 'stripe', seen]] }); s = w.buy({ email: 'Buyer@Example.COM' }); w.refund(s, 'full'); a = await w.admin('match', { email: B }); m('L18', 'stripe row, paid with capitals, fully refunded, asked in small letters', a, w);
+  w = new W(); w.buy({ email: 'Buyer@Example.COM' }); a = await w.admin('match', { email: B }); m('L19', 'not on the list, paid with capitals, asked in small letters', a, w);
+  w = new W({ members: [[B, 'stripe', seen]] }); w.buy({ email: 'Buyer@Example.COM' }); a = await w.admin('match', { email: B }); m('L20', 'stripe row, live sale under capitals, asked in small letters', a, w);
 
   /* P — patience (the slow one, last) ------------------------------- */
   w = new W(); s = w.buy(); w.stripe.delay = 4500; r = await w.send('checkout.session.completed', s);
