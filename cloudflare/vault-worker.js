@@ -13,6 +13,7 @@
 //   GET  /vault-api/admin     the guest list, for Eric only — see The admin page
 //        /vault-api/admin/list · /add · /remove · /test-code
 //   POST /vault-api/gumroad/<secret>   what Gumroad posts to — see Gumroad
+//   POST /vault-api/stripe/webhook     what Stripe posts to, signed — see Stripe
 //   GET  /vault-api/audio/01.mp3      a file, but only with a good cookie
 //        /vault-api/lyrics/01.lrc
 //        /vault-api/notes/01.md
@@ -33,6 +34,13 @@
 //   GUMROAD_TOKEN    reads Eric's own sales, to confirm a purchase
 //   GUMROAD_PRODUCT  which product grants access — its permalink or id
 //   GUMROAD_PING_SECRET  the long random word in the address Gumroad posts to
+//   STRIPE_SECRET_KEY    a RESTRICTED, read-only key: it reads Eric's own
+//                        receipts, payments, charges and disputes, and can
+//                        do nothing else — it cannot charge, refund or pay out
+//   STRIPE_WEBHOOK_SECRET  the signing secret of the webhook endpoint, which
+//                        is how a message is known to have come from Stripe
+//   STRIPE_PRODUCT       which product grants access — its product id
+//                        (prod_…), a price id or the payment link's id
 //
 // There is no VAULT_PASSWORD any more. The shared password was removed
 // on 29 September 2026 in favour of a code emailed to an address on the
@@ -69,6 +77,8 @@ export default {
     if (route.startsWith('gumroad/')) {
       return handleGumroad(request, env, ctx, route.slice('gumroad/'.length));
     }
+
+    if (route === 'stripe/webhook') return handleStripe(request, env, ctx);
 
     return handleFile(request, env, route);
   },
@@ -162,6 +172,22 @@ async function postCode(env, email) {
   if (!member && env.GUMROAD_TOKEN) {
     if ((await reconcile(env, email)) === true) {
       member = await findMember(env, email);
+    }
+  }
+
+  // The same safety net for the other shop, asked second and for the
+  // same reason. Somebody who has just paid through Stripe is sent
+  // straight back to this page, and may well ask for a code before
+  // Stripe's own message about the sale has arrived. A throw in here
+  // is swallowed: it must never be the reason no code went out to
+  // somebody the list already knows.
+  if (!member && env.STRIPE_SECRET_KEY) {
+    try {
+      if ((await reconcileStripe(env, email)) === true) {
+        member = await findMember(env, email);
+      }
+    } catch (e) {
+      /* could not tell; they can ask again in a moment */
     }
   }
 
@@ -500,8 +526,8 @@ function cookieValue(header, name) {
 
    A D1 database — an ordinary table of rows and columns — arriving as
    the binding MEMBERS. One row per person allowed in: their address,
-   where they came from ('manual' or 'gumroad'), when they were added,
-   and when they last signed in. Its shape is in cloudflare/vault-schema.sql.
+   where they came from ('manual', 'gumroad' or 'stripe'), when they
+   were added, and when they last signed in. Its shape is in cloudflare/vault-schema.sql.
 
    Every address is put through normalizeEmail() before it is looked up
    or stored, so the list can never end up holding two rows for one
@@ -1049,6 +1075,783 @@ async function gumroadStatus(env) {
 }
 
 /* ---------------------------------------------------------------------
+   Stripe
+
+   A second shop beside Gumroad, held to the same rules. Somebody pays
+   through a Stripe Payment Link; their address joins the guest list
+   tagged 'stripe'. A full refund or a lost dispute takes it off again.
+   Nothing about Gumroad above is changed by any of this.
+
+   STRIPE HOSTS THE PAYMENT. There are no card fields on the site, no
+   Stripe script on it, and no route here that makes a checkout — so no
+   card detail ever comes near this file, and there is no price or
+   product for a visitor to tamper with.
+
+   A STRIPE MESSAGE IS SIGNED, WHICH A GUMROAD PING IS NOT — and it is
+   still not believed. The signature proves Stripe sent it; nothing
+   more is taken from it than the id of the receipt or payment it is
+   about. That receipt is then fetched from Stripe over a connection
+   this worker opened itself, and the address, the product and whether
+   the money is still there are all read from THAT. reconcileStripe()
+   asks what is true now and makes the list agree, so a message
+   arriving twice, late, or out of order does no harm.
+
+   IT FAILS SAFE. stripeLive() answers true, false, or null for "could
+   not tell", and null changes nothing — nobody is added on a guess and
+   nobody is removed because an API had a bad minute.
+
+   IT ANSWERS HONESTLY, so Stripe re-sends when it should. 200 only
+   once the list agrees with Stripe's records, or the message was
+   rightly ignored (another product, an event this file does not act
+   on). 503 when it could not find out or the list refused a write;
+   Stripe then tries again, for up to three days.
+
+   IT NEVER OVERRULES ERIC OR GUMROAD. Only rows whose source is
+   'stripe' are ever removed, and not even those while Gumroad still
+   shows a live sale for the same address — see reconcileStripe.
+
+   NOTHING ABOUT A BUYER IS KEPT BUT THE ADDRESS. No name, no postal
+   address, no amount and no card detail is written anywhere, and
+   nothing is logged. The answer to Stripe is a status and no body.
+   --------------------------------------------------------------------- */
+
+const STRIPE_API = 'https://api.stripe.com/v1/';
+
+// Pinned, so the fields read below keep their names whatever Eric's
+// account default moves on to. Stripe's current version on 6 October
+// 2026, when this was written.
+const STRIPE_VERSION = '2026-09-30.endive';
+
+// Not a secret — the secret is the signature on what arrives there.
+const STRIPE_WEBHOOK_URL = 'https://graymanmusical.com/vault-api/stripe/webhook';
+
+// The six events to tick on the webhook endpoint, and the only six this
+// file acts on. Anything else that arrives signed is heard and ignored.
+const STRIPE_EVENTS = [
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'charge.refunded',
+  'charge.dispute.created',
+  'charge.dispute.closed',
+];
+
+// A message older than this is refused even with a good signature, so
+// one that was overheard cannot be played back later.
+const STRIPE_TOLERANCE_S = 5 * 60;
+
+// Stripe's messages are a few kilobytes. Anything vastly larger is not
+// one, and is turned away before any work is spent on it.
+const STRIPE_BODY_LIMIT = 512 * 1024;
+
+// How long a message's lookup may take before Stripe is simply asked to
+// send it again. The attempt itself carries on regardless.
+const STRIPE_PATIENCE_MS = 8000;
+
+// What a dispute's status means for the sale it is about. An INQUIRY —
+// the three "warning" statuses — is a bank asking a question; no money
+// has moved, and most never become a dispute, so access stays. A status
+// in neither list is one this file has not met, and is "could not tell".
+const STRIPE_DISPUTE_AGAINST = ['needs_response', 'under_review', 'lost'];
+const STRIPE_DISPUTE_STANDS = [
+  'won',
+  'prevented',
+  'warning_closed',
+  'warning_needs_response',
+  'warning_under_review',
+];
+
+async function handleStripe(request, env, ctx) {
+  if (request.method !== 'POST') return notFound();
+  if (!env.STRIPE_WEBHOOK_SECRET || !env.MEMBERS) return notFound();
+
+  const header = request.headers.get('stripe-signature') || '';
+  if (!header) return notFound();
+  if (Number(request.headers.get('content-length') || 0) > STRIPE_BODY_LIMIT) {
+    return notFound();
+  }
+
+  // Read ONCE, as text, before anything parses it. The signature is
+  // over these exact characters; a body that has been through a JSON
+  // parser and back is a different string and would never verify.
+  let raw;
+  try {
+    raw = await request.text();
+  } catch (e) {
+    return notFound();
+  }
+  if (raw.length > STRIPE_BODY_LIMIT) return notFound();
+
+  // Unsigned, wrongly signed, tampered with or stale: the same blank
+  // 404 the Gumroad doorbell gives, and the same one a stranger gets
+  // for any address here. Nothing has been looked at but the signature.
+  if (!(await stripeSigned(raw, header, env.STRIPE_WEBHOOK_SECRET))) {
+    return notFound();
+  }
+
+  let event;
+  try {
+    event = JSON.parse(raw);
+  } catch (e) {
+    return stripeHeard();
+  }
+
+  const type = event && typeof event.type === 'string' ? event.type : '';
+  const about = event && event.data ? event.data.object : null;
+
+  // Signed, but not one of the six. Heard, and nothing else — saying
+  // anything but 200 would only earn three days of the same message.
+  if (!STRIPE_EVENTS.includes(type) || !about || typeof about !== 'object') {
+    return stripeHeard();
+  }
+
+  // The same shape as the Gumroad doorbell: the work is done BEFORE the
+  // answer, the answer says whether it worked, and the attempt is kept
+  // alive with waitUntil so running out of patience does not abandon
+  // it. A throw — the guest list refusing a write — counts as "could
+  // not tell", the same as a null.
+  const attempt = stripeEvent(env, type, about).then(
+    (done) => done,
+    () => null
+  );
+  ctx.waitUntil(attempt);
+
+  const settled = await Promise.race([
+    attempt.then((done) => ({ done })),
+    sleep(STRIPE_PATIENCE_MS).then(() => null),
+  ]);
+
+  if (!settled || settled.done === null) return stripeAgain();
+  return stripeHeard();
+}
+
+// A status and nothing else, either way.
+function stripeHeard() {
+  return new Response(null, { status: 200 });
+}
+
+function stripeAgain() {
+  return new Response(null, { status: 503 });
+}
+
+/* Is this message Stripe's? The header reads  t=<seconds>,v1=<hex>,…
+   and may carry more than one v1 while a signing secret is being
+   rolled. The expected signature is HMAC-SHA256, keyed with the
+   endpoint's signing secret, over the timestamp, a full stop, and the
+   body exactly as it arrived.
+
+   Every v1 offered is compared, each at constant time and with no
+   early way out, so neither which one matched nor how nearly can be
+   felt from outside. */
+async function stripeSigned(raw, header, secret) {
+  let stamp = '';
+  const offered = [];
+
+  for (const piece of String(header).split(',')) {
+    const at = piece.indexOf('=');
+    if (at < 0) continue;
+    const name = piece.slice(0, at).trim();
+    const value = piece.slice(at + 1).trim();
+    if (name === 't') stamp = value;
+    else if (name === 'v1') offered.push(value.toLowerCase());
+  }
+
+  if (!/^\d{1,12}$/.test(stamp) || !offered.length) return false;
+
+  // Too old, or dated in a future that has not happened. Checked
+  // against this worker's own clock, never against anything sent.
+  const age = Math.floor(Date.now() / 1000) - Number(stamp);
+  if (Math.abs(age) > STRIPE_TOLERANCE_S) return false;
+
+  const expected = bytes(await hmacHex(stamp + '.' + raw, secret));
+
+  let good = false;
+  for (const one of offered) {
+    if (timingSafeEqual(bytes(one), expected)) good = true;
+  }
+  return good;
+}
+
+/* Acts on one verified event. Answers true for "finished" — the list
+   now agrees with Stripe's records, or this was rightly none of the
+   vault's business — and null for "could not tell", which earns a 503
+   and another delivery.
+
+   All that is taken from the event is an id. A checkout event names
+   its receipt; a refund or a dispute names a payment, and the receipt
+   that payment belongs to is asked for. */
+async function stripeEvent(env, type, about) {
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRODUCT) return null;
+
+  let session;
+
+  if (type.indexOf('checkout.session.') === 0) {
+    const id = stripeId(about.id);
+    if (!id) return true;
+    session = await stripeSessionById(env, id);
+  } else {
+    let intent = stripeId(stripeRef(about.payment_intent));
+
+    // A dispute always names its charge and does not always name the
+    // payment, so the charge is asked which payment it was.
+    if (!intent) {
+      const charge = stripeId(stripeRef(about.charge));
+      if (!charge) return true;
+      const got = await stripeAsk(env, 'charges/' + charge, []);
+      if (!got.ok) return null;
+      intent = stripeId(stripeRef(got.data.payment_intent));
+    }
+
+    // Money that did not come through a checkout page at all — an
+    // invoice, something keyed in by hand. Not this vault's.
+    if (!intent) return true;
+
+    session = await stripeSessionForPayment(env, intent);
+    if (session === false) return true;
+  }
+
+  if (!session) return null;
+
+  // Stripe sends this address every sale on Eric's account. One for
+  // anything else is heard and left alone: a 200 and nothing more.
+  const ours = await stripeOurs(env, session);
+  if (ours === null) return null;
+  if (!ours) return true;
+
+  const email = normalizeEmail(stripeEmail(session));
+  if (!email) return true;
+
+  const live = await reconcileStripe(env, email, session);
+  return live === null ? null : true;
+}
+
+/* Asks Stripe what is true for one address and makes the guest list
+   agree. Returns true if Stripe shows a live sale, false if it does
+   not, and null if that could not be found out — in which case
+   nothing is touched.
+
+   SOMEBODY MAY HAVE BOUGHT IN BOTH SHOPS, and a row has only one
+   source. Two rules keep a refund in one from costing them the other,
+   and both live here so that nothing of Gumroad's had to change:
+
+   1. A live Stripe sale for a row tagged 'gumroad' re-tags it
+      'stripe'. Gumroad's own refund only ever removes 'gumroad' rows,
+      so from then on it cannot remove this one.
+
+   2. Before a 'stripe' row is removed, Gumroad is asked. A live sale
+      there keeps the row and tags it 'gumroad' again. If Gumroad
+      cannot be asked, nothing changes and the answer is null — Stripe
+      re-sends, and the question is put again.
+
+   A 'manual' row is never touched by either rule. */
+async function reconcileStripe(env, email, known) {
+  const live = await stripeLive(env, email, known);
+  if (live === null) return null;
+
+  if (live) {
+    await env.MEMBERS.prepare(
+      'INSERT INTO members (email, source, added_at) VALUES (?, ?, ?) ' +
+        "ON CONFLICT(email) DO UPDATE SET source = 'stripe' " +
+        "WHERE members.source = 'gumroad'"
+    )
+      .bind(email, 'stripe', new Date().toISOString().replace(/\.\d+Z$/, 'Z'))
+      .run();
+    return true;
+  }
+
+  // No live sale at Stripe. That only matters to a row Stripe put there.
+  const row = await findMember(env, email);
+  if (!row || row.source !== 'stripe') return false;
+
+  if (env.GUMROAD_TOKEN && env.GUMROAD_PRODUCT) {
+    const elsewhere = await hasLiveSale(env, email);
+    if (elsewhere === null) return null;
+
+    if (elsewhere) {
+      await env.MEMBERS.prepare(
+        "UPDATE members SET source = 'gumroad' WHERE email = ? AND source = 'stripe'"
+      )
+        .bind(email)
+        .run();
+      return false;
+    }
+  }
+
+  // Note the source test, the same one Gumroad's removal carries.
+  await env.MEMBERS.batch([
+    env.MEMBERS.prepare(
+      "DELETE FROM members WHERE email = ? AND source = 'stripe'"
+    ).bind(email),
+    env.MEMBERS.prepare('DELETE FROM codes WHERE email = ?').bind(email),
+  ]);
+
+  return false;
+}
+
+/* true / false / null, as hasLiveSale answers for Gumroad. Looks for
+   at least one receipt for the right product, to this address, that
+   was paid and has not been fully refunded or lost to a dispute.
+
+   `known` is a receipt already in hand — the one a message was about.
+   It is judged alongside whatever the search by address returns, so
+   the sale that rang the bell is always among those looked at, however
+   Stripe's search treats the spelling of an address. */
+async function stripeLive(env, email, known) {
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRODUCT) return null;
+
+  const found = await stripeSessionsFor(env, email, false);
+  if (!found) return null;
+
+  const receipts = found.sessions.slice();
+  if (known && !receipts.some((one) => one && one.id === known.id)) {
+    receipts.push(known);
+  }
+
+  // More receipts than one page holds, for a single address, is not
+  // something a real buyer does. If it ever happens and none of those
+  // seen counts, the honest answer is "could not tell", not "no".
+  let unsure = !found.all;
+
+  for (const session of receipts) {
+    if (!session || normalizeEmail(stripeEmail(session)) !== email) continue;
+
+    const seen = await stripeJudge(env, session);
+    if (seen.counts === true) return true;
+    if (seen.counts === null) unsure = true;
+  }
+
+  return unsure ? null : false;
+}
+
+/* What one receipt is worth: { counts, why, refund, disputes }, where
+   counts is true, false, or null for "could not tell". The sales
+   lookup and the admin page's check both ask this, so they can never
+   disagree about a receipt. */
+async function stripeJudge(env, session) {
+  const seen = { counts: false, why: '', refund: 'none', disputes: [] };
+  const unsure = (why) => {
+    seen.counts = null;
+    seen.why = 'could not be judged — ' + why;
+    return seen;
+  };
+
+  const ours = await stripeOurs(env, session);
+  if (ours === null) return unsure('what was bought could not be read');
+  if (!ours) {
+    seen.why = 'a different product — this is why it was ignored';
+    return seen;
+  }
+
+  if (session.status !== 'complete') {
+    seen.why = session.status === 'expired'
+      ? 'abandoned — the checkout page was left without paying'
+      : 'still open — nobody has paid yet';
+    return seen;
+  }
+
+  // The refund and dispute reading below is of a single payment. A
+  // subscription has no single payment to read, so it is not counted
+  // rather than counted for ever.
+  if (session.mode !== 'payment') {
+    seen.why = 'not a one-off payment';
+    return seen;
+  }
+
+  // A code for 100% off: nothing was charged, so there is nothing that
+  // can be refunded or disputed. It counts, as a free sale at Gumroad
+  // does.
+  if (session.payment_status === 'no_payment_required') {
+    seen.counts = true;
+    seen.why = 'counts — nothing was owed, so there is nothing to refund';
+    return seen;
+  }
+
+  if (session.payment_status !== 'paid') {
+    seen.why = 'not paid — a payment still on its way, or one that failed';
+    return seen;
+  }
+
+  const charge = await stripeCharge(env, session);
+  if (!charge) return unsure('Stripe did not hand over its payment');
+
+  // `refunded` is true only when ALL of it has gone back. A part
+  // refund leaves it false, and leaves the sale standing.
+  if (charge.refunded === true) {
+    seen.refund = 'full';
+    seen.why = 'fully refunded';
+    return seen;
+  }
+  if (Number(charge.amount_refunded) > 0) seen.refund = 'part';
+
+  if (charge.disputed === true) {
+    const id = stripeId(charge.id);
+    const got = id
+      ? await stripeAsk(env, 'disputes', [['charge', id], ['limit', '100']])
+      : { ok: false };
+    const list = got.ok && Array.isArray(got.data.data) ? got.data.data : null;
+
+    if (!list || !list.length) {
+      return unsure('it is marked disputed, but Stripe did not hand over the dispute');
+    }
+
+    seen.disputes = list.map((one) => String((one && one.status) || ''));
+
+    const against = seen.disputes.filter((s) => STRIPE_DISPUTE_AGAINST.includes(s));
+    if (against.length) {
+      seen.why = against.includes('lost') ? 'dispute lost' : 'disputed, and not yet decided';
+      return seen;
+    }
+
+    const strange = seen.disputes.filter((s) => !STRIPE_DISPUTE_STANDS.includes(s));
+    if (strange.length) {
+      return unsure('a dispute status this vault has not met: ' + strange.join(', '));
+    }
+  }
+
+  seen.counts = true;
+  seen.why = 'counts — this one grants access';
+  if (seen.refund === 'part') seen.why += ' (partly refunded, which leaves it standing)';
+  if (seen.disputes.includes('won')) seen.why += ' (a dispute, won)';
+  else if (seen.disputes.length) seen.why += ' (a bank inquiry, not a dispute)';
+  return seen;
+}
+
+/* Is this receipt for the thing that grants access? true, false, or
+   null when what was bought could not be read at all — which must not
+   be mistaken for "something else", or a real sale would be ignored in
+   silence.
+
+   STRIPE_PRODUCT may be the product's id (prod_…), a price's id
+   (price_…) or the payment link's id (plink_…), and all three are
+   matched, so none is a wrong answer to give. The product id is the
+   one to prefer: it survives a change of price. One function, because
+   the sales lookup, the webhook and the admin page's check all ask it
+   and must never disagree. */
+async function stripeOurs(env, session) {
+  const want = String(env.STRIPE_PRODUCT || '').trim();
+  if (!want || !session) return null;
+
+  // Something that is not a Stripe id at all — the product's NAME,
+  // say — can match nothing, and "nothing matched" would wave every
+  // real sale past in silence, which is the trap GUMROAD_PRODUCT once
+  // was. So it is "could not tell" instead: Stripe keeps re-sending,
+  // its dashboard shows the deliveries failing, and a sale made in the
+  // meantime arrives once the setting is put right.
+  if (!/^(prod|price|plink)_/.test(want)) return null;
+
+  if (stripeRef(session.payment_link) === want) return true;
+
+  let items = session.line_items && Array.isArray(session.line_items.data)
+    ? session.line_items.data
+    : null;
+
+  // Not sent along with the receipt, so it is asked for by itself.
+  if (!items) {
+    const id = stripeId(session.id);
+    if (!id) return null;
+    const got = await stripeAsk(env, 'checkout/sessions/' + id + '/line_items', [
+      ['limit', '100'],
+    ]);
+    if (!got.ok || !Array.isArray(got.data.data)) return null;
+    items = got.data.data;
+  }
+
+  return items.some((item) => {
+    const price = item && item.price;
+    if (!price || typeof price !== 'object') return false;
+    return price.id === want || stripeRef(price.product) === want;
+  });
+}
+
+/* The charge behind a paid receipt, or null if it could not be had.
+   Normally it arrives folded into the receipt; if only its id did, it
+   is fetched. */
+async function stripeCharge(env, session) {
+  let intent = session.payment_intent;
+
+  if (typeof intent === 'string') {
+    const id = stripeId(intent);
+    if (!id) return null;
+    const got = await stripeAsk(env, 'payment_intents/' + id, [
+      ['expand[]', 'latest_charge'],
+    ]);
+    intent = got.ok ? got.data : null;
+  }
+  if (!intent || typeof intent !== 'object') return null;
+
+  let charge = intent.latest_charge;
+
+  if (typeof charge === 'string') {
+    const id = stripeId(charge);
+    if (!id) return null;
+    const got = await stripeAsk(env, 'charges/' + id, []);
+    charge = got.ok ? got.data : null;
+  }
+
+  return charge && typeof charge === 'object' && charge.object === 'charge'
+    ? charge
+    : null;
+}
+
+// What was bought and how it was paid, folded into the receipt so one
+// question does the work of three.
+function stripeExpand(prefix) {
+  return [
+    ['expand[]', prefix + 'line_items'],
+    ['expand[]', prefix + 'payment_intent.latest_charge'],
+  ];
+}
+
+// One receipt by its own id, or null if Stripe could not be asked.
+async function stripeSessionById(env, id) {
+  const got = await stripeAsk(env, 'checkout/sessions/' + id, stripeExpand(''));
+  return got.ok && got.data.object === 'checkout.session' ? got.data : null;
+}
+
+// The receipt a payment belongs to: the receipt, false if it has none,
+// or null if Stripe could not be asked.
+async function stripeSessionForPayment(env, intent) {
+  const got = await stripeAsk(
+    env,
+    'checkout/sessions',
+    [['payment_intent', intent], ['limit', '1']].concat(stripeExpand('data.'))
+  );
+  if (!got.ok || !Array.isArray(got.data.data)) return null;
+  return got.data.data[0] || false;
+}
+
+// Every receipt under one address — finished ones only, unless the
+// admin page is asking and wants to see the abandoned ones too.
+// Answers { sessions, all }, or null if Stripe could not be asked.
+async function stripeSessionsFor(env, email, anyStatus) {
+  const params = [['customer_details[email]', email], ['limit', '100']];
+  if (!anyStatus) params.push(['status', 'complete']);
+
+  const got = await stripeAsk(env, 'checkout/sessions', params.concat(stripeExpand('data.')));
+  if (!got.ok || !Array.isArray(got.data.data)) return null;
+
+  return { sessions: got.data.data, all: got.data.has_more !== true };
+}
+
+/* One question put to Stripe. Answers { ok, status, data } and never
+   throws. `ok` means Stripe said yes AND sent something readable, so a
+   caller that sees it can go straight to the data.
+
+   The key travels in a header, never in the address, and goes nowhere
+   but Stripe. It is not logged, and nothing Stripe says back about a
+   refusal is passed on raw — see stripeWhy. */
+async function stripeAsk(env, path, params) {
+  if (!env.STRIPE_SECRET_KEY) return { ok: false, status: 0, data: null };
+
+  const url = new URL(STRIPE_API + path);
+  for (const [name, value] of params || []) url.searchParams.append(name, value);
+
+  try {
+    const reply = await fetch(url.toString(), {
+      headers: {
+        authorization: 'Bearer ' + env.STRIPE_SECRET_KEY,
+        'stripe-version': STRIPE_VERSION,
+        accept: 'application/json',
+      },
+    });
+
+    let data = null;
+    try {
+      data = await reply.json();
+    } catch (e) {
+      data = null;
+    }
+
+    const readable = !!data && typeof data === 'object';
+    return { ok: reply.ok && readable, status: reply.status, data: readable ? data : null };
+  } catch (e) {
+    return { ok: false, status: 0, data: null };
+  }
+}
+
+// An id, whether Stripe handed over the bare id or the whole object.
+function stripeRef(value) {
+  if (typeof value === 'string') return value;
+  return value && typeof value === 'object' && typeof value.id === 'string' ? value.id : '';
+}
+
+// An id fit to go into an address: letters, digits and underscores,
+// which is all Stripe's ids are made of. Anything else is refused, so
+// nothing in a message can steer a request somewhere it should not go.
+function stripeId(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_]{3,255}$/.test(value) ? value : '';
+}
+
+// The address a receipt was paid under, as Stripe spells it.
+function stripeEmail(session) {
+  const details = session && session.customer_details;
+  const email = (details && details.email) || (session && session.customer_email) || '';
+  return typeof email === 'string' ? email : '';
+}
+
+/* Why Stripe said no, in words that are safe to show. Its own message
+   is NOT passed along: for a refused key it quotes part of the key
+   back. Only the names of missing permissions are lifted out of it —
+   they look like  rak_dispute_read  — along with Stripe's short code
+   for the kind of refusal. */
+function stripeWhy(got) {
+  if (!got || got.status === 0) return 'Stripe could not be reached.';
+
+  const error = got.data && got.data.error ? got.data.error : {};
+  const said = typeof error.message === 'string' ? error.message : '';
+  const missing = [];
+  for (const name of said.match(/rak_[a-z0-9_]+/g) || []) {
+    if (missing.indexOf(name) < 0) missing.push(name);
+  }
+
+  if (missing.length) {
+    return 'The key is missing a permission: ' + missing.join(', ') + '.';
+  }
+  if (got.status === 401) return 'Stripe does not recognise the key.';
+  if (got.status === 403) return 'The key is not allowed to read that.';
+
+  const code = typeof error.code === 'string' && /^[a-z_]{1,60}$/.test(error.code)
+    ? ' (' + error.code + ')'
+    : '';
+  return 'Stripe answered ' + got.status + code + '.';
+}
+
+/* What the admin page shows about Stripe: which of the three secrets
+   are set — never what they are — whether the key is a test or a live
+   one, and whether it can read what this file reads. */
+async function stripeStatus(env) {
+  const key = String(env.STRIPE_SECRET_KEY || '');
+  const product = String(env.STRIPE_PRODUCT || '').trim();
+
+  const out = {
+    ok: true,
+    set: { key: !!key, webhook: !!env.STRIPE_WEBHOOK_SECRET, product: !!product },
+    // Read off the front of the key, which is all that is ever looked at.
+    mode: !key ? null : /^(rk|sk)_test_/.test(key) ? 'test' : /^(rk|sk)_live_/.test(key) ? 'live' : 'unknown',
+    kind: !key ? null : key.indexOf('rk_') === 0 ? 'restricted' : key.indexOf('sk_') === 0 ? 'full' : 'unknown',
+    // What sort of id the product setting is, without showing it.
+    names: !product ? null
+      : product.indexOf('prod_') === 0 ? 'a product id'
+      : product.indexOf('price_') === 0 ? 'a price id'
+      : product.indexOf('plink_') === 0 ? 'a payment link id'
+      : 'unrecognised',
+    webhookUrl: STRIPE_WEBHOOK_URL,
+    events: STRIPE_EVENTS,
+    can: [],
+  };
+
+  if (!key) return out;
+
+  // The same reads the webhook makes, so a missing permission shows up
+  // here rather than as a sale that quietly never arrived.
+  const reads = [
+    ['receipts, with what was bought and how it was paid', 'checkout/sessions',
+      [['limit', '1']].concat(stripeExpand('data.'))],
+    ['disputes', 'disputes', [['limit', '1']]],
+  ];
+
+  for (const [what, path, params] of reads) {
+    const got = await stripeAsk(env, path, params);
+    out.can.push({ what, ok: got.ok, why: got.ok ? null : stripeWhy(got) });
+  }
+
+  return out;
+}
+
+/* Asks Stripe what it knows about one address and reports back without
+   judging — every receipt it holds for it, what each was for, and
+   whether this worker would count it. Stripe's twin of gumroadLookup.
+
+   WHAT IS SHOWN IS CUT DOWN ON PURPOSE. A Stripe receipt carries a
+   name, a postal address, an amount and the last digits of a card.
+   None of that helps to find out why somebody did not get in, so none
+   of it leaves this function: only the address that was asked about,
+   the ids of what was bought, and the state of the payment.
+
+   When nothing is found for the address, the most recent receipts are
+   listed instead — with NO address on them at all — so the ids Eric's
+   products actually use are there to compare with STRIPE_PRODUCT. */
+async function stripeLookup(env, email) {
+  if (!env.STRIPE_SECRET_KEY) {
+    return { ok: false, why: 'No STRIPE_SECRET_KEY is set.' };
+  }
+
+  const bought = (session) => {
+    const items = session.line_items && Array.isArray(session.line_items.data)
+      ? session.line_items.data
+      : [];
+    return items.map((item) => ({
+      product: stripeRef(item && item.price && item.price.product) || null,
+      price: (item && item.price && item.price.id) || null,
+    }));
+  };
+
+  const when = (session) => {
+    const at = Number(session.created);
+    return at > 0 ? new Date(at * 1000).toISOString().replace(/\.\d+Z$/, 'Z') : null;
+  };
+
+  const first = await stripeAsk(
+    env,
+    'checkout/sessions',
+    [['customer_details[email]', email], ['limit', '100']].concat(stripeExpand('data.'))
+  );
+  if (!first.ok || !Array.isArray(first.data.data)) {
+    return { ok: false, why: stripeWhy(first) };
+  }
+
+  const mine = first.data.data.filter(
+    (session) => session && normalizeEmail(stripeEmail(session)) === email
+  );
+
+  if (mine.length) {
+    const found = [];
+    for (const session of mine) {
+      const seen = await stripeJudge(env, session);
+      found.push({
+        receipt: session.id || null,
+        email: stripeEmail(session) || null,
+        created: when(session),
+        checkout: session.status || null,
+        payment: session.payment_status || null,
+        bought: bought(session),
+        payment_link: stripeRef(session.payment_link) || null,
+        refund: seen.refund,
+        disputes: seen.disputes,
+        counts: seen.counts,
+        verdict: seen.why,
+      });
+    }
+    return { ok: true, set: !!String(env.STRIPE_PRODUCT || '').trim(), found, recent: [] };
+  }
+
+  // Nothing for that address. Show what IS there, so the ids can be
+  // compared by eye. Other people's receipts: no address, no verdict
+  // on their money — only what was bought.
+  const lately = await stripeAsk(env, 'checkout/sessions', [
+    ['status', 'complete'],
+    ['limit', '10'],
+    ['expand[]', 'data.line_items'],
+  ]);
+  if (!lately.ok || !Array.isArray(lately.data.data)) {
+    return { ok: false, why: stripeWhy(lately) };
+  }
+
+  const recent = [];
+  for (const session of lately.data.data) {
+    if (!session) continue;
+    recent.push({
+      created: when(session),
+      bought: bought(session),
+      payment_link: stripeRef(session.payment_link) || null,
+      matches: (await stripeOurs(env, session)) === true,
+    });
+  }
+
+  return { ok: true, set: !!String(env.STRIPE_PRODUCT || '').trim(), found: [], recent };
+}
+
+/* ---------------------------------------------------------------------
    The admin page
 
    Eric's own view of the guest list: who is on it, where each came
@@ -1173,6 +1976,61 @@ async function handleAdminApi(request, env, action) {
     if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
     const now = await reconcile(env, email);
     return json({ ok: true, email, live: now }, 200);
+  }
+
+  if (action === 'stripe' && request.method === 'GET') {
+    return json(await stripeStatus(env), 200);
+  }
+
+  if (action === 'stripe-check' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+    return json(await stripeLookup(env, email), 200);
+  }
+
+  // "Make the list match", for both shops at once — what the button on
+  // the page presses now that there are two. The route above is left
+  // exactly as it was.
+  //
+  // STRIPE IS ASKED FIRST, AND THE ORDER MATTERS. Gumroad's own
+  // reconcile() removes a row tagged 'gumroad' the moment Gumroad shows
+  // no live sale. If that person also bought through Stripe, asking
+  // Stripe first re-tags the row 'stripe' before Gumroad's removal
+  // looks at it, so they are never taken off and put back — which
+  // would lose the date they were added and their last sign-in.
+  //
+  // For the same reason, if Stripe is set up and could not be asked,
+  // nothing at all is done: Gumroad's half is not run on its own.
+  if (action === 'match' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+
+    const stripeOn = !!env.STRIPE_SECRET_KEY;
+
+    try {
+      let stripe = null;
+      if (stripeOn) {
+        stripe = await reconcileStripe(env, email);
+        if (stripe === null) return json({ ok: true, email, stripeOn, held: true }, 200);
+      }
+
+      const gumroad = await reconcile(env, email);
+      const row = await findMember(env, email);
+
+      return json({
+        ok: true,
+        email,
+        stripeOn,
+        stripe,
+        gumroad,
+        listed: !!row,
+        source: row ? row.source : null,
+      }, 200);
+    } catch (e) {
+      return json({ ok: false }, 200);
+    }
   }
 
   if (action === 'test-code' && request.method === 'POST') {
@@ -1385,27 +2243,43 @@ const ADMIN_PAGE = `<!doctype html>
     away again. Pressing it twice does no harm. Anyone added by hand is never
     removed by Gumroad — only people who arrived through a purchase.</p>
 
+  <h2>Stripe</h2>
+  <div id="stripe" class="said">Asking Stripe…</div>
+  <p class="note">Stripe tells this vault about a purchase, a refund or a dispute
+    by posting a signed message to the webhook address above. The vault then asks
+    Stripe itself what is true and makes the list agree. A full refund or a lost
+    dispute takes access away; a part refund, or a dispute you win, leaves it.
+    Stripe only ever removes people it added — never anyone added by hand, and
+    never anyone who still has a live Gumroad purchase.</p>
+
   <h2>Why didn't somebody get in?</h2>
   <div class="row">
     <input id="checkWho" type="email" placeholder="their email address"
            autocapitalize="off" autocorrect="off" spellcheck="false">
-    <button id="checkBtn">Ask Gumroad</button>
-    <button id="syncBtn" class="x" hidden>Make the list match Gumroad</button>
+    <button id="checkBtn">Ask Gumroad and Stripe</button>
+    <button id="syncBtn" class="x" hidden>Make the list match</button>
   </div>
   <div class="said" id="checkSaid"></div>
-  <p class="note">Asks Gumroad what it knows about that address and shows every
-    sale it reports, whether or not this vault counts it. Use it when somebody
-    says they bought the album but can't get in — or when you have revoked
-    somebody and want to be sure it took. <b>The usual answer is the
+  <p class="note">Asks Gumroad and Stripe what they know about that address and
+    shows every sale each reports, whether or not this vault counts it. Use it
+    when somebody says they bought the album but can't get in — or when you have
+    revoked somebody and want to be sure it took. <b>The usual answer is the
     product:</b> Gumroad's API reports a product's original perma id, not the
     custom name in your shop address, so <code>GUMROAD_PRODUCT</code> may need to
     be the id shown below rather than the pretty name.</p>
   <p class="note"><b>Revoking access in Gumroad is not a refund</b>, and Gumroad
     does not send a message when you do it, so nothing here changes by itself.
-    Revoke there, then come back and press <b>Make the list match Gumroad</b>.
+    Revoke there, then come back and press <b>Make the list match</b>.
     If the sale still reads as counting afterwards, open <i>everything Gumroad
     said about it</i> and send me what is in there — the field that marks a
     revoked sale is not in Gumroad's own API reference.</p>
+  <p class="note"><b>On Stripe the usual answer is the product too.</b>
+    <code>STRIPE_PRODUCT</code> has to be one of the ids shown beside the receipt
+    below. The one beginning <code>prod_</code> is the one to use, because it
+    stays the same if you ever change the price. Test mode and live mode have
+    different ids for everything, so it changes when the key does. What is shown
+    about a Stripe receipt is cut down on purpose: no name, no postal address,
+    no amount and no card.</p>
 
   <h2>Check the post</h2>
   <div class="row">
@@ -1761,49 +2635,205 @@ const ADMIN_PAGE = `<!doctype html>
     return bits.join(' ');
   }
 
+  // What Gumroad said about an address, in the words it has always
+  // been given in. Returns the lines and whether there is anything for
+  // the "make the list match" button to act on.
+  function gumroadSaid(r) {
+    if (!r) return { html: 'That did not work.', found: false };
+    if (!r.ok) return { html: safe(r.why || 'That did not work.'), found: false };
+
+    var out = ['Looking for a product matching <code>' + safe(r.wanted || '(not set)') + '</code>.'];
+    var found = false;
+
+    if (r.found.length) {
+      out.push('<br><br>Gumroad has ' + r.found.length + ' sale(s) to that address:');
+      out.push(r.found.map(saleLine).join('<br>'));
+      found = true;
+    } else if (r.recent.length) {
+      out.push('<br><br><b>Gumroad has no sale at all to that address.</b>' +
+        ' Either the purchase was under a different email, or it never' +
+        ' completed. Your most recent sales, for comparison:');
+      out.push(r.recent.map(saleLine).join('<br>'));
+    } else {
+      out.push('<br><br><b>Gumroad reports no sales at all.</b>');
+    }
+
+    return { html: out.join(' '), found: found };
+  }
+
+  function stripeStatusLines(r) {
+    var lines = [];
+
+    if (!r.set.key && !r.set.webhook && !r.set.product) {
+      lines.push('Not set up yet. It needs three secrets in Cloudflare: ' +
+        'STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRODUCT.');
+    } else {
+      if (!r.set.key) {
+        lines.push('<b>No key set</b> — add STRIPE_SECRET_KEY.');
+      } else if (r.mode === 'test') {
+        lines.push('Key set — <b>TEST mode</b>. No real money moves, and real buyers are not seen.');
+      } else if (r.mode === 'live') {
+        lines.push('Key set — <b>LIVE mode</b>. Real sales.');
+      } else {
+        lines.push('<b>A key is set, but it does not look like a Stripe key.</b> ' +
+          'It should begin rk_test_ or rk_live_.');
+      }
+
+      if (r.kind === 'full') {
+        lines.push('<b>That is a full secret key</b>, which can do anything in your Stripe ' +
+          'account. A restricted, read-only one is all this needs, and is safer.');
+      }
+
+      lines.push(r.set.webhook
+        ? 'Webhook signing secret set.'
+        : '<b>No webhook signing secret set</b> — add STRIPE_WEBHOOK_SECRET.');
+
+      if (!r.set.product) {
+        lines.push('<b>No product set</b> — add STRIPE_PRODUCT.');
+      } else if (r.names === 'unrecognised') {
+        lines.push('<b>A product is set, but it does not look like a Stripe id.</b> ' +
+          'It should begin prod_, price_ or plink_.');
+      } else {
+        lines.push('Product set — ' + safe(r.names) + '.');
+      }
+
+      (r.can || []).forEach(function (c) {
+        lines.push(c.ok
+          ? 'The key can read ' + safe(c.what) + '.'
+          : '<b>The key cannot read ' + safe(c.what) + '.</b> ' + safe(c.why || ''));
+      });
+    }
+
+    lines.push('Webhook address: <code>' + safe(r.webhookUrl) + '</code>');
+    lines.push('Events to tick there, and no others: ' + (r.events || []).map(function (e) {
+      return '<code>' + safe(e) + '</code>';
+    }).join(' '));
+
+    return lines;
+  }
+
+  function stripe() {
+    return ask('stripe').then(function (r) {
+      if (!r || !r.ok) { $('stripe').textContent = 'Stripe could not be asked.'; return; }
+      $('stripe').innerHTML = stripeStatusLines(r).join('<br>');
+    });
+  }
+
+  function boughtLines(list) {
+    if (!list || !list.length) return '<br>&nbsp;&nbsp;&nbsp;what was bought: <code>—</code>';
+    return list.map(function (b) {
+      return '<br>&nbsp;&nbsp;&nbsp;product: <code>' + safe(b.product || '—') + '</code>' +
+        ' price: <code>' + safe(b.price || '—') + '</code>';
+    }).join('');
+  }
+
+  function receiptLine(s, i) {
+    var bits = [];
+    bits.push('<b>' + (i + 1) + '.</b> ' + safe(day(s.created) || 'a receipt'));
+    if (s.email) bits.push('to ' + safe(s.email));
+    bits.push(boughtLines(s.bought));
+    if (s.payment_link) {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;payment link: <code>' + safe(s.payment_link) + '</code>');
+    }
+    if (s.verdict) {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;<b>' + safe(s.verdict) + '</b>');
+    } else {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;<b>' + (s.matches
+        ? 'the product that grants access'
+        : 'a different product') + '</b>');
+    }
+    if (s.receipt) {
+      bits.push('<br>&nbsp;&nbsp;&nbsp;<details><summary>what Stripe said about it, cut down</summary>' +
+        '<pre>' + safe(JSON.stringify(s, null, 2)) + '</pre></details>');
+    }
+    return bits.join(' ');
+  }
+
+  function stripeSaid(r) {
+    if (!r) return { html: 'That did not work.', found: false };
+    if (!r.ok) return { html: safe(r.why || 'That did not work.'), found: false };
+
+    var out = [];
+    var found = false;
+
+    if (!r.set) out.push('<b>No STRIPE_PRODUCT is set</b>, so nothing can count yet.<br><br>');
+
+    if (r.found.length) {
+      out.push('Stripe has ' + r.found.length + ' receipt(s) for that address:');
+      out.push(r.found.map(receiptLine).join('<br>'));
+      found = true;
+    } else if (r.recent.length) {
+      out.push('<b>Stripe has no receipt at all for that address.</b>' +
+        ' Either the purchase was under a different email, or it never' +
+        ' completed. Your most recent receipts, for comparison — with no' +
+        ' addresses shown:');
+      out.push(r.recent.map(receiptLine).join('<br>'));
+    } else {
+      out.push('<b>Stripe reports no receipts at all.</b>');
+    }
+
+    return { html: out.join(' '), found: found };
+  }
+
   $('checkBtn').addEventListener('click', function () {
     var who = $('checkWho').value.trim();
     if (!who) { $('checkSaid').textContent = 'Type an address first.'; return; }
     busy($('checkBtn'), true, 'Asking…');
     $('checkSaid').textContent = '';
     $('syncBtn').hidden = true;
-    ask('gumroad-check', { email: who }).then(function (r) {
+
+    Promise.all([
+      ask('gumroad-check', { email: who }),
+      ask('stripe-check', { email: who })
+    ]).then(function (both) {
       busy($('checkBtn'), false);
-      if (!r) { $('checkSaid').textContent = 'That did not work.'; return; }
-      if (!r.ok) { $('checkSaid').textContent = r.why || 'That did not work.'; return; }
 
-      var out = ['Looking for a product matching <code>' + safe(r.wanted || '(not set)') + '</code>.'];
+      var g = gumroadSaid(both[0]);
+      var s = stripeSaid(both[1]);
 
-      if (r.found.length) {
-        out.push('<br><br>Gumroad has ' + r.found.length + ' sale(s) to that address:');
-        out.push(r.found.map(saleLine).join('<br>'));
-        // Offered whichever way the answer went: it adds somebody who
-        // should be in and removes somebody who should not, so it is
-        // the button for "make this agree with Gumroad" either way.
-        $('syncBtn').hidden = false;
-      } else if (r.recent.length) {
-        out.push('<br><br><b>Gumroad has no sale at all to that address.</b>' +
-          ' Either the purchase was under a different email, or it never' +
-          ' completed. Your most recent sales, for comparison:');
-        out.push(r.recent.map(saleLine).join('<br>'));
-      } else {
-        out.push('<br><br><b>Gumroad reports no sales at all.</b>');
-      }
+      $('checkSaid').innerHTML =
+        '<b>GUMROAD</b><br>' + g.html +
+        '<br><br><b>STRIPE</b><br>' + s.html;
 
-      $('checkSaid').innerHTML = out.join(' ');
+      // Offered whichever way the answer went: it adds somebody who
+      // should be in and removes somebody who should not, so it is
+      // the button for "make this agree with the shops" either way.
+      $('syncBtn').hidden = !(g.found || s.found);
     });
   });
 
+  // What "make the list match" did, said by where the address ended
+  // up rather than by which shop was asked. With Stripe not set up at
+  // all, the words are exactly the ones this button has always used.
+  function matchSaid(r) {
+    if (!r || !r.ok) return 'That did not work.';
+    if (r.held) return 'Nothing changed — a shop could not be asked just now. Try again in a minute.';
+
+    if (!r.stripeOn) {
+      if (r.gumroad === true) return 'On the list. Their sale stands.';
+      if (r.gumroad === false) return 'Taken off the list, if they were on it through a purchase. Anyone added by hand stays.';
+      return 'Nothing changed — Gumroad could not be asked just now.';
+    }
+
+    if (r.listed) {
+      if (r.source === 'manual') return 'On the list, added by hand. No purchase or refund changes that.';
+      if (r.source === 'gumroad' && r.gumroad === null) {
+        return 'On the list through Gumroad, which could not be asked just now — nothing was changed.';
+      }
+      return 'On the list, through ' + (r.source === 'stripe' ? 'Stripe' : 'Gumroad') + '. Their sale stands.';
+    }
+
+    if (r.gumroad === null) {
+      return 'Not on the list. Stripe shows no live sale, and Gumroad could not be asked just now.';
+    }
+    return 'Not on the list. Neither shop shows a live sale for that address.';
+  }
+
   $('syncBtn').addEventListener('click', function () {
     busy($('syncBtn'), true, '…');
-    ask('gumroad-sync', { email: $('checkWho').value.trim() }).then(function (r) {
+    ask('match', { email: $('checkWho').value.trim() }).then(function (r) {
       busy($('syncBtn'), false);
-      var said;
-      if (!r || !r.ok) said = 'That did not work.';
-      else if (r.live === true) said = 'On the list. Their sale stands.';
-      else if (r.live === false) said = 'Taken off the list, if they were on it through a purchase. Anyone added by hand stays.';
-      else said = 'Nothing changed — Gumroad could not be asked just now.';
-      $('checkSaid').textContent = said;
+      $('checkSaid').textContent = matchSaid(r);
       $('syncBtn').hidden = true;
       load();
     });
@@ -1822,6 +2852,7 @@ const ADMIN_PAGE = `<!doctype html>
 
   load();
   gumroad();
+  stripe();
 })();
 </script>
 </body>
@@ -1961,6 +2992,23 @@ async function sign(text, secret) {
   );
   const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(text));
   return b64url(String.fromCharCode(...new Uint8Array(mac)));
+}
+
+// The same signing, written out as lowercase hex — which is how Stripe
+// writes the signature it sends, where everything of this worker's own
+// uses the shorter spelling above.
+async function hmacHex(text, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(text));
+  let hex = '';
+  for (const byte of new Uint8Array(mac)) hex += byte.toString(16).padStart(2, '0');
+  return hex;
 }
 
 function timingSafeEqual(a, b) {

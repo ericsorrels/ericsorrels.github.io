@@ -429,6 +429,18 @@ window.SITE_CONTENT = {
 
     // Step one: the address.
     gate_hint: "Enter the email address your access is under, and a six-digit code will be sent to it.",
+
+    // Shown IN PLACE OF the line above, and only to somebody who has
+    // just paid through Stripe — the shop sends them back to
+    // access.html?paid , and that last word is what switches this on.
+    // It also puts away the "No invitation?" button beneath, which is
+    // the wrong thing to offer somebody who bought a minute ago.
+    //
+    // It is a greeting, not a receipt: anybody who types that address
+    // sees it, and it lets nobody in. Leave it empty ("") and a buyer
+    // simply sees the ordinary line above.
+    gate_paid: "Thank you for your purchase. Enter the email address you paid with, and a six-digit code will be sent to it.",
+
     gate_placeholder: "Email address",      // read aloud by screen readers
     gate_button: "Send My Code",
 

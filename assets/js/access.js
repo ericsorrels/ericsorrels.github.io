@@ -1176,6 +1176,17 @@
     codeInput.setAttribute('aria-label', A.gate_code_placeholder);
   }
 
+  // Somebody who has just paid. The shop sends a buyer back to
+  // access.html?paid , and that word is all this looks for: it swaps
+  // the gate's opening line for the one written for them (content.js →
+  // access.gate_paid) and puts the buy button away. It is a greeting
+  // and nothing more — the relay decides who gets a code, exactly as it
+  // does for everybody else, so typing the word into the address lets
+  // nobody in. No line written for them, no change.
+  if (gate && A.gate_paid && /[?&]paid(?:[=&]|$)/.test(window.location.search)) {
+    gate.classList.add('gate--paid');
+  }
+
   if (seenBefore() && gate) gate.hidden = true;
 
   askSession().then(function (signedIn) {

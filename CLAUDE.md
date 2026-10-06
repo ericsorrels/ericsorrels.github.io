@@ -45,6 +45,8 @@ tools/              Claude's working tools, not part of the site:
                     preview-server.py, transcode-video.swift,
                     grab-frame.swift, make-icon.swift, find-letter.swift,
                     shrink-pdf.swift, join-album.py
+tools/worker-tests/ the vault worker run against stand-ins — see Stripe →
+                    The tests. Open through the preview server.
 CNAME               the custom domain, required by GitHub Pages
 ```
 
@@ -879,6 +881,9 @@ nowhere else:
 | `GUMROAD_TOKEN` | reads Eric's own sales, to confirm a purchase |
 | `GUMROAD_PRODUCT` | which product grants access — its permalink or id |
 | `GUMROAD_PING_SECRET` | the long random word in the address Gumroad posts to |
+| `STRIPE_SECRET_KEY` | a **restricted, read-only** key: reads Eric's own receipts, payments, charges and disputes, and can do nothing else |
+| `STRIPE_WEBHOOK_SECRET` | the webhook endpoint's signing secret — how a message is known to be Stripe's |
+| `STRIPE_PRODUCT` | which Stripe product grants access — its `prod_…` id (a price or payment-link id is matched too) |
 
 There was a third, `VAULT_PASSWORD`, until 29 September 2026. Nothing
 reads it now.
@@ -1494,6 +1499,330 @@ judges nothing and changes nothing; **Put it right** next to it runs
 `reconcile()` by hand once the cause is understood. Failures say why —
 a 401, an unreachable API, no token — rather than reporting "no sales",
 which would look exactly like a real answer.
+
+### Stripe
+
+A second, parallel way to buy, begun 6 October 2026 from a written
+brief of Eric's. **Stage 2 of 4 is done: built, tested against
+stand-ins, committed. It is NOT deployed, and nothing here has met the
+real Stripe.** Describe it that way until Stage 3 has run.
+
+| Stage | What | Where it stands |
+|---|---|---|
+| 1 | the plan, and Eric's rulings | done |
+| 2 | build, stand-in tests, Gumroad regressions | **done, 6 October 2026** |
+| 3 | a real run in Stripe **test mode**: buy, sign in, refund, dispute | waits on Eric's dashboard steps |
+| 4 | live keys, one real purchase, then switch the buy buttons | not begun |
+
+**Three hard rules from the brief. They outlast this task.**
+
+- **Gumroad keeps working exactly as it did.** No Gumroad function,
+  route, secret or admin section was removed, renamed or changed, and
+  none may be. Removing Gumroad is a separate task Eric will start
+  himself — don't offer it.
+- **Both buy buttons stay on Gumroad** — `music.early_access.url` does
+  not change until Eric has made a real Stripe purchase and says to.
+- **Stop after each stage.** He asked for it in so many words.
+
+#### How it works
+
+**Stripe hosts the payment** — a Payment Link. No card fields on the
+site, no Stripe script, and no route of ours that creates a checkout,
+so there is no price for a visitor to tamper with.
+
+**`POST /vault-api/stripe/webhook`, signed.** `handleStripe` reads the
+body once as text, computes HMAC-SHA256 of `timestamp.body` with
+`STRIPE_WEBHOOK_SECRET` (`hmacHex`, checked against `openssl`), and
+compares it with **every** `v1` in the header through
+`timingSafeEqual`, with no early exit. A timestamp more than five
+minutes off the worker's own clock — **either way** — is refused.
+Anything that fails gets `notFound()`, byte for byte the Gumroad
+doorbell's 404. A body over 512 KB is refused before any work is done.
+
+**A signed message is still not believed.** All that is taken from it
+is an id. A checkout event names its receipt, fetched by id; a refund
+or dispute names a payment, and the receipt for that payment is asked
+for (`checkout/sessions?payment_intent=`). The address, the product
+and the state of the money are all read from what Stripe hands back.
+This goes a step further than the brief, which had the event "name an
+email worth asking about": the email is not taken from the event
+either. So even somebody holding the signing secret could not add an
+address by inventing an event — test E05 is a properly signed event
+for a receipt Stripe does not have, and it adds nobody.
+
+**One function each, as Gumroad has:**
+
+| | Stripe | Gumroad's twin |
+|---|---|---|
+| true / false / null | `stripeLive()` | `hasLiveSale()` |
+| make the list agree | `reconcileStripe()` | `reconcile()` |
+| is it our product | `stripeOurs()` | `sameProduct()` |
+| what is one receipt worth | `stripeJudge()` | (inline) |
+| the admin page's check | `stripeLookup()` | `gumroadLookup()` |
+| the admin page's panel | `stripeStatus()` | `gumroadStatus()` |
+
+**What counts as a live sale** — `stripeJudge()`, the only place it is
+decided: a Checkout Session for our product, `status: complete`,
+`mode: payment`, `payment_status: paid`, whose charge is not
+`refunded` and has no dispute against it.
+
+- `refunded` is true **only when all of it has gone back**, so a part
+  refund leaves the sale standing with no special case needed.
+- Disputes are read from `GET /v1/disputes?charge=`.
+  `needs_response`, `under_review` and `lost` take access away; `won`,
+  `prevented` and `warning_closed` leave it. **The two open "warning"
+  statuses are a bank inquiry, not a dispute — no money has moved —
+  and leave it too.** That was put to Eric in the plan as a rule that
+  would apply unless he objected; he did not.
+- **A 100%-off code counts** (`no_payment_required`), as a free sale
+  at Gumroad does. Same footing.
+- A status in neither list, a charge marked disputed with no dispute
+  listed yet, a receipt whose payment could not be fetched: all
+  **null**, never a guess.
+
+**The answer is a status and no body.** 200 once the list agrees with
+Stripe's records or the event was rightly ignored — another product,
+an event type not acted on, a payment that never went through
+Checkout. 503 when it could not find out or D1 refused a write.
+Stripe re-sends for **up to three days in live mode, three times over
+a few hours in a sandbox**. The work is done before the answer, with
+`STRIPE_PATIENCE_MS` (8 s) of patience and `waitUntil` keeping the
+attempt alive past it — the same shape as the Gumroad doorbell.
+
+**`STRIPE_PRODUCT` that is not a Stripe id at all answers 503, not
+200, and that is deliberate.** The product's *name* in that box can
+match nothing; "nothing matched" would wave every real sale past in
+silence, which is exactly the trap `GUMROAD_PRODUCT` was. So
+`stripeOurs()` calls it "could not tell": Stripe's dashboard shows the
+deliveries failing, and a sale made meanwhile arrives once the setting
+is put right. **What this cannot catch is a real-looking id for the
+wrong thing** — and test and live mode have different ids for
+everything, so the test-mode `prod_…` left in place at Stage 4 is the
+obvious way to hit it. That one is a silent 200 (test E09). The admin
+page's lookup says "a different product" when asked.
+
+#### Somebody who bought in both shops
+
+A row has one `source`, and Gumroad's `reconcile()` deletes any row
+tagged `gumroad` the moment Gumroad shows no live sale — and may not
+be changed. Eric approved this on 6 October 2026:
+
+1. **A live Stripe sale for a row tagged `gumroad` re-tags it
+   `stripe`** (an upsert with `WHERE members.source = 'gumroad'`).
+   Gumroad's removal can then no longer reach it.
+2. **Before a `stripe` row is removed, Gumroad is asked.** Live there:
+   the row stays and goes back to `gumroad`. Could not ask: nothing
+   changes, 503, Stripe re-sends.
+3. **`manual` is never touched** by either.
+
+So the Source column shows whoever is *currently vouching*, never
+"both", and it may flip. `added_at` and `last_login` survive every
+flip — checked against a real SQLite built from the schema file.
+
+**No migration was needed.** `source` has no CHECK constraint, so
+`'stripe'` is simply a new value. The alternative — a second table
+holding each shop's claim — needed a migration *and* a change to
+Gumroad's own `reconcile()`, which the hard rule forbids.
+
+**The one gap, told to Eric:** a double buyer whose row is still
+tagged `gumroad` because Stripe's purchase message never got through
+in three days could be removed by a Gumroad refund. The gate's backup
+puts them back the next time they ask for a code.
+
+**"Make the list match" asks Stripe FIRST, and the order is
+load-bearing** (`admin/match`). Gumroad's half run first would delete
+a double buyer's row and Stripe's half would then re-add it, losing
+the date they were added and their last sign-in. For the same reason,
+with Stripe set up but unreachable, **nothing is done at all** — the
+answer is `held` and Gumroad's half is not run alone. The old
+`admin/gumroad-sync` route is still there, untouched and now unused by
+the page. With no Stripe key set, the button's three messages are
+word for word what they were.
+
+#### The rest
+
+**The gate's backup** — `postCode()` asks Stripe after Gumroad when an
+unlisted address requests a code, inside the same `waitUntil`. A buyer
+is sent from Stripe straight back to the page and may well ask before
+the webhook lands. Tested that the answer goes back before either shop
+is asked.
+
+**The admin page** has a Stripe panel: which of the three secrets are
+set — **never a value, not even the product id**, which is why it says
+"a product id" rather than showing one — whether the key is TEST or
+LIVE and whether it is restricted (both read off its prefix), the
+webhook address, the six events, and a live check that the key can
+read what the worker reads. *Why didn't somebody get in?* asks both
+shops; its button is now **Ask Gumroad and Stripe** and the other
+**Make the list match**.
+
+**`stripeWhy()` never passes Stripe's own error message on.** For a
+refused key Stripe quotes part of the key back, and for a missing
+permission it names the account. Only the `rak_…` permission names
+are lifted out, plus the short error code.
+
+**What the lookup shows is cut down on purpose** — a Stripe receipt
+carries a name, a postal address, an amount and card digits, and none
+of it leaves `stripeLookup()`. When nothing is found for an address
+the recent receipts are listed **with no address on them at all**,
+where Gumroad's list masks them.
+
+**Nothing new is stored.** Email, source and dates, as before. No
+`console.` anywhere in the worker. A purchase adds nobody to any
+mailing list.
+
+**Checked against Stripe's own reference on 6 October 2026**, not
+assumed: sessions list by `customer_details[email]`, by
+`payment_intent` and by `status`; `line_items` is not returned unless
+expanded; `charge.refunded` is full refunds only; the eight dispute
+statuses, `prevented` among them; the six event names; the signature
+recipe; and the current API version, `2026-09-30.endive`, which is
+**pinned** in a `Stripe-Version` header so the fields keep their names
+whatever Eric's account default does. Stripe's docs serve plain text
+if `.md` is added to the address, which is how to read them from here.
+
+#### The buyer's line at the gate
+
+`access.gate_paid`, shown **in place of** `gate_hint` — same class,
+same size, same place — to somebody arriving at `access.html?paid`,
+and the "No invitation?" buy block is put away for them. `access.js`
+adds `gate--paid` to the gate when the query carries the word `paid`
+and the line is not empty; `style.css` does the rest, so with
+JavaScript off it never appears. Tested: `?paid`, `?paid=1`,
+`?x=1&paid` switch it on; `?unpaid`, `?paidup` and `#paid` do not;
+emptying the line leaves the page exactly as it was; two rows on a
+desktop, four at 375 and 320 with no sideways scroll; and the whole
+walk through to the vault.
+
+**It is a greeting, not a receipt.** Anybody who types that address
+sees it and it lets nobody in. **So the Payment Link must send buyers
+to `https://graymanmusical.com/access.html?paid`**, not the bare page.
+
+**The wording is Claude's suggestion and Eric has not approved it** —
+he said to put it in the test and he would review. Don't describe it
+as his.
+
+#### Eric's rulings, 6 October 2026
+
+- The two-shop approach above: **approved.**
+- **No sales tax collected on the link, for now.** His decision, with
+  the reason that he is unlikely to reach a US economic nexus. The
+  options were put to him without a recommendation — collect nothing,
+  Stripe Tax, or Stripe Managed Payments (Stripe as seller of record,
+  as Gumroad is). **Don't re-raise it and don't advise on it.** If he
+  ever picks Managed Payments, read how it handles refunds and
+  disputes before assuming this design still holds.
+- **No refund policy stated on the site, for now.** Stripe expects one
+  and contact details to be findable; he knows and chose this.
+- Not objected to, and so applied: a 100%-off purchase counts; an
+  inquiry does not remove access; **hand-adding somebody already on
+  the list through a purchase leaves them tagged as a purchase**, as
+  it always has — `addMembers()` is `DO NOTHING` on a conflict. That
+  last one means "I added them by hand" is only true of a row that
+  says `manual`.
+
+#### Not knowable until Stage 3 — say so, don't guess
+
+- **Whether Stripe's search by email minds capital letters.** The
+  webhook is safe either way, because the receipt that rang the bell
+  is always judged alongside the search results (`known`). The gate's
+  backup is not: paid as `Buyer@Example.com`, asked for as
+  `buyer@example.com`, and an exact search finds nothing (test H13).
+  **Buy with a capitalised address in test mode and see.** If it
+  matters, the fix is to pass the gate's as-typed spelling along as a
+  second thing to search for.
+- **Whether Cloudflare lets Stripe's servers through.** Bot Fight Mode
+  has blocked webhooks elsewhere. Security → Events, around the time
+  of a test purchase. Stripe publishes the addresses it sends from.
+- **Whether four Read permissions are enough** — Checkout Sessions,
+  PaymentIntents, Charges, Disputes. Folding `line_items` into a
+  receipt may want Prices or Products as well. The admin panel names
+  whatever `rak_…` is missing.
+- **Whether a restricted key may expand on a list call at all.** If
+  not, the worker already falls back to asking for the items, the
+  payment and the charge one at a time — tests I02 and I03.
+- **How long Stripe waits for an answer.** Not in the pages read. The
+  8-second patience is a guess that is safe either way: if Stripe
+  hangs up sooner it counts a failure and re-sends, which is what a
+  503 asks for anyway.
+
+#### Known and accepted
+
+- **A refund that later fails** (rare on cards) flips `refunded` back,
+  and no subscribed event says so. The buyer was removed; the gate's
+  backup re-adds them when they next ask for a code.
+- A session with more receipts for one address than a page of 100 and
+  none of them counting answers null, not false.
+- Subscriptions are not counted — there is no single payment to read
+  a refund or dispute from. The product is a one-off.
+
+#### Eric's dashboard steps — check each happened, don't assume
+
+In Stripe, **test mode first**, then all of it again on the live side
+at Stage 4 (every id and secret is different there):
+
+1. A product with a one-off price. Its `prod_…` id is `STRIPE_PRODUCT`.
+2. A Payment Link for it: after payment, redirect to
+   `https://graymanmusical.com/access.html?paid`; quantity fixed at
+   one; no tax (his ruling).
+3. A **restricted** key: Read on Checkout Sessions, PaymentIntents,
+   Charges, Disputes; None on everything else.
+4. A webhook endpoint at
+   `https://graymanmusical.com/vault-api/stripe/webhook` with exactly
+   the six events in `STRIPE_EVENTS`. Its signing secret is
+   `STRIPE_WEBHOOK_SECRET`.
+5. Receipts on, Radar on, a support email and a recognisable
+   statement descriptor.
+
+In Cloudflare: the three secrets, then the worker pasted in.
+
+#### The tests
+
+**`tools/worker-tests/` runs the worker exactly as it is on disk
+against a made-up guest list, Stripe, Gumroad and mail relay**, and
+compares every line with `expected.json`.
+
+```
+python3 tools/preview-server.py 8423
+```
+
+then `localhost:8423/tools/worker-tests/` in the pane. About twenty
+seconds; the page says **ALL AS RECORDED** or marks what moved with
+`!!`. `window.__RESULTS` holds the lines if the baseline has to be
+recorded again — after a deliberate change, and only after reading
+what changed. Stop the server afterwards, and never use 8420.
+
+- **129 Stripe cases** (`stripe-cases.js`): the signature (20),
+  failures (9), refunds (11), disputes (11), other products (9), kinds
+  of payment (8), both shops (8), the gate (15), what is sent to
+  Stripe (3), the admin panel (8), the lookup (10), make-the-list-match
+  (16), patience (1).
+- **The 40 Gumroad cases first run on 5 October 2026**, kept as they
+  were run with stand-in product ids. **All 40 gave the same answers
+  after the Stripe work as before it** — with Stripe not set up, and
+  again with it set up beside them. Run them after any change to
+  shared code; that is what they are for.
+- **The 5 October tests had to be dug out of the session transcript**
+  to be re-run, which is why these are files now.
+
+`harness.js` is the stand-ins. Three things about it that cost time:
+
+- **The fake Stripe only folds in what was asked for**, as the real
+  one does. A stand-in that always returned everything would have
+  hidden a forgotten `expand`.
+- **A browser will not let a page put a `Cookie` header on a
+  `Request`**, so the admin routes are called with a plain object in
+  its place. With a real `Request` every admin test 404s and looks
+  like a broken lock.
+- **`H.showAdmin(world)` puts the real admin page on screen** wired to
+  a made-up world — the only way to see that page from here.
+
+**The three new SQL statements were also run against a real SQLite**
+built from `vault-schema.sql`, because a regex in a fake database
+proves nothing about whether D1 will accept an upsert with a `WHERE`.
+
+**Add one line to the post-deploy check from now on:** a POST to
+`/vault-api/stripe/webhook` with no signature must answer 404.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.
@@ -2707,7 +3036,17 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (3 October 2026)
+## Where things stand (6 October 2026)
+
+**`?v=86` is the buyer's line at the gate, committed 6 October 2026
+with Stage 2 of the Stripe work** — see Stripe above. It changes
+nothing a visitor sees unless they arrive at `access.html?paid`. The
+worker in the repo is ahead of the one at Cloudflare until Eric pastes
+it; with no Stripe secrets set it behaves exactly as the deployed one
+does, which the Gumroad tests were re-run to show.
+
+What follows is older, newest first.
+
 
 **`?v=79` is the pre-launch review's fixes, committed 3 October 2026
 for the Monday launch.** Eric asked for a read-only review of the whole

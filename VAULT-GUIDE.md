@@ -147,9 +147,10 @@ becomes a few seconds' delay rather than an email to you at midnight.
 ### "They bought it but can't get in"
 
 The admin page has a box called **Why didn't somebody get in?** Type
-their address and press **Ask Gumroad**. It shows every sale Gumroad
-has for that address, what product each was for, and — in plain words —
-whether the vault counts it and why not.
+their address and press **Ask Gumroad and Stripe**. It shows every sale
+each shop has for that address, what product each was for, and — in
+plain words — whether the vault counts it and why not. Gumroad's answer
+comes first, Stripe's beneath it.
 
 Three answers you might see:
 
@@ -161,8 +162,9 @@ Three answers you might see:
   lists your most recent sales so you can spot which address they
   really used.
 
-When a sale *does* count but they still aren't on the list, a **Put it
-right** button appears. Press it and they're added.
+When a sale *does* count but they still aren't on the list, press
+**Make the list match**, which appears beside the first button. They're
+added.
 
 > ⚠️ **The product identifier catches everyone once.** Gumroad's API
 > reports a product's *original* perma id — a random string — not the
@@ -184,8 +186,8 @@ To cut somebody off for good:
 1. Revoke their access in Gumroad (Customers → find them → **Revoke
    access**), **or** just refund them if it was a paid sale.
 2. Come back to the admin page, type their address into **Why didn't
-   somebody get in?**, press **Ask Gumroad**, then press **Make the
-   list match Gumroad**.
+   somebody get in?**, press **Ask Gumroad and Stripe**, then press
+   **Make the list match**.
 
 Or simply press **Remove** on their row, which does the same thing
 without involving Gumroad at all. Removing by hand is the quicker route
@@ -197,10 +199,11 @@ change `SESSION_SECRET` — but that signs out everybody.
 
 ### "Nonrefundable" is a policy, not a mechanism
 
-You can state that sales are final, and you should — it's set in
-Gumroad under your store's **refund policy**, and the site says it
-under both buy buttons (from `music.early_access.terms` in
-`content.js`, one line feeding both).
+You can state that sales are final — it's set in Gumroad under your
+store's **refund policy**. The site itself has not said so since
+3 October 2026, when the line under both buy buttons was taken off;
+typing one back into `music.early_access.terms` in `content.js`
+restores it in both places.
 
 But saying it doesn't stop a refund happening. **A buyer can raise a
 chargeback with their card issuer whatever your page says**, and
@@ -227,6 +230,116 @@ anything is missing it says so by name.
 
 ---
 
+## How Stripe connects
+
+Stripe is a second way to buy, beside Gumroad. **It was built and
+tested against stand-ins on 6 October 2026 and has not yet met the real
+Stripe** — until it has, both buy buttons on the site still go to
+Gumroad, and nothing about Gumroad has changed.
+
+When someone pays through your Stripe payment link, Stripe tells the
+vault, and their address joins the list tagged **STRIPE**. A full
+refund, or a dispute you lose, takes it off again.
+
+### What Stripe does, and what the site never touches
+
+Stripe hosts the whole payment on its own page. There are no card
+fields on your site, nothing of Stripe's loaded into it, and nothing a
+visitor could tamper with to change the price. No card number ever
+comes near the vault.
+
+### What the vault trusts
+
+Stripe's messages are **signed**, which Gumroad's are not — the vault
+can prove a message really came from Stripe, and throws away anything
+that can't prove it. Even so, it doesn't take the message's word for
+anything. It reads the receipt number out of it, fetches that receipt
+from Stripe itself, and decides from what Stripe's own records say.
+
+### What takes access away, and what doesn't
+
+| What happened | Access |
+|---|---|
+| a full refund | taken away |
+| a part refund | stays |
+| a dispute opened, or lost | taken away |
+| a dispute you win | given back |
+| a bank *inquiry* (a question, no money moved) | stays |
+
+**You refund in Stripe's own dashboard**, not here. The vault notices
+within seconds.
+
+### Three things that protect you
+
+**If Stripe can't be reached, nothing changes** — and Stripe keeps
+re-sending the message for up to three days until the vault has dealt
+with it.
+
+**Stripe never overrules you.** Anyone you added by hand stays, whatever
+Stripe says.
+
+**Somebody who bought in both shops keeps their access until both are
+refunded.** The Source column shows one shop at a time — whichever is
+currently vouching for them — and may change from GUMROAD to STRIPE or
+back. That is the vault keeping track, not a fault.
+
+### If a sale is ever missed
+
+The same safety net as Gumroad. A buyer is sent from Stripe straight
+back to your access page; if they ask for a code before Stripe's
+message has arrived, the vault asks Stripe about them on the spot and
+lets them in.
+
+### "They bought it but can't get in"
+
+The same box on the admin page: **Why didn't somebody get in?** Under
+**STRIPE** it lists every receipt for that address and says, in plain
+words, whether each one counts.
+
+- **"a different product"** — `STRIPE_PRODUCT` is not the id of what
+  they bought. The ids are shown beside the receipt; use the one
+  beginning `prod_`.
+- **"fully refunded" / "disputed" / "dispute lost"** — working as
+  intended.
+- **"Stripe has no receipt at all for that address"** — they paid
+  under a different email, or never finished paying. It then lists your
+  most recent receipts, with no addresses on them, so the ids can be
+  compared.
+
+What it shows about a receipt is cut down on purpose: no name, no
+postal address, no amount and no card.
+
+> ⚠️ **Test mode and live mode are two separate worlds.** Stripe gives
+> the product, the payment link, the key and the webhook secret a
+> different value in each. Moving from testing to real sales means
+> changing all three secrets together, and making the payment link and
+> the webhook again on the live side. The admin page says in capitals
+> which mode the key is in.
+
+### Where the settings live
+
+All in Stripe's dashboard, and the admin page's **Stripe** panel checks
+them and says by name if anything is missing.
+
+- **The payment link.** After payment, send the buyer to
+  `https://graymanmusical.com/access.html?paid` — the last word is what
+  makes the page greet them as a buyer. Quantity fixed at one.
+- **The key.** A *restricted* key that can only read: Checkout
+  Sessions, PaymentIntents, Charges and Disputes set to **Read**,
+  everything else **None**. It cannot charge, refund or pay out.
+- **The webhook.** Pointed at the address the admin page shows, with
+  six events ticked and no others. The admin page lists them.
+
+### What Stripe leaves to you that Gumroad did for you
+
+Gumroad is the seller of record and deals with sales tax itself. On
+Stripe **you** are the seller. On 6 October 2026 you chose to collect
+no tax through the link for now. That is a setting on the payment link
+and can be changed there at any time; nothing in the vault depends on
+it.
+
+---
+
 ## The secrets
 
 These live **only** in the Cloudflare dashboard, under
@@ -242,6 +355,9 @@ here, and the names are already public in the worker's own source.
 | `GUMROAD_TOKEN` | reads your own sales, to confirm a purchase |
 | `GUMROAD_PRODUCT` | which product grants access |
 | `GUMROAD_PING_SECRET` | the long random word in the address Gumroad posts to |
+| `STRIPE_SECRET_KEY` | a restricted, read-only key: reads your own receipts, to confirm a purchase |
+| `STRIPE_WEBHOOK_SECRET` | proves a message really came from Stripe |
+| `STRIPE_PRODUCT` | which Stripe product grants access — its id, beginning `prod_` |
 
 **`SESSION_SECRET` is the emergency lever.** Changing it signs out
 every single person at once and cancels any code in flight. Use it if
@@ -319,7 +435,7 @@ afternoon.**
 | "It says the code expired" | more than ten minutes passed | ask for a new one |
 | "Too many tries" | five wrong guesses | ask for a new code; the old one is gone |
 | "It says my email isn't an address" | a typo, or a space on the end | check for a trailing space |
-| Someone bought but can't get in | wrong product identifier, or a missed notification | use **Why didn't somebody get in?** on the admin page — it says which |
+| Someone bought but can't get in | wrong product identifier, or a missed notification | use **Why didn't somebody get in?** on the admin page — it asks both shops and says which |
 | Nobody can get in at all | the vault is down or misconfigured | check the admin page. If *that* won't open either, see below |
 | Tracks say "Soon" | the audio file isn't in the vault storage | the file has to be put in the bucket, not just the folder on your Mac |
 | The whole album asks for a Cloudflare login | the Access rule is on the wrong path | it must be `vault-api/admin`, **not** `vault-api` |

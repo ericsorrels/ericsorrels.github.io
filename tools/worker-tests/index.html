@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Vault worker — stand-in tests</title>
+<style>
+  body { margin: 2rem; background: #EDE8DD; color: #1B1A17; font: 14px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+  h1 { font: 600 1rem/1.4 -apple-system, Helvetica, Arial, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
+  p { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 52rem; }
+  pre { white-space: pre-wrap; word-break: break-word; }
+  .bad { background: #1B1A17; color: #EDE8DD; padding: .1rem .3rem; }
+</style>
+</head>
+<body>
+<h1>Vault worker — stand-in tests</h1>
+<p>Runs <code>cloudflare/vault-worker.js</code> exactly as it is on disk, against a
+  made-up guest list, a made-up Stripe, a made-up Gumroad and a made-up mail
+  relay. Nothing here reaches the real ones, and nothing here is part of the
+  site. Open it through the preview server:
+  <code>python3 tools/preview-server.py 8423</code>, then
+  <code>localhost:8423/tools/worker-tests/</code>. It takes about twenty
+  seconds, most of it two tests that wait on purpose.</p>
+<pre id="out">Running…</pre>
+
+<script type="module">
+  const stamp = '?cb=' + Date.now();
+  const out = document.getElementById('out');
+
+  function classic(file) {
+    return new Promise((done, failed) => {
+      const tag = document.createElement('script');
+      tag.src = file + stamp;
+      tag.onload = done;
+      tag.onerror = () => failed(new Error('could not load ' + file));
+      document.head.appendChild(tag);
+    });
+  }
+
+  try {
+    await import('./harness.js' + stamp);
+    await classic('stripe-cases.js');
+    await classic('gumroad-doorbell.js');
+    await classic('gumroad-regress.js');
+
+    const expected = await (await fetch('expected.json' + stamp)).json().catch(() => ({}));
+
+    const sets = [
+      ['stripe', 'STRIPE', window.__STRIPE_CASES],
+      ['gumroad-doorbell', 'GUMROAD DOORBELL (first run 5 October 2026)', window.__GUMROAD_DOORBELL],
+      ['gumroad-regress', 'GUMROAD GATE AND LOOKUPS (first run 5 October 2026)', window.__GUMROAD_REGRESS],
+    ];
+
+    const results = {};
+    const report = [];
+    let moved = 0;
+
+    for (const [key, title, run] of sets) {
+      const now = await run();
+      results[key] = now;
+      const was = expected[key] || [];
+      const lines = [];
+      let same = 0;
+
+      for (let i = 0; i < Math.max(now.length, was.length); i++) {
+        if (now[i] === was[i]) { same++; lines.push('   ' + now[i]); }
+        else {
+          moved++;
+          lines.push('!! NOW: ' + now[i]);
+          lines.push('!! WAS: ' + was[i]);
+        }
+      }
+
+      report.push(title + ' — ' + now.length + ' cases, ' + same + ' as recorded, ' +
+        (now.length - same) + ' different');
+      report.push(lines.join('\n'));
+      report.push('');
+    }
+
+    report.unshift(moved
+      ? 'SOMETHING MOVED: ' + moved + ' line(s) differ from expected.json. Marked !! below.\n'
+      : 'ALL AS RECORDED.\n');
+
+    out.textContent = report.join('\n');
+    window.__RESULTS = results;
+    window.__MOVED = moved;
+  } catch (e) {
+    out.textContent = 'The tests did not run: ' + (e && e.stack ? e.stack : e);
+    window.__MOVED = -1;
+  }
+</script>
+</body>
+</html>

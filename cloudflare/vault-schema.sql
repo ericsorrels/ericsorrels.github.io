@@ -33,8 +33,12 @@ CREATE TABLE IF NOT EXISTS members (
      spellings that differ only in capitals as the same address. */
   email      TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
 
-  /* How they got here: 'manual' (Eric added them) or 'gumroad' (they
-     bought early access and were added automatically). */
+  /* How they got here: 'manual' (Eric added them), or 'gumroad' or
+     'stripe' (they bought early access in that shop and were added
+     automatically). Nothing restricts the words allowed here, so a new
+     source needs no change to this table. Somebody who bought in both
+     shops has ONE row, tagged with whichever shop is currently
+     vouching for them — see reconcileStripe in the worker. */
   source     TEXT NOT NULL DEFAULT 'manual',
 
   /* When they were added, and when they last signed in successfully.

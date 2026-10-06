@@ -1482,6 +1482,25 @@ img {
   margin: 0 auto 2.6em;
 }
 
+/* Somebody who has just paid is sent back to access.html?paid, and
+   access.js marks the gate for it. They get a line of their own in
+   place of the usual one — the same size and the same place, so the
+   door does not rearrange itself — and are not offered the button that
+   sells what they bought a minute ago. Without the mark, the paid line
+   is simply not there. */
+.gate__hint--paid {
+  display: none;
+}
+
+.gate--paid .gate__hint--paid {
+  display: block;
+}
+
+.gate--paid .gate__hint--usual,
+.gate--paid .gate__invite {
+  display: none;
+}
+
 /* The hint on the code step follows a paragraph rather than the title,
    so it needs far less air above it than the email step's does. */
 .gate__hint--code {
