@@ -2007,9 +2007,14 @@ proves nothing about whether D1 will accept an upsert with a `WHERE`.
 ### Report a Sighting — the listeners' feedback form
 
 Built 15 October 2026 from Eric's written brief, `?v=90`, to gather
-testimonials for the public release on **Monday 26 October**. **Not yet
-live until Eric runs the schema, pastes the worker and pushes, in that
-order.**
+testimonials for the public release on **Monday 26 October**. Eric ran
+the schema and deployed the worker the same day, in that order, before
+the push. **The check after the deploy could tell the new worker from
+the old one, for once:** `/vault-api/report` answered 401
+`signed-out` to a request with no session, where the old worker would
+have sent it to the file handler and 404'd. Everything else in the
+usual check held, and the three new admin routes 404 without his
+session.
 
 - **On the page:** `#reportNotice` under the vault's heading, pointing
   down with its deadline (Thursday 22 October; the form stays open after
