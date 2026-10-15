@@ -3214,9 +3214,57 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## Where things stand (6 October 2026)
+## The Music section's album, preview and pre-save (15 October 2026)
 
-**`?v=88` moves both buy buttons to Stripe**, committed 6 October
+At Eric's asking, on the main page, `?v=89`. Top to bottom inside
+`.album` and above it:
+
+- **The preview player, `#teaser` (`.listen`)**, above the cover: a
+  waveform on the left that moves with the sound and is also the
+  play/pause control, a scrubber (`<input type="range">`), a mute
+  button, and the track's title beneath. Words and labels in
+  `content.js → music.teaser`.
+- **The cover** — the album page's own `album-cover.jpg`, 360px, with
+  the album page's `access.cover_alt` so the two never disagree.
+- **The title and date** — `album_box_note` reads "Coming October 26,
+  2026", the official release date. The old bordered "coming soon" box
+  is gone.
+- **Pre-Save on Spotify** (`#presave`, `music.presave`) — the same
+  DistroKid hyperfollow page `access.thanks` links to, written a second
+  time because that one sits inside a sentence. Change both together.
+
+**The clip is PUBLIC, in `assets/teaser/`, a new folder deliberately
+NOT in the deny-list** — unlike everything else of the album. It is the
+first 15 seconds of `assets/audio/02.mp3` (Weather Chatter (2004)), as
+Eric asked, with a 1.5-second raised-cosine fade at the end, AAC 256
+kbps, `ftyp → moov`, 490 KB. **That mp3 is the same recording as the
+album's own track 2 but about 4 dB louder** — an earlier master. Told
+to Eric; he kept the mp3. Replacing it means a new file name (the image
+rule) and a new waveform file.
+
+**The waveform is not listened to, it is read.** The `.json` beside the
+clip holds its loudness 25 times a second (RMS over the max, to the
+power 1.25 — square-rooted it looked like a solid block), and the
+canvas draws the last 38 readings up to `currentTime`. Real analysis
+would mean routing the sound through Web Audio, which an iPhone
+silences until it is tapped — the trap the album player fell into.
+Under reduced motion the whole clip is drawn still and lights up as it
+plays.
+
+**It starts by itself, and browsers mostly make that silent.** When the
+row is three-quarters on screen, once a visit, it tries to play with
+sound; refused — which is what happens unless the visitor has already
+clicked or tapped the page, since scrolling does not count — it plays
+**muted**, moving, with the mute button showing muted. Eric was told
+this before it was built. It does not start if a film is already
+playing, and it does not loop. **The built-in browser pane allows sound
+without a click, so it is no test of the muted start** — a real phone
+is.
+
+## Where things stand (15 October 2026)
+
+**`?v=89` is the Music section's album, preview and pre-save** — see
+the section above. **`?v=88` moved both buy buttons to Stripe**, committed 6 October
 2026 at Eric's word after his live purchase — see Stripe above. It is
 one line of `content.js`. `?v=87` was the buyer's line at the gate in
 his own words, and `?v=86` that line's first appearance. The worker at

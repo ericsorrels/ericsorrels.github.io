@@ -186,8 +186,9 @@
     // Pausing sounding <audio> is the album half of it. access.js owns
     // those track players and is deliberately not reached into: every
     // one of them is an <audio> element on the page, so this needs to
-    // know nothing about how the album works. On the main page there is
-    // no audio and the loop finds none.
+    // know nothing about how the album works. On the main page the only
+    // <audio> is the preview under the album cover, and it is caught the
+    // same way.
     players.forEach(function (player) {
       player.addEventListener('play', function () {
         var sounding = document.getElementsByTagName('audio');
@@ -216,6 +217,191 @@
         if (!film.paused) film.pause();
       });
     }, true);
+
+    // The pre-save button under the album's date. Hidden until it has an
+    // address, so it never leads nowhere.
+    var presave = document.getElementById('presave');
+    var presaveTo = C.music && C.music.presave;
+    if (presave && presaveTo && presaveTo.url && presaveTo.label) {
+      presave.href = presaveTo.url;
+      presave.hidden = false;
+    }
+
+    // The preview player above the album cover on the main page — the
+    // first seconds of a track, free to anybody. Hidden until there is a
+    // file for it, and hidden again if the file will not play, so the
+    // page never offers a control that does nothing. The two rules above
+    // already cover it: it is an <audio> on the page.
+    var teaserBox = document.getElementById('teaser');
+    var teaser = C.music && C.music.teaser;
+    if (teaserBox && teaser && teaser.file) {
+      var clip = teaserBox.querySelector('.listen__audio');
+      var row = teaserBox.querySelector('.listen__row');
+      var wave = teaserBox.querySelector('.listen__wave');
+      var canvas = teaserBox.querySelector('.listen__canvas');
+      var seek = teaserBox.querySelector('.listen__seek');
+      var mute = teaserBox.querySelector('.listen__mute');
+      var pen = canvas.getContext && canvas.getContext('2d');
+      var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var levels = [];
+      var perSecond = 20;
+      var frame = 0;
+      var dragging = false;
+
+      // The loudness of the clip, measured twenty times a second when it
+      // was cut. Drawing from that rather than listening to the sound as
+      // it plays keeps the sound out of Web Audio, which an iPhone
+      // silences until it has been tapped. The picture is the same.
+      if (teaser.waveform && window.fetch) {
+        fetch(teaser.waveform).then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (data && Array.isArray(data.levels)) {
+              levels = data.levels;
+              perSecond = data.per_second || perSecond;
+              draw();
+            }
+          }).catch(function () { /* the row still works, with a quiet line */ });
+      }
+
+      // Bars scroll in from the right as the sound arrives — the last two
+      // seconds of it, with the newest at the right-hand end. With reduced
+      // motion asked for, the whole clip is drawn still instead, the part
+      // already heard in full paper.
+      var BARS = 38;
+      var draw = function () {
+        if (!pen) return;
+        var ratio = window.devicePixelRatio || 1;
+        var w = canvas.clientWidth || 76;
+        var h = canvas.clientHeight || 32;
+        if (canvas.width !== Math.round(w * ratio)) {
+          canvas.width = Math.round(w * ratio);
+          canvas.height = Math.round(h * ratio);
+        }
+        pen.setTransform(ratio, 0, 0, ratio, 0, 0);
+        pen.clearRect(0, 0, w, h);
+
+        var gap = w / BARS;
+        var now = Math.floor((clip.currentTime || 0) * perSecond);
+        var started = (clip.currentTime || 0) > 0 || !clip.paused;
+
+        for (var i = 0; i < BARS; i++) {
+          var level, lit;
+          if (calm) {
+            var at = Math.floor(i * levels.length / BARS);
+            level = levels[at] || 0.04;
+            lit = at <= now && started;
+          } else {
+            var k = now - (BARS - 1 - i);
+            level = started ? (k >= 0 ? (levels[k] || 0.04) : 0.04) : (levels[i * 4] || 0.04);
+            lit = started && k >= 0;
+          }
+          var bar = Math.max(1, level * (h - 2));
+          pen.fillStyle = lit ? 'rgba(237, 232, 221, 0.95)' : 'rgba(237, 232, 221, 0.35)';
+          pen.fillRect(i * gap, (h - bar) / 2, Math.max(1, gap - 1), bar);
+        }
+      };
+
+      var paint = function () {
+        var length = clip.duration;
+        var known = isFinite(length) && length > 0;
+        var share = known ? Math.min(1, (clip.currentTime || 0) / length) : 0;
+        var playing = !clip.paused && !clip.ended;
+
+        if (!dragging) seek.value = Math.round(share * 1000);
+        seek.style.setProperty('--played', (seek.value / 10) + '%');
+        teaserBox.classList.toggle('listen--playing', playing);
+        teaserBox.classList.toggle('listen--muted', clip.muted);
+        wave.setAttribute('aria-label', playing ? teaser.pause_label : teaser.play_label);
+        mute.setAttribute('aria-pressed', clip.muted ? 'true' : 'false');
+        mute.setAttribute('aria-label', clip.muted ? teaser.unmute_label : teaser.mute_label);
+        draw();
+      };
+
+      var follow = function () {
+        paint();
+        frame = clip.paused ? 0 : window.requestAnimationFrame(follow);
+      };
+
+      var start = function () {
+        var playing = clip.play();
+        return playing && playing.then ? playing : Promise.resolve();
+      };
+
+      clip.src = teaser.file;
+      seek.setAttribute('aria-label', teaser.seek_label || '');
+      teaserBox.hidden = false;
+
+      wave.addEventListener('click', function () {
+        if (clip.paused) start().catch(paint);
+        else clip.pause();
+      });
+
+      mute.addEventListener('click', function () {
+        clip.muted = !clip.muted;
+        // Turning the sound on for a preview that has finished, or never
+        // started, is a request to hear it.
+        if (!clip.muted && clip.paused) start().catch(paint);
+        paint();
+      });
+
+      seek.addEventListener('input', function () {
+        dragging = true;
+        var length = clip.duration;
+        if (isFinite(length) && length > 0) clip.currentTime = (seek.value / 1000) * length;
+        seek.style.setProperty('--played', (seek.value / 10) + '%');
+        draw();
+      });
+      seek.addEventListener('change', function () { dragging = false; paint(); });
+
+      clip.addEventListener('play', function () {
+        if (!frame) frame = window.requestAnimationFrame(follow);
+      });
+      ['pause', 'loadedmetadata', 'timeupdate', 'seeked', 'volumechange'].forEach(function (name) {
+        clip.addEventListener(name, paint);
+      });
+      clip.addEventListener('ended', function () {
+        clip.currentTime = 0;
+        paint();
+      });
+      clip.addEventListener('error', function () {
+        teaserBox.hidden = true;
+      });
+
+      // It starts by itself the first time it comes into view — once a
+      // visit, never again on scrolling back. With sound if the browser
+      // allows it; browsers do not let a page make sound until the
+      // visitor has clicked or tapped something, so failing that it
+      // starts MUTED, moving, with the mute button there to undo it. It
+      // stands down if a film is already playing: somebody watching one
+      // has chosen what to listen to.
+      var filmPlaying = function () {
+        return players.some(function (film) { return !film.paused && !film.ended; });
+      };
+      var autoStart = function () {
+        if (filmPlaying() || !clip.paused) return;
+        start().catch(function () {
+          clip.muted = true;
+          paint();
+          start().catch(function () {
+            clip.muted = false;
+            paint();
+          });
+        });
+      };
+
+      if ('IntersectionObserver' in window) {
+        var watcher = new IntersectionObserver(function (entries) {
+          var seen = entries.some(function (entry) { return entry.isIntersecting; });
+          if (!seen) return;
+          watcher.disconnect();
+          autoStart();
+        }, { threshold: 0.75 });
+        watcher.observe(row);
+      }
+
+      window.addEventListener('resize', draw);
+      paint();
+    }
 
     function buildVideo(video) {
       var figure = videoTemplate.content.firstElementChild.cloneNode(true);

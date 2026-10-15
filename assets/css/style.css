@@ -644,35 +644,214 @@ img {
   text-decoration-color: var(--paper);
 }
 
-/* Music — placeholder for the future album embed */
+/* Music — the album: its cover, its name and date, and a preview.
 
-.album-placeholder {
+   The cover is the album page's own picture at a smaller size. No
+   frame: the sleeve has a paper edge of its own. On ink a shadow barely
+   shows, so it is deeper than the album page's. */
+
+.album {
   display: flex;
   flex-direction: column;
-  gap: 1em;
   align-items: center;
   max-width: 520px;
   margin: 0 auto 3.5em;
-  padding: 3.2em 2em;
-  border: 1px solid rgba(237, 232, 221, 0.25);
 }
 
-/* The album's own line is long, so it is set a little tighter than the
-   note beneath it — otherwise the last word drops on its own. */
-.album-placeholder span:first-child {
-  letter-spacing: var(--tracking-wide);
+.album__cover {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin: 0 0 2.2em;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
 }
 
-.album-placeholder span {
+.album__title,
+.album__note {
   font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
   color: var(--paper);
+  margin: 0;
 }
 
-.album-placeholder__note {
+/* The album's own line is long, so it is set a little tighter than the
+   date beneath it — otherwise the last word drops on its own. */
+.album__title {
+  letter-spacing: var(--tracking-wide);
+}
+
+.album__note {
+  margin-top: 1em;
+  opacity: 0.5;
+}
+
+/* The pre-save button. Outlined, not filled: the filled button further
+   down — the one that sells the album — stays the only thing on the
+   page asking to be pressed first. */
+
+.presave {
+  display: inline-block;
+  margin-top: 2.2em;
+  padding: 1em 1.9em;
+  border: 1px solid rgba(237, 232, 221, 0.35);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.35s ease, background 0.35s ease;
+}
+
+.presave:hover,
+.presave:focus-visible {
+  border-color: var(--paper);
+  background: rgba(237, 232, 221, 0.06);
+}
+
+/* The preview player, above the album: waveform, scrubber, mute, in one
+   quiet row the width of the cover beneath it, and the track's name
+   under that. */
+
+.listen {
+  width: min(100%, 360px);
+  margin: 0 auto 2.6em;
+}
+
+.listen__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.listen__wave,
+.listen__mute {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--paper);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* The waveform is also the play and pause control — pressing the
+   picture of the sound is the natural thing to try. */
+.listen__wave {
+  width: 76px;
+  height: 32px;
+}
+
+.listen__canvas {
+  display: block;
+  width: 76px;
+  height: 32px;
+}
+
+.listen__mute {
+  width: 32px;
+  height: 32px;
+  opacity: 0.75;
+  transition: opacity 0.3s ease;
+}
+
+.listen__mute:hover,
+.listen__mute:focus-visible {
+  opacity: 1;
+}
+
+.listen__icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.listen__icon path:first-child {
+  fill: currentColor;
+}
+
+.listen__icon--off,
+.listen--muted .listen__icon--on {
+  display: none;
+}
+
+.listen--muted .listen__icon--off {
+  display: block;
+}
+
+/* The scrubber: a hairline that fills with paper as it plays. The fill
+   is painted from --played, which main.js keeps up to date. */
+.listen__seek {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  --played: 0%;
+}
+
+.listen__seek::-webkit-slider-runnable-track {
+  height: 1px;
+  background: linear-gradient(to right, var(--paper) var(--played), rgba(237, 232, 221, 0.25) var(--played));
+}
+
+.listen__seek::-moz-range-track {
+  height: 1px;
+  background: linear-gradient(to right, var(--paper) var(--played), rgba(237, 232, 221, 0.25) var(--played));
+}
+
+.listen__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 0;
+}
+
+.listen__seek::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 0;
+}
+
+.listen__seek:focus-visible {
+  outline: 1px dotted rgba(237, 232, 221, 0.6);
+  outline-offset: 4px;
+}
+
+.listen__wave:focus-visible,
+.listen__mute:focus-visible {
+  outline: 1px dotted rgba(237, 232, 221, 0.6);
+  outline-offset: 3px;
+}
+
+.listen__title {
+  margin: 0.9em 0 0;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--paper);
   opacity: 0.5;
 }
 
