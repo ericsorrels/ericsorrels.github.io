@@ -1969,6 +1969,8 @@ made a hundred lines look as though they had moved. `window.__RESULTS` holds the
 recorded again — after a deliberate change, and only after reading
 what changed. Stop the server afterwards, and never use 8420.
 
+- **37 Report a Sighting cases** (`report-cases.js`), added
+  15 October 2026 — see Report a Sighting.
 - **141 Stripe cases** (`stripe-cases.js`): the signature (20),
   failures (9), refunds (13), disputes (11), other products (9), kinds
   of payment (8), both shops (8), the gate (18), what is sent to
@@ -2001,6 +2003,81 @@ proves nothing about whether D1 will accept an upsert with a `WHERE`.
 
 **Add one line to the post-deploy check from now on:** a POST to
 `/vault-api/stripe/webhook` with no signature must answer 404.
+
+### Report a Sighting — the listeners' feedback form
+
+Built 15 October 2026 from Eric's written brief, `?v=90`, to gather
+testimonials for the public release on **Monday 26 October**. **Not yet
+live until Eric runs the schema, pastes the worker and pushes, in that
+order.**
+
+- **On the page:** `#reportNotice` under the vault's heading, pointing
+  down with its deadline (Thursday 22 October; the form stays open after
+  it), and `#report` at the foot after the closing film and the
+  thank-you. Both built by **`assets/js/report.js`**, its own file,
+  touching nothing of the album's. It waits for `#vault` to lose
+  `hidden` (a `MutationObserver`), then asks `GET /vault-api/report`;
+  a listener who has filed sees "Report filed" and a revise button,
+  and the notice switches to its filed wording.
+- **Every word** is in `content.js → access.report`, the song list is
+  `access.tracks`. The choices are keyed by codes (`charli`, `1989`,
+  `colleague`…) that **the worker checks against its own
+  `REPORT_CHOICE`** — the words may change freely, a new choice needs
+  both files.
+- **In the worker:** `handleReport`, `cleanReport`, `reportCredit`,
+  `listReports`, `reportsCsv`; admin routes `reports`, `report-approve`
+  and `reports.csv`; and a Sightings view on the admin page.
+- **In D1:** the `reports` table, one row per email (primary key,
+  `COLLATE NOCASE`), answers as one JSON text, `may_quote`, `approved`,
+  `filed_at`, `updated_at`. In `vault-schema.sql` with block comments;
+  the whole file was run flattened to one line, twice, against a real
+  SQLite to prove it is safe to paste again.
+
+**Rules it keeps, each tested:**
+
+- **The address is the session's, never the form's.** An `email` in the
+  body is ignored (R07). No session, or one for somebody taken off the
+  list since: 401 (R01–R03).
+- **One per person; filing again replaces it whole, keeps `filed_at`,
+  and takes back approval** (R08) — changed words are read again.
+- **Caps on the page (`maxlength`, `CAPS` in report.js) and in the
+  worker (`REPORT_TEXT`) — KEEP IN STEP.** Over the cap is refused
+  whole, `too-long` with the field named (R09–R12), never trimmed. The
+  sentence is the one required answer (R13–R14). Credit by full name,
+  or by first name, initial and city, needs those filled (R26–R27);
+  anonymous needs nothing ("A listener" without a state).
+- **Ticks are `true` or nothing** — the string "true" is not (R24).
+  Answers that no longer apply (heard_other without Other, a title
+  without Yes, the unchosen credit's names) are dropped, and keys the
+  worker does not know are not stored (R23).
+- **Only JSON from this site's own page:** a form-encoded POST from
+  elsewhere is refused (R17), a body over 16 KB (R19), 30 filings an
+  hour per person (R32).
+- **Strangers' words are stored as typed and only ever shown through
+  `safe()`.** Checked by putting `<img onerror>`, `<script>`, `<b>` and
+  `<i>` into a report and opening the real admin page on it: no tag
+  made it into the page and nothing ran. The CSV gives any cell starting
+  `= + - @` a leading apostrophe so a spreadsheet cannot run it (R36),
+  and starts with a byte-order mark so Excel reads curly quotes and
+  accents.
+- **Only a report that may be quoted can be approved** (R34).
+
+**On the page, checked at 320, 375 and 1280:** every chip, tick, select
+and button at least 44px tall, every field 16px or larger so a phone
+does not zoom, nothing past the edge. The last-initial box needed
+widening to 7.5em before its label would hold one line at 375. The
+chips can be pressed again to un-choose, except credit, which always
+has one (anonymous by default). Questions are sentence case; group
+labels keep the tracked capitals.
+
+**Not built, by the brief: the public "The Sightings" section on
+index.html.** `approved` is there for it.
+
+**The preview server answers `/vault-api/report` with a stand-in** that
+keeps one report in memory and checks only the required sentence. The
+real checks are the worker's, run by `tools/worker-tests`
+(`report-cases.js`, 37 cases). The 141 Stripe and 40 Gumroad cases gave
+the same answers after this as before.
 
 **Everything is a 404, never a 403.** A refusal would confirm a file is
 there. A track that exists and one that never did answer identically.
@@ -3262,6 +3339,9 @@ without a click, so it is no test of the muted start** — a real phone
 is.
 
 ## Where things stand (15 October 2026)
+
+**`?v=90` is Report a Sighting** — see that section under The vault.
+It needs the schema run in D1 and the worker pasted before the push.
 
 **`?v=89` is the Music section's album, preview and pre-save** — see
 the section above. **`?v=88` moved both buy buttons to Stripe**, committed 6 October

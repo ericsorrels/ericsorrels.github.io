@@ -94,6 +94,13 @@ elif "--offline" in ARGS:
     PREVIEW_MODE = "offline"
 PREVIEW_CODE = "123456"
 
+# Report a Sighting, answered here so the form can be filled in and
+# filed in a preview. Kept in memory and forgotten when the server stops.
+# This is a stand-in, not the vault: it checks only that the one
+# required answer is there. The real checks are in
+# cloudflare/vault-worker.js, and tools/worker-tests runs them.
+PREVIEW_REPORT = {}
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     # Python labels an .m4a file "audio/mp4a-latm", which is a different
@@ -127,6 +134,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         """Signing in, answered locally so the gate works in a preview."""
         route = self.path.split("?", 1)[0]
+        if route == VAULT_PREFIX + "report":
+            return self.report_post()
         if route not in (VAULT_PREFIX + "request-code",
                          VAULT_PREFIX + "verify-code"):
             return self.send_error(404)
@@ -168,7 +177,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except ValueError:
             return {}
 
+    def report_post(self):
+        if PREVIEW_MODE == "offline":
+            return self.hang_up()
+        if PREVIEW_MODE == "locked":
+            return self.answer(401, b'{"ok":false,"reason":"signed-out"}')
+        sent = self.read_json()
+        if not str(sent.get("sentence") or "").strip():
+            return self.answer(400, b'{"ok":false,"reason":"missing","field":"sentence"}')
+        PREVIEW_REPORT["answers"] = sent
+        return self.answer(200, b'{"ok":true}')
+
     def do_GET(self):
+        if self.path.split("?", 1)[0] == VAULT_PREFIX + "report":
+            if PREVIEW_MODE == "offline":
+                return self.hang_up()
+            if PREVIEW_MODE == "locked":
+                return self.answer(401, b'{"ok":false,"reason":"signed-out"}')
+            body = {"ok": True, "report": PREVIEW_REPORT.get("answers")}
+            return self.answer(200, json.dumps(body).encode("utf-8"))
         if self.path.split("?", 1)[0] == VAULT_PREFIX + "session":
             if PREVIEW_MODE == "offline":
                 return self.hang_up()

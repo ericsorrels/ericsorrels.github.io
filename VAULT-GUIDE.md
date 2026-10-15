@@ -360,6 +360,71 @@ it.
 
 ---
 
+## Report a Sighting — what listeners tell you
+
+Added 15 October 2026. At the foot of the album page, after the closing
+film and the thank-you, there is a form called **Report a Sighting**:
+eleven questions about the album, a private one, a few about the
+listener, and how they'd like to be credited. A line under the album's
+heading points down to it and names the deadline, **Thursday,
+October 22**. The form stays open after that; only the line names the
+date.
+
+**Only people on the guest list can fill it in**, and nobody is asked
+for an email address — the vault takes it from their sign-in. Nobody
+can file a report under somebody else's name.
+
+**One report per person.** Filling it in again replaces the earlier
+answers. Somebody who has already filed sees "Report filed" when they
+come back, with a button to revise it.
+
+### Reading them
+
+On the admin page, under **Sightings**:
+
+- **Every report, newest first**, with the address it came from. The
+  one-sentence description is at the top of each, then everything else
+  they answered.
+- **"Anything you'd change?" is private.** It is marked so on every
+  report and in the spreadsheet, and it is never meant to be quoted.
+- **Every May quote only** shows just the reports whose writer ticked
+  "You may quote me". Unticked means private feedback — read it, don't
+  publish it.
+- **Copy quote** puts the one-sentence description and the credit line
+  on your clipboard, ready to paste: "…" — Pat D., Charleston.
+- **The tally** counts favorite songs, characters, storms and how people
+  first heard.
+- **Copy ticket-alert addresses** and **Copy video-volunteer addresses**
+  work like the guest list's copy button. **Paste into BCC.**
+- **Download every report as a spreadsheet** gives you all of it as a
+  file Excel or Numbers opens.
+
+### Approving a quote
+
+Each report that may be quoted has an **Approved for The Sightings**
+tick. It is for a public section of the main page that hasn't been
+built yet. Approval is just a mark for now; nothing goes public.
+
+**If somebody revises their report, its approval is taken back**, so
+changed words get read again before they go anywhere.
+
+### What the form never does
+
+- It never shows anybody else's answers to anybody.
+- It never publishes anything by itself.
+- It stores the listener's words exactly as typed, and the admin page
+  always shows them as plain text — a report containing code just
+  shows the code, it never runs.
+
+### Changing the wording
+
+Every word of the form is in `content.js`, under `report`. Change any
+of it freely. **A new choice** — another character, another storm —
+needs Claude, because the vault checks answers against its own list of
+choices too.
+
+---
+
 ## The secrets
 
 These live **only** in the Cloudflare dashboard, under

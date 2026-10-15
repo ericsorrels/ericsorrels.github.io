@@ -11,7 +11,7 @@ window.__H = await (async function () {
   }
   await reload();
 
-  var TAIL = '\n; return { worker: __w, stripeLive: stripeLive, reconcileStripe: reconcileStripe, stripeLookup: stripeLookup, stripeStatus: stripeStatus, hmacHex: hmacHex, hasLiveSale: hasLiveSale, reconcile: reconcile, gumroadLookup: gumroadLookup, issueSession: issueSession, ADMIN_PAGE: ADMIN_PAGE, STRIPE_EVENTS: STRIPE_EVENTS };';
+  var TAIL = '\n; return { worker: __w, stripeLive: stripeLive, reconcileStripe: reconcileStripe, stripeLookup: stripeLookup, stripeStatus: stripeStatus, hmacHex: hmacHex, hasLiveSale: hasLiveSale, reconcile: reconcile, gumroadLookup: gumroadLookup, issueSession: issueSession, cleanReport: cleanReport, reportCredit: reportCredit, reportsCsv: reportsCsv, ADMIN_PAGE: ADMIN_PAGE, STRIPE_EVENTS: STRIPE_EVENTS };';
   var PROD = 'prod_TGMaccess', PRICE = 'price_TGMearly', PLINK = 'plink_TGMearly';
   var GPID = 'STANDINproductID0000==';
   var WHSEC = 'whsec_standin_0123456789';
@@ -32,7 +32,7 @@ window.__H = await (async function () {
 
   function World(o) {
     o = o || {}; var self = this;
-    this.members = new Map(); this.codes = new Map(); this.throttle = new Map();
+    this.members = new Map(); this.codes = new Map(); this.throttle = new Map(); this.reports = new Map();
     (o.members || []).forEach(function (m) {
       self.members.set(m[0], { email: m[0], source: m[1], added_at: '2026-09-01T00:00:00Z', last_login: m[2] || null });
     });
@@ -50,10 +50,16 @@ window.__H = await (async function () {
           if (/count\(\*\) AS n FROM members/.test(sql)) return { n: self.members.size };
           if (/FROM members WHERE email = \?/.test(sql)) { var m = self.members.get(args[0]); return m ? Object.assign({}, m) : null; }
           if (/FROM codes/.test(sql)) return self.codes.get(args[0]) || null;
+          if (/SELECT answers, filed_at, updated_at FROM reports WHERE email = \?/.test(sql)) {
+            var rep = self.reports.get(String(args[0]).toLowerCase()); return rep ? Object.assign({}, rep) : null;
+          }
           self.unknownSql.push(sql); return null;
         },
         all: async function () {
           if (/FROM members ORDER BY/.test(sql)) return { results: Array.from(self.members.values()) };
+          if (/FROM reports ORDER BY updated_at DESC/.test(sql)) {
+            return { results: Array.from(self.reports.values()).sort(function (x, y) { return x.updated_at < y.updated_at ? 1 : x.updated_at > y.updated_at ? -1 : 0; }).map(function (r) { return Object.assign({}, r); }) };
+          }
           self.unknownSql.push(sql); return { results: [] };
         },
         run: async function () {
@@ -79,6 +85,16 @@ window.__H = await (async function () {
           else if (/DELETE FROM codes WHERE email/.test(sql)) self.codes.delete(args[0]);
           else if (/DELETE FROM codes WHERE expires_at/.test(sql)) { /* swept */ }
           else if (/UPDATE codes SET tries/.test(sql)) { /* counted */ }
+          else if (/INSERT INTO reports[\s\S]*ON CONFLICT\(email\) DO UPDATE SET answers = excluded\.answers/.test(sql)) {
+            if (self.failWrites) throw new Error('D1 write refused');
+            var key = String(args[0]).toLowerCase(); var had = self.reports.get(key);
+            self.reports.set(key, { email: key, answers: args[1], may_quote: args[2], approved: 0, filed_at: had ? had.filed_at : args[3], updated_at: args[4] });
+          }
+          else if (/UPDATE reports SET approved = \? WHERE email = \? AND may_quote = 1/.test(sql)) {
+            var r0 = self.reports.get(String(args[1]).toLowerCase());
+            if (r0 && r0.may_quote === 1) { r0.approved = args[0]; return { meta: { changes: 1 } }; }
+            return { meta: { changes: 0 } };
+          }
           else self.unknownSql.push(sql);
           return {};
         }
@@ -267,6 +283,32 @@ window.__H = await (async function () {
       headers: { get: function (name) { return sent[String(name).toLowerCase()] || null; } },
       json: async function () { return body; },
       text: async function () { return JSON.stringify(body); }
+    };
+    var reply = await this.api.worker.fetch(req, this.env, { waitUntil: function () {} });
+    var text = await reply.text(); var data = null;
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+    return { status: reply.status, text: text, data: data };
+  };
+
+  // A listener, signed in or not, calling /vault-api/report. A plain
+  // stand-in again, for the Cookie header's sake.
+  World.prototype.report = async function (method, body, o) {
+    o = o || {};
+    var who = o.as || 'buyer@example.com';
+    if (!o.notListed && !this.members.get(who)) this.members.set(who, { email: who, source: 'stripe', added_at: '2026-10-01T00:00:00Z', last_login: null });
+    var token = o.noSession ? '' : await this.api.issueSession(who, this.env);
+    var raw = body === undefined ? '' : (typeof body === 'string' ? body : JSON.stringify(body));
+    var sent = {
+      cookie: token ? 'tgm_vault=' + token : '',
+      'content-type': o.type === undefined ? 'application/json' : o.type,
+      'content-length': String(raw.length)
+    };
+    var req = {
+      method: method,
+      url: 'https://graymanmusical.com/vault-api/report',
+      headers: { get: function (name) { return sent[String(name).toLowerCase()] || null; } },
+      text: async function () { return raw; },
+      json: async function () { return JSON.parse(raw); }
     };
     var reply = await this.api.worker.fetch(req, this.env, { waitUntil: function () {} });
     var text = await reply.text(); var data = null;

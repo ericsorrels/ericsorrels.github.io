@@ -10,8 +10,11 @@
 //   POST /vault-api/verify-code   the code back, a signed session cookie out
 //   POST /vault-api/logout    throws the cookie away
 //   GET  /vault-api/session   "am I still signed in?" — yes or no, nothing more
+//   GET  /vault-api/report    the signed-in listener's own Sighting, if filed
+//   POST /vault-api/report    file or replace it — see Report a Sighting
 //   GET  /vault-api/admin     the guest list, for Eric only — see The admin page
 //        /vault-api/admin/list · /add · /remove · /test-code
+//        /vault-api/admin/reports · /report-approve · /reports.csv
 //   POST /vault-api/gumroad/<secret>   what Gumroad posts to — see Gumroad
 //   POST /vault-api/stripe/webhook     what Stripe posts to, signed — see Stripe
 //   GET  /vault-api/audio/01.mp3      a file, but only with a good cookie
@@ -68,6 +71,7 @@ export default {
     if (route === 'verify-code') return handleVerifyCode(request, env);
     if (route === 'logout') return handleLogout(request, env);
     if (route === 'session') return handleSession(request, env);
+    if (route === 'report') return handleReport(request, env);
 
     if (route === 'admin') return handleAdminPage(request, env);
     if (route.startsWith('admin/')) {
@@ -1994,6 +1998,316 @@ async function stripeLookup(env, email, typed) {
 }
 
 /* ---------------------------------------------------------------------
+   Report a Sighting — the listeners' feedback form
+
+   Somebody on the guest list answers a few questions about the album
+   at the foot of the vault. Their answers land in the `reports` table
+   (see vault-schema.sql), one row per person, and Eric reads them on
+   the admin page under Sightings.
+
+   WHO IT IS COMES FROM THE SESSION, NEVER FROM THE FORM. The page does
+   not send an address and nothing in the body is read as one, so
+   nobody can file a report under somebody else's name. No session, or
+   a session for somebody since taken off the list: 401.
+
+   ONE REPORT PER PERSON. Filing again replaces the earlier answers
+   whole, keeps the date first filed, and takes back any approval Eric
+   gave — an approved quote whose words have changed has to be read
+   again before it goes anywhere public.
+
+   EVERY ANSWER IS CHECKED AGAINST A LIST KEPT HERE. A box of words has
+   a length it may not exceed (the page caps the same boxes at the same
+   lengths, so this is only ever met by something that did not come
+   from the page); a choice must be one of its codes; a tick is true or
+   absent. Anything else is refused whole with the reason, rather than
+   trimmed or guessed at. Keys this file does not know are dropped.
+
+   THESE ARE STRANGERS' WORDS. They are stored exactly as typed and are
+   never trusted as markup anywhere: the admin page puts every one
+   through safe() before it touches the page, and the spreadsheet export
+   defuses anything a spreadsheet would read as a formula.
+   --------------------------------------------------------------------- */
+
+// The longest each box of words may be, in characters. KEEP IN STEP
+// with FIELDS in assets/js/report.js, which caps the page the same way.
+const REPORT_TEXT = {
+  song: 120,
+  heard_other: 80,
+  sentence: 280,
+  moment: 500,
+  line: 280,
+  send_to: 280,
+  love: 120,
+  where: 200,
+  change: 1000,
+  work_title: 120,
+  full_name: 80,
+  first_name: 40,
+  last_initial: 2,
+  city: 60,
+  state: 40,
+};
+
+// The choices, by code. The words a listener sees for each are in
+// content.js; the words Eric sees are REPORT_LABELS below.
+const REPORT_CHOICE = {
+  character: ['charli', 'theo', 'gray_man', 'someone_else'],
+  storm: ['1822', '1979', '1989', '2004', '2022'],
+  heard: ['kickstarter', 'instagram', 'tiktok', 'friend', 'colleague', 'pawleys', 'other'],
+  work: ['yes', 'no'],
+  pawleys: ['yes', 'no'],
+  hurricane: ['yes', 'no'],
+  credit: ['full', 'initial', 'anonymous'],
+};
+
+const REPORT_TICKS = ['tickets', 'kickstarter', 'may_quote', 'video'];
+
+const REPORT_LABELS = {
+  character: { charli: 'Charli', theo: 'Theo', gray_man: 'The Gray Man', someone_else: 'Someone else' },
+  storm: { 1822: '1822', 1979: '1979', 1989: '1989 (Hugo)', 2004: '2004', 2022: '2022' },
+  heard: {
+    kickstarter: 'Kickstarter', instagram: 'Instagram', tiktok: 'TikTok', friend: 'A friend',
+    colleague: 'A theatre colleague', pawleys: 'A Pawleys Island connection', other: 'Other',
+  },
+  credit: { full: 'Full name', initial: 'First name, initial, city', anonymous: 'Anonymous' },
+};
+
+// A whole report is a few kilobytes at most. Far more than that did
+// not come from the page.
+const REPORT_BODY_LIMIT = 16 * 1024;
+const REPORTS_PER_HOUR = 30;
+
+async function handleReport(request, env) {
+  if (request.method !== 'GET' && request.method !== 'POST') return notFound();
+  if (!env.MEMBERS) return json({ ok: false, reason: 'offline' }, 503);
+
+  const who = await readSession(request, env);
+  if (!who) return json({ ok: false, reason: 'signed-out' }, 401);
+
+  // Taken off the list since signing in: the same answer as no session.
+  try {
+    if (!(await findMember(env, who))) return json({ ok: false, reason: 'signed-out' }, 401);
+  } catch (e) {
+    return json({ ok: false, reason: 'offline' }, 503);
+  }
+
+  if (request.method === 'GET') {
+    const row = await env.MEMBERS.prepare(
+      'SELECT answers, filed_at, updated_at FROM reports WHERE email = ?'
+    )
+      .bind(who)
+      .first();
+    if (!row) return json({ ok: true, report: null }, 200);
+
+    let answers = null;
+    try {
+      answers = JSON.parse(row.answers);
+    } catch (e) {
+      answers = null;
+    }
+    return json({ ok: true, report: answers, filed_at: row.filed_at, updated_at: row.updated_at }, 200);
+  }
+
+  // A form on another site cannot send this header without the browser
+  // asking first, which the cookie's SameSite setting then refuses — so
+  // a report can only be filed from this site's own page.
+  if (!/^application\/json\b/i.test(request.headers.get('content-type') || '')) {
+    return json({ ok: false, reason: 'bad' }, 400);
+  }
+  if (Number(request.headers.get('content-length') || 0) > REPORT_BODY_LIMIT) {
+    return json({ ok: false, reason: 'too-long' }, 400);
+  }
+
+  if (await overLimit(env, 'report:' + who, REPORTS_PER_HOUR, HOUR_MS)) {
+    return json({ ok: false, reason: 'slow-down' }, 429);
+  }
+
+  let raw;
+  try {
+    raw = await request.text();
+  } catch (e) {
+    return json({ ok: false, reason: 'bad' }, 400);
+  }
+  if (raw.length > REPORT_BODY_LIMIT) return json({ ok: false, reason: 'too-long' }, 400);
+
+  let body;
+  try {
+    body = JSON.parse(raw);
+  } catch (e) {
+    return json({ ok: false, reason: 'bad' }, 400);
+  }
+
+  const checked = cleanReport(body);
+  if (!checked.ok) return json({ ok: false, reason: checked.reason, field: checked.field }, 400);
+
+  const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  try {
+    await env.MEMBERS.prepare(
+      'INSERT INTO reports (email, answers, may_quote, approved, filed_at, updated_at) ' +
+        'VALUES (?, ?, ?, 0, ?, ?) ' +
+        'ON CONFLICT(email) DO UPDATE SET answers = excluded.answers, ' +
+        'may_quote = excluded.may_quote, approved = 0, updated_at = excluded.updated_at'
+    )
+      .bind(who, JSON.stringify(checked.answers), checked.answers.may_quote ? 1 : 0, now, now)
+      .run();
+  } catch (e) {
+    return json({ ok: false, reason: 'offline' }, 503);
+  }
+
+  return json({ ok: true, updated_at: now }, 200);
+}
+
+/* The answers, checked and tidied, or the first thing wrong with them:
+   { ok: true, answers } or { ok: false, reason, field }. Reasons are
+   'missing', 'too-long', 'bad' and 'credit'. */
+function cleanReport(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, reason: 'bad', field: null };
+  }
+
+  const answers = {};
+
+  for (const [key, most] of Object.entries(REPORT_TEXT)) {
+    const value = body[key];
+    if (value === undefined || value === null) {
+      answers[key] = '';
+      continue;
+    }
+    if (typeof value !== 'string') return { ok: false, reason: 'bad', field: key };
+    // Line endings made one kind, invisible control characters dropped,
+    // and the ends trimmed. Nothing else about the words is touched.
+    const text = value
+      .replace(/\r\n?/g, '\n')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+      .trim();
+    if (text.length > most) return { ok: false, reason: 'too-long', field: key };
+    answers[key] = text;
+  }
+
+  for (const [key, codes] of Object.entries(REPORT_CHOICE)) {
+    const value = body[key];
+    if (value === undefined || value === null || value === '') {
+      answers[key] = '';
+      continue;
+    }
+    if (typeof value !== 'string' || !codes.includes(value)) {
+      return { ok: false, reason: 'bad', field: key };
+    }
+    answers[key] = value;
+  }
+
+  for (const key of REPORT_TICKS) answers[key] = body[key] === true;
+
+  if (!answers.sentence) return { ok: false, reason: 'missing', field: 'sentence' };
+
+  // Only what the choices made call for is kept.
+  if (answers.heard !== 'other') answers.heard_other = '';
+  if (answers.work !== 'yes') answers.work_title = '';
+
+  if (!answers.credit) answers.credit = 'anonymous';
+  if (answers.credit === 'full') {
+    if (!answers.full_name) return { ok: false, reason: 'credit', field: 'full_name' };
+    answers.first_name = answers.last_initial = answers.city = answers.state = '';
+  } else if (answers.credit === 'initial') {
+    for (const key of ['first_name', 'last_initial', 'city']) {
+      if (!answers[key]) return { ok: false, reason: 'credit', field: key };
+    }
+    answers.full_name = answers.state = '';
+  } else {
+    answers.full_name = answers.first_name = answers.last_initial = answers.city = '';
+  }
+
+  return { ok: true, answers };
+}
+
+/* The credit line under a quote, built from the way the listener chose
+   to be credited: "Pat Doe", "Pat D., Charleston", or "A listener from
+   Ohio" — with ", Kickstarter backer" after it if they ticked that. */
+function reportCredit(a) {
+  let name;
+  if (a.credit === 'full') {
+    name = a.full_name;
+  } else if (a.credit === 'initial') {
+    const initial = String(a.last_initial || '').replace(/\.+$/, '').toUpperCase();
+    name = a.first_name + ' ' + initial + '., ' + a.city;
+  } else {
+    name = a.state ? 'A listener from ' + a.state : 'A listener';
+  }
+  return a.kickstarter ? name + ', Kickstarter backer' : name;
+}
+
+async function listReports(env) {
+  const found = await env.MEMBERS.prepare(
+    'SELECT email, answers, may_quote, approved, filed_at, updated_at FROM reports ' +
+      'ORDER BY updated_at DESC, email ASC'
+  ).all();
+
+  return (found.results || []).map((row) => {
+    let answers = {};
+    try {
+      answers = JSON.parse(row.answers) || {};
+    } catch (e) {
+      answers = {};
+    }
+    return {
+      email: row.email,
+      answers,
+      may_quote: row.may_quote === 1,
+      approved: row.approved === 1,
+      filed_at: row.filed_at,
+      updated_at: row.updated_at,
+      credit_line: reportCredit(answers),
+    };
+  });
+}
+
+// Every report as a spreadsheet. Choices are written out in words, and
+// the private answer is marked so in its heading. A cell starting with
+// = + - @ or a tab is one a spreadsheet would run as a formula, so it is
+// given a leading apostrophe — these are strangers' words.
+function reportsCsv(reports) {
+  const columns = [
+    ['Updated', (r) => r.updated_at],
+    ['First filed', (r) => r.filed_at],
+    ['Email', (r) => r.email],
+    ['May quote', (r) => (r.may_quote ? 'yes' : 'no')],
+    ['Approved', (r) => (r.approved ? 'yes' : 'no')],
+    ['Credit line', (r) => r.credit_line],
+    ['One sentence', (r) => r.answers.sentence],
+    ['Favorite song', (r) => r.answers.song],
+    ['Favorite character', (r) => REPORT_LABELS.character[r.answers.character] || ''],
+    ['Storm', (r) => REPORT_LABELS.storm[r.answers.storm] || ''],
+    ['Heard about it', (r) => REPORT_LABELS.heard[r.answers.heard] || ''],
+    ['Heard about it (other)', (r) => r.answers.heard_other],
+    ['The moment', (r) => r.answers.moment],
+    ['A line', (r) => r.answers.line],
+    ['Would send to', (r) => r.answers.send_to],
+    ['If you love', (r) => r.answers.love],
+    ['Where they listened', (r) => r.answers.where],
+    ['Anything to change (PRIVATE)', (r) => r.answers.change],
+    ['Works in theatre or music', (r) => r.answers.work],
+    ['Title and company', (r) => r.answers.work_title],
+    ['Been to Pawleys', (r) => r.answers.pawleys],
+    ['Lived through a hurricane', (r) => r.answers.hurricane],
+    ['Ticket alerts', (r) => (r.answers.tickets ? 'yes' : '')],
+    ['Kickstarter backer', (r) => (r.answers.kickstarter ? 'yes' : '')],
+    ['Would record a video', (r) => (r.answers.video ? 'yes' : '')],
+  ];
+
+  const cell = (value) => {
+    let text = value == null ? '' : String(value);
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return '"' + text.replace(/"/g, '""') + '"';
+  };
+
+  const lines = [columns.map((c) => cell(c[0])).join(',')];
+  for (const r of reports) lines.push(columns.map((c) => cell(c[1](r))).join(','));
+  // The byte-order mark is what makes Excel read the file as UTF-8, so a
+  // curly quote or an accent arrives as itself.
+  return '﻿' + lines.join('\r\n') + '\r\n';
+}
+
+/* ---------------------------------------------------------------------
    The admin page
 
    Eric's own view of the guest list: who is on it, where each came
@@ -2182,6 +2496,41 @@ async function handleAdminApi(request, env, action) {
     }
   }
 
+  // Sightings: every report, newest first, with the address it came from.
+  if (action === 'reports' && request.method === 'GET') {
+    return json({ ok: true, reports: await listReports(env) }, 200);
+  }
+
+  // Approved for "The Sightings" on the main page later. Only a report
+  // whose writer said it may be quoted can be approved.
+  if (action === 'report-approve' && request.method === 'POST') {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    if (!email) return json({ ok: false, why: 'Not an address.' }, 400);
+    const result = await env.MEMBERS.prepare(
+      'UPDATE reports SET approved = ? WHERE email = ? AND may_quote = 1'
+    )
+      .bind(body.approved === true ? 1 : 0, email)
+      .run();
+    const changed = result && result.meta ? result.meta.changes : null;
+    if (changed === 0) {
+      return json({ ok: false, why: 'Only a report that may be quoted can be approved.' }, 400);
+    }
+    return json({ ok: true, email, approved: body.approved === true }, 200);
+  }
+
+  if (action === 'reports.csv' && request.method === 'GET') {
+    const day = new Date().toISOString().slice(0, 10);
+    return new Response(reportsCsv(await listReports(env)), {
+      headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': 'attachment; filename="sightings-' + day + '.csv"',
+        'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff',
+      },
+    });
+  }
+
   if (action === 'test-code' && request.method === 'POST') {
     // A real code by the real route, so this tests the thing itself
     // rather than a rehearsal of it.
@@ -2335,6 +2684,30 @@ const ADMIN_PAGE = `<!doctype html>
         background:#fff; border:1px solid var(--edge); border-radius:2px;
         padding:.7rem; overflow:auto; max-height:26rem; white-space:pre-wrap;
         word-break:break-word; margin:.4rem 0 0; }
+  /* Sightings. Each report is a card; the answers in it are the
+     listener's own words and are only ever written in through safe(). */
+  .tally { display:grid; grid-template-columns:repeat(auto-fit, minmax(12rem, 1fr)); gap:1.2rem 2rem;
+           margin:1rem 0 1.4rem; font-size:.85rem; }
+  .tally h3, .report h3 { font-size:.62rem; letter-spacing:.18em; text-transform:uppercase;
+           color:var(--faint); font-weight:600; margin:0 0 .4rem; }
+  .tally ol { margin:0; padding:0; list-style:none; }
+  .tally li { display:flex; justify-content:space-between; gap:1rem; padding:.15rem 0;
+              border-bottom:1px solid rgba(211,204,184,.5); }
+  .report { background:#fff; border:1px solid var(--edge); border-radius:2px;
+            padding:1rem 1.1rem; margin:.9rem 0; }
+  .report__head { display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:center;
+                  font-size:.85rem; color:var(--soft); }
+  .report__head .addr { font-weight:600; color:var(--ink); word-break:break-all; }
+  .report__quote { font-size:1.05rem; margin:.7rem 0 .2rem; }
+  .report__credit { font-size:.85rem; color:var(--soft); margin:0 0 .6rem; }
+  .report dl { margin:.6rem 0 0; font-size:.88rem; }
+  .report dt { font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+               font-weight:600; margin-top:.55rem; }
+  .report dd { margin:.1rem 0 0; white-space:pre-wrap; word-break:break-word; }
+  .report .private { border-left:2px solid var(--edge); padding-left:.7rem; }
+  .report label { display:inline-flex; gap:.4rem; align-items:center; cursor:pointer; font-size:.8rem; }
+  .mails { display:grid; gap:1rem; margin:1rem 0; }
+  .mails textarea { min-height:4rem; font-size:.8rem; }
   @media (max-width:620px) { .hide-narrow { display:none; } body { padding-top:1.5rem; } }
 </style>
 </head>
@@ -2379,6 +2752,44 @@ const ADMIN_PAGE = `<!doctype html>
   <p class="note">Removing somebody stops any new code being sent to them. If they are
     signed in already, that session lasts until it runs out — to end every session at
     once, change SESSION_SECRET in the Cloudflare dashboard.</p>
+
+  <h2>Sightings — <span id="repCount">…</span></h2>
+  <p class="seen" id="repSeen">&nbsp;</p>
+  <p class="note">What listeners filed through <b>Report a Sighting</b> at the foot of
+    the album page. Their own words, exactly as typed. A report filed again replaces
+    the earlier one and loses its approval, so changed words are read again before
+    they go anywhere. <b>"Anything you'd change?" is private</b> — it is marked as
+    such on every card and in the spreadsheet.</p>
+  <div class="row">
+    <a class="x" id="repCsv" href="/vault-api/admin/reports.csv" download>Download every report as a spreadsheet</a>
+  </div>
+
+  <div class="tally" id="repTally"></div>
+
+  <div class="mails">
+    <div>
+      <div class="picked">
+        <button id="repTicketsBtn" disabled>Copy ticket-alert addresses</button>
+        <span class="said" id="repTicketsSaid"></span>
+      </div>
+      <textarea id="repTicketsOut" readonly hidden></textarea>
+    </div>
+    <div>
+      <div class="picked">
+        <button id="repVideoBtn" disabled>Copy video-volunteer addresses</button>
+        <span class="said" id="repVideoSaid"></span>
+      </div>
+      <textarea id="repVideoOut" readonly hidden></textarea>
+    </div>
+  </div>
+  <p class="note"><b>Paste them into BCC, not To</b>, as with the guest list.</p>
+
+  <div class="sort" role="group" aria-label="Which reports to show">
+    <span class="sort__label">Show</span>
+    <button class="x sort__by" id="repAll" aria-pressed="true">Every report</button>
+    <button class="x sort__by" id="repQuote" aria-pressed="false">May quote only</button>
+  </div>
+  <div id="repList"><p class="never">Reading the reports…</p></div>
 
   <h2>Gumroad</h2>
   <div id="gum" class="said">Asking Gumroad…</div>
@@ -3010,7 +3421,198 @@ const ADMIN_PAGE = `<!doctype html>
     });
   });
 
+  /* ------------------------------------------------------------------
+     Sightings.
+
+     Every answer here was typed by a stranger. Each one goes through
+     safe() before it reaches the page, with no exceptions — that is
+     what stops a report from becoming part of this page.
+     ------------------------------------------------------------------ */
+
+  var reports = [];
+  var reportFilter = 'all';
+
+  var LABELS = {
+    character: { charli: 'Charli', theo: 'Theo', gray_man: 'The Gray Man', someone_else: 'Someone else' },
+    storm: { '1822': '1822', '1979': '1979', '1989': '1989 (Hugo)', '2004': '2004', '2022': '2022' },
+    heard: { kickstarter: 'Kickstarter', instagram: 'Instagram', tiktok: 'TikTok', friend: 'A friend',
+             colleague: 'A theatre colleague', pawleys: 'A Pawleys Island connection', other: 'Other' }
+  };
+
+  // The questions in the order the form asks them, with the short name
+  // each goes by here.
+  var ASKED = [
+    ['song', 'Favorite song'],
+    ['character', 'Favorite character', 'character'],
+    ['storm', 'Storm that hit hardest', 'storm'],
+    ['heard', 'First heard through', 'heard'],
+    ['heard_other', 'Heard through (other)'],
+    ['moment', 'The moment that got them'],
+    ['line', "A line they can't shake"],
+    ['send_to', "They'd send it to"],
+    ['love', "If you love ___, you'll love The Gray Man"],
+    ['where', 'Where they listened'],
+    ['work_title', 'Works in theatre or music as'],
+    ['pawleys', 'Been to Pawleys Island'],
+    ['hurricane', 'Lived through a hurricane']
+  ];
+
+  function quoteOf(r) {
+    return '“' + (r.answers.sentence || '') + '” — ' + r.credit_line;
+  }
+
+  function drawTally() {
+    var groups = [
+      ['Favorite song', function (a) { return a.song; }],
+      ['Favorite character', function (a) { return LABELS.character[a.character]; }],
+      ['Storm', function (a) { return LABELS.storm[a.storm]; }],
+      ['How they heard', function (a) {
+        return a.heard === 'other' && a.heard_other ? 'Other: ' + a.heard_other : LABELS.heard[a.heard];
+      }]
+    ];
+    $('repTally').innerHTML = groups.map(function (g) {
+      var counts = {};
+      reports.forEach(function (r) {
+        var v = g[1](r.answers || {});
+        if (v) counts[v] = (counts[v] || 0) + 1;
+      });
+      var rows = Object.keys(counts).sort(function (x, y) { return counts[y] - counts[x] || (x < y ? -1 : 1); });
+      return '<div><h3>' + safe(g[0]) + '</h3><ol>' + (rows.length
+        ? rows.map(function (k) { return '<li><span>' + safe(k) + '</span><b>' + counts[k] + '</b></li>'; }).join('')
+        : '<li class="never">none yet</li>') + '</ol></div>';
+    }).join('');
+  }
+
+  function drawMails() {
+    var tickets = reports.filter(function (r) { return r.answers && r.answers.tickets; });
+    var video = reports.filter(function (r) { return r.answers && r.answers.video; });
+    $('repTicketsBtn').disabled = !tickets.length;
+    $('repVideoBtn').disabled = !video.length;
+    $('repTicketsSaid').textContent = tickets.length === 1 ? '1 address' : tickets.length + ' addresses';
+    $('repVideoSaid').textContent = video.length === 1 ? '1 address' : video.length + ' addresses';
+    $('repTicketsBtn').dataset.list = tickets.map(function (r) { return r.email; }).join(', ');
+    $('repVideoBtn').dataset.list = video.map(function (r) { return r.email; }).join(', ');
+  }
+
+  function copyInto(button, said, box) {
+    var text = button.dataset.list || '';
+    if (!text) return;
+    copyText(text).then(function () {
+      said.innerHTML = '<b>' + text.split(', ').length + '</b> copied — paste into BCC.';
+    }).catch(function () {
+      box.value = text;
+      box.hidden = false;
+      box.focus();
+      box.select();
+      said.textContent = 'The clipboard was blocked — copy them from the box below.';
+    });
+  }
+
+  $('repTicketsBtn').addEventListener('click', function () {
+    copyInto(this, $('repTicketsSaid'), $('repTicketsOut'));
+  });
+  $('repVideoBtn').addEventListener('click', function () {
+    copyInto(this, $('repVideoSaid'), $('repVideoOut'));
+  });
+
+  function card(r, i) {
+    var a = r.answers || {};
+    var bits = [];
+    bits.push('<article class="report">');
+    bits.push('<div class="report__head"><span>' + safe(day(r.updated_at) || '') + '</span>' +
+      '<span class="addr">' + safe(r.email) + '</span>' +
+      '<span class="tag">' + (r.may_quote ? 'may quote' : 'private') + '</span>' +
+      (r.may_quote
+        ? '<label><input type="checkbox" class="rep-approve" data-email="' + safe(r.email) + '"' +
+          (r.approved ? ' checked' : '') + '> Approved for The Sightings</label>' +
+          '<button class="x rep-copy" data-i="' + i + '">Copy quote</button>'
+        : '') +
+      '</div>');
+    bits.push('<p class="report__quote">“' + safe(a.sentence) + '”</p>');
+    bits.push('<p class="report__credit">— ' + safe(r.credit_line) +
+      (a.video ? ' · would record a video' : '') +
+      (a.tickets ? ' · wants ticket alerts' : '') + '</p>');
+    bits.push('<dl>');
+    ASKED.forEach(function (q) {
+      var v = a[q[0]];
+      if (q[2]) v = LABELS[q[2]][v];
+      if (!v) return;
+      bits.push('<dt>' + safe(q[1]) + '</dt><dd>' + safe(v) + '</dd>');
+    });
+    if (a.change) {
+      bits.push('<div class="private"><dt>Anything to change — PRIVATE, never published</dt>' +
+        '<dd>' + safe(a.change) + '</dd></div>');
+    }
+    bits.push('</dl><span class="said" data-said="' + i + '"></span></article>');
+    return bits.join('');
+  }
+
+  function drawReports() {
+    var shown = reportFilter === 'quote'
+      ? reports.filter(function (r) { return r.may_quote; })
+      : reports;
+    $('repAll').setAttribute('aria-pressed', reportFilter === 'all' ? 'true' : 'false');
+    $('repQuote').setAttribute('aria-pressed', reportFilter === 'quote' ? 'true' : 'false');
+    $('repList').innerHTML = shown.length
+      ? shown.map(function (r) { return card(r, reports.indexOf(r)); }).join('')
+      : '<p class="never">' + (reports.length ? 'None that may be quoted yet.' : 'No reports yet.') + '</p>';
+  }
+
+  function sightings() {
+    return ask('reports').then(function (r) {
+      if (!r || !r.ok) {
+        $('repList').innerHTML = '<p class="never">The reports could not be read.</p>';
+        return;
+      }
+      reports = r.reports || [];
+      var quotable = reports.filter(function (x) { return x.may_quote; }).length;
+      var approved = reports.filter(function (x) { return x.approved; }).length;
+      $('repCount').textContent = reports.length === 1 ? '1 report' : reports.length + ' reports';
+      $('repSeen').innerHTML = reports.length
+        ? '<b>' + quotable + '</b> may be quoted · <b>' + approved + '</b> approved'
+        : '&nbsp;';
+      drawTally();
+      drawMails();
+      drawReports();
+    });
+  }
+
+  $('repAll').addEventListener('click', function () { reportFilter = 'all'; drawReports(); });
+  $('repQuote').addEventListener('click', function () { reportFilter = 'quote'; drawReports(); });
+
+  $('repList').addEventListener('click', function (event) {
+    var button = event.target.closest('button.rep-copy');
+    if (!button) return;
+    var r = reports[Number(button.dataset.i)];
+    var said = document.querySelector('[data-said="' + button.dataset.i + '"]');
+    if (!r) return;
+    copyText(quoteOf(r)).then(function () {
+      if (said) said.textContent = 'Copied.';
+    }).catch(function () {
+      if (said) said.textContent = quoteOf(r);
+    });
+  });
+
+  $('repList').addEventListener('change', function (event) {
+    var box = event.target;
+    if (!box.classList || !box.classList.contains('rep-approve')) return;
+    box.disabled = true;
+    ask('report-approve', { email: box.dataset.email, approved: box.checked }).then(function (r) {
+      box.disabled = false;
+      if (!r || !r.ok) {
+        box.checked = !box.checked;
+        window.alert(r && r.why ? r.why : 'That did not work.');
+        return;
+      }
+      reports.forEach(function (x) { if (x.email === r.email) x.approved = r.approved; });
+      var approved = reports.filter(function (x) { return x.approved; }).length;
+      var quotable = reports.filter(function (x) { return x.may_quote; }).length;
+      $('repSeen').innerHTML = '<b>' + quotable + '</b> may be quoted · <b>' + approved + '</b> approved';
+    });
+  });
+
   load();
+  sightings();
   gumroad();
   stripe();
 })();

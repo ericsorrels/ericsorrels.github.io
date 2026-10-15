@@ -105,3 +105,48 @@ CREATE TABLE IF NOT EXISTS throttle (
   count        INTEGER NOT NULL,
   window_until INTEGER NOT NULL
 );
+
+
+/* ---------------------------------------------------------------------
+   Report a Sighting — what listeners say about the album.
+
+   Added 15 October 2026. One row per person on the guest list who has
+   filled in the form at the foot of the album page, and AT MOST ONE:
+   the email is the primary key, so filing again replaces the earlier
+   answers rather than adding a second row.
+
+   The email comes from the listener's signed-in session, never from
+   the form, so nobody can file under somebody else's address.
+
+   Adding this table to a database that already has the three above is
+   harmless: like everything in this file it says IF NOT EXISTS, and
+   it touches no existing row. Pasting the whole file again is the way
+   to add it.
+   --------------------------------------------------------------------- */
+
+CREATE TABLE IF NOT EXISTS reports (
+  email      TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+
+  /* Every answer, as one block of JSON text, checked by the worker
+     before it is written: each box of words within its length, each
+     choice one of its codes. Words are stored exactly as typed and are
+     never trusted as markup when shown. */
+  answers    TEXT NOT NULL,
+
+  /* 1 if they ticked "You may quote me…", 0 if not. Unticked means the
+     report is private feedback. */
+  may_quote  INTEGER NOT NULL DEFAULT 0,
+
+  /* 1 once Eric has approved it, on the admin page, for the public
+     section of the main page that is still to come. Filing again sets
+     it back to 0, so changed words are read again. */
+  approved   INTEGER NOT NULL DEFAULT 0,
+
+  /* When it was first filed and when it last changed, in UTC, like
+     2026-10-15T14:02:11Z — the same readable form the guest list uses. */
+  filed_at   TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+/* So the admin page can list newest first without reading every row. */
+CREATE INDEX IF NOT EXISTS reports_updated_at ON reports (updated_at);
