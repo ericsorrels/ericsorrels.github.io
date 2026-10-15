@@ -2078,6 +2078,24 @@ labels keep the tracked capitals.
 **Not built, by the brief: the public "The Sightings" section on
 index.html.** `approved` is there for it.
 
+**Eric edited the form's words on 15 October 2026 (`?v=91`)**: the
+deadline is now **Friday, October 23**; "Someone else" came out of the
+characters and 1822 and 1979 out of the storms, which now read 1989
+(Hugo), 2004 (Charley) and 2022 (Ian). Two things that edit needed:
+
+- **His storm names had gone outside their quotation marks** —
+  `"2004": "2004" (Charley),` — which is not a typo a browser forgives
+  quietly. JavaScript reads it as calling the text "2004" with a thing
+  named Charley, fails when the page runs, and every word on BOTH pages
+  goes blank. It passes a syntax check and fails only when run, which
+  is why **the check to use is running content.js, not parsing it** —
+  `osascript -l JavaScript` with `eval`, as in Verifying work.
+- **report.js had its own list of codes** and would have shown the
+  removed choices anyway, with their bare codes as labels. It now shows
+  only the choices content.js still names, so taking one out there
+  takes it off the form. The worker still accepts the old codes, which
+  is harmless.
+
 **The preview server answers `/vault-api/report` with a stand-in** that
 keeps one report in memory and checks only the required sentence. The
 real checks are the worker's, run by `tools/worker-tests`
@@ -3345,8 +3363,9 @@ is.
 
 ## Where things stand (15 October 2026)
 
-**`?v=90` is Report a Sighting** — see that section under The vault.
-It needs the schema run in D1 and the worker pasted before the push.
+**`?v=91` is Eric's edits to Report a Sighting's words**, and `?v=90`
+the form itself — see that section under The vault. The schema and the
+worker were in before either was pushed.
 
 **`?v=89` is the Music section's album, preview and pre-save** — see
 the section above. **`?v=88` moved both buy buttons to Stripe**, committed 6 October

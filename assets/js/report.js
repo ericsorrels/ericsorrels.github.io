@@ -49,7 +49,8 @@
   };
 
   // The order the choices appear in. The words are in content.js; these
-  // codes are what the vault checks against.
+  // codes are what the vault checks against. A code whose words have been
+  // taken out of content.js is simply not shown.
   var CHARACTERS = ['charli', 'theo', 'gray_man', 'someone_else'];
   var STORMS = ['1822', '1979', '1989', '2004', '2022'];
   var HEARD = ['kickstarter', 'instagram', 'tiktok', 'friend', 'colleague', 'pawleys', 'other'];
@@ -113,6 +114,9 @@
   // it, since every one of these is optional.
   function chips(name, question, codes, labels, opts) {
     opts = opts || {};
+    // Only the choices content.js still names. Taking one out there takes
+    // it off the form; the vault goes on accepting its code, harmlessly.
+    codes = codes.filter(function (code) { return !labels || labels[code]; });
     var set = el('fieldset', 'sighting__q sighting__chips' + (opts.stack ? ' sighting__chips--stack' : ''));
     set.appendChild(el('legend', 'sighting__ask', format(question)));
     var row = el('div', 'sighting__chip-row');

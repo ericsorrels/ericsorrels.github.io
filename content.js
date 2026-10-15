@@ -621,9 +621,9 @@ window.SITE_CONTENT = {
       // The notice near the top. The link's words sit between the two
       // halves of the line. Emptying notice_link ("") hides the notice.
       // The form stays open after the deadline — only the notice names it.
-      notice_before: "Heard the storm come through?",
+      notice_before: "Already listened to The Gray Man?",
       notice_link: "Report a Sighting",
-      notice_after: "by Thursday, October 22.",
+      notice_after: "by Friday, October 23.",
 
       // The same notice, for somebody who has already filed.
       notice_filed_before: "Your sighting is on file.",
@@ -633,7 +633,7 @@ window.SITE_CONTENT = {
       // The form's heading and the lines under it.
       label: "Report a Sighting",
       intro: "Spoilers welcome. We never publish them.",
-      intro_more: "About three minutes. One answer is required; skip anything else.",
+      intro_more: "About three minutes. One answer is required; everything else is optional.",
       required: "Required",
       required_publish: "Required to publish",
 
@@ -641,7 +641,7 @@ window.SITE_CONTENT = {
       group_taps: "Quick taps",
       group_words: "In your own words",
       group_private: "Just between us",
-      private_note: "Never published. Eric reads every one.",
+      private_note: "Never published. For Eric's eyes only.",
       group_context: "Your bearings (optional)",
       group_credit: "Credit and consent",
 
@@ -649,12 +649,12 @@ window.SITE_CONTENT = {
       song: "Favorite song",
       song_choose: "Choose a song",
       character: "Favorite character",
-      storm: "Which storm hit you hardest?",
+      storm: "Which storm resonates the most?",
       heard: "How did you first hear about *The Gray Man*?",
       heard_other: "Where?",
       sentence: "Describe the album in one sentence to a friend who hasn't heard it.",
-      moment: "What moment got you? Name the song and roughly where.",
-      line: "A line you can't shake.",
+      moment: "What moment stuck with you? Name the track and roughly where.",
+      line: "A line that gets stuck in your head.",
       send_to: "Who's the first person you'd send this to, and which song would you send them?",
       love: "Finish this sentence: If you love ___, you'll love *The Gray Man*.",
       where: "Where were you when you listened?",
@@ -677,14 +677,11 @@ window.SITE_CONTENT = {
         charli: "Charli",
         theo: "Theo",
         gray_man: "The Gray Man",
-        someone_else: "Someone else",
       },
       storms: {
-        "1822": "1822",
-        "1979": "1979",
         "1989": "1989 (Hugo)",
-        "2004": "2004",
-        "2022": "2022",
+        "2004": "2004 (Charley)",
+        "2022": "2022 (Ian)",
       },
       heard_from: {
         kickstarter: "Kickstarter",
