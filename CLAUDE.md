@@ -3410,8 +3410,9 @@ the gate's label and the label over the heading read **The Deluxe
 Album**; the heading reads **The Gray Man** (was The Concept Album);
 the thank-you says "save the album", still linked to the DistroKid
 page, which now points to the released album; and Report a Sighting
-is off the page — see that section. The gate's buy button still says
-"Purchase Full Digital Access"; not asked about.
+is off the page — see that section. **`?v=96`** changed the gate's buy
+button (`access.gate_buy`) to "Purchase Deluxe Album", matching the
+main page's.
 
 **`?v=94` renames early access on the main page, at Eric's word**: the
 menu's fifth item reads **Deluxe Access**, the buy button **Purchase

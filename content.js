@@ -550,7 +550,7 @@ window.SITE_CONTENT = {
     // so there is only ever one address to change. While that is left
     // empty ("") neither button appears at all.
     gate_no_invite: "No invitation?",
-    gate_buy: "Purchase Full Digital Access",
+    gate_buy: "Purchase Deluxe Album",
 
     /* ---- Once inside ----------------------------------------------------- */
     label: "The Deluxe Album",
