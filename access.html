@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Early Digital Access — The Gray Man</title>
+  <title>The Deluxe Album — The Gray Man</title>
   <meta name="robots" content="noindex" />
 
   <!-- The same mark as the public page carries. See index.html for
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=94" />
+  <link rel="stylesheet" href="assets/css/style.css?v=95" />
 </head>
 <body>
 
@@ -32,7 +32,7 @@
        THE LOCKED DOOR
        ============================================================ -->
   <div id="gate" class="gate texture-grain texture-halftone">
-    <p class="section-label" data-content="access.gate_label">Early Digital Access</p>
+    <p class="section-label" data-content="access.gate_label">The Deluxe Album</p>
     <div class="gate__title">
       <img src="assets/img/gray-man-title.png" alt="The Gray Man" data-content-alt="hero.title" />
     </div>
@@ -283,23 +283,14 @@
 
     <section class="section section--paper texture-grain texture-halftone">
       <div class="section__inner">
-        <p class="section-label" data-content="access.label">Early Digital Access</p>
+        <p class="section-label" data-content="access.label">The Deluxe Album</p>
         <!-- tabindex="-1" makes this focusable without putting it in
              the tab order. access.js moves focus here when the storm
              clears, so a keyboard or a screen reader arrives at the top
              of the album rather than being left on a button inside a
              gate that is no longer on the page. -->
-        <h1 class="vault__heading" tabindex="-1" data-content="access.heading">The Concept Album</h1>
+        <h1 class="vault__heading" tabindex="-1" data-content="access.heading">The Gray Man</h1>
 
-        <!-- Points down to Report a Sighting at the foot of the page, with
-             its deadline. Filled by assets/js/report.js from content.js →
-             access.report; hidden if notice_link is empty. Somebody who
-             has already filed sees the filed version instead. -->
-        <p class="report-notice" id="reportNotice" hidden>
-          <span class="report-notice__before"></span>
-          <a class="report-notice__link" href="#report"></a>
-          <span class="report-notice__after"></span>
-        </p>
 
         <!-- The welcome film, in place of the paragraph that used to sit
              here. Filled by main.js from content.js → access.welcome_video,
@@ -381,13 +372,6 @@
           <p data-content="access.thanks" data-content-breaks data-content-links></p>
         </div>
 
-        <!-- Report a Sighting: the listeners' feedback form, after the
-             closing film and the thank-you lines. Built by
-             assets/js/report.js — every word from content.js →
-             access.report, the song list from access.tracks. It posts to
-             the vault, which takes the listener's address from their
-             session rather than asking for it. -->
-        <div class="sighting" id="report" hidden></div>
 
         <a class="vault__back" href="index.html" data-content="access.back_link">Back to the main site</a>
       </div>
@@ -425,29 +409,25 @@
     </figure>
   </template>
 
-  <script src="content.js?v=94"></script>
-  <script src="assets/js/main.js?v=94"></script>
+  <script src="content.js?v=95"></script>
+  <script src="assets/js/main.js?v=95"></script>
   <!-- Before access.js on purpose: it listens for the album being
        built, which happens the moment access.js runs for a visitor who
        is already through the gate. -->
-  <script src="assets/js/lyrics.js?v=94"></script>
+  <script src="assets/js/lyrics.js?v=95"></script>
   <!-- Before access.js, for the same reason lyrics.js is: access.js
        asks for window.TGMStorm the moment a code is accepted, and a
        visitor can get that far faster than a script at the end of the
        body would expect. It is a module and nothing else — loading it
        starts no animation and touches no markup. If it is missing
        altogether, access.js lets the visitor in without weather. -->
-  <script src="assets/js/storm-intro.js?v=94"></script>
+  <script src="assets/js/storm-intro.js?v=95"></script>
   <!-- The album sleeve turning over, and opening out over the page.
        After main.js, which is what pours the two pictures' descriptions
        into them from content.js. It touches nothing else on the page,
        and if it is missing both pictures simply show one above the
        other. -->
-  <script src="assets/js/sleeve.js?v=94"></script>
-  <script src="assets/js/access.js?v=94"></script>
-  <!-- Report a Sighting. Its own file, touching nothing of the album's:
-       it waits for the vault to be opened, then asks whether this
-       listener has filed already. -->
-  <script src="assets/js/report.js?v=94"></script>
+  <script src="assets/js/sleeve.js?v=95"></script>
+  <script src="assets/js/access.js?v=95"></script>
 </body>
 </html>

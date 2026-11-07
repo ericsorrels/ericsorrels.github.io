@@ -463,7 +463,7 @@ window.SITE_CONTENT = {
   },
 
   /* =======================================================================
-     EARLY DIGITAL ACCESS PAGE  (access.html)
+     THE DELUXE ALBUM PAGE  (access.html)
      There is no password. A visitor gives an email address and is sent
      a six-digit code — but only if the address is on the guest list,
      which lives at Cloudflare and not in this file. To let somebody in,
@@ -473,7 +473,7 @@ window.SITE_CONTENT = {
 
     // What the browser tab says on this page. The main page has its own,
     // under  meta  at the top of this file.
-    browser_tab_title: "Early Digital Access — The Gray Man",
+    browser_tab_title: "The Deluxe Album — The Gray Man",
 
     /* ---- The locked door (what visitors see first) ----------------------
        Two steps: an email address, then the six-digit code sent to it.
@@ -481,7 +481,7 @@ window.SITE_CONTENT = {
        access is given and taken away one person at a time.
        --------------------------------------------------------------------- */
 
-    gate_label: "Early Digital Access",
+    gate_label: "The Deluxe Album",
 
     // Step one: the address.
     gate_hint: "Enter the email address your access is under, and a six-digit code will be sent to it.",
@@ -553,8 +553,8 @@ window.SITE_CONTENT = {
     gate_buy: "Purchase Full Digital Access",
 
     /* ---- Once inside ----------------------------------------------------- */
-    label: "Early Digital Access",
-    heading: "The Concept Album",
+    label: "The Deluxe Album",
+    heading: "The Gray Man",
 
     // The welcome film, under the heading. It replaced the paragraph
     // that used to sit here.
@@ -608,126 +608,11 @@ window.SITE_CONTENT = {
     //
     // To make some of the words a link, put the words in square
     // brackets and the web address straight after in round ones:
-    //     [pre-save the album](https://the.address)
+    //     [save the album](https://the.address)
     // The address must begin with https:// and have no spaces in it.
     // It opens in a new tab, so nobody is taken away from the album.
     thanks:
-      "Thank you for supporting *The Gray Man*!|Be sure to [pre-save the album](https://distrokid.com/hyperfollow/ericsorrels/the-gray-man?ref=release)|And spread the word…|A HURRICANE IS COMING!",
-
-    /* ---- Report a Sighting: the listeners' feedback form ----------------
-       Two places on the album page. A notice near the top, pointing down
-       to the form; and the form itself at the foot, after the closing
-       film and the thank-you lines. Answers go to the vault and appear
-       on your admin page under Sightings — nowhere else.
-
-       The choices below (characters, storms, how they heard) each have a
-       short code on the left. The vault checks answers against those
-       codes, so a code must not change. The words on the right are
-       yours to change freely. A NEW choice needs Claude, because the
-       vault has to be told about it as well.
-       --------------------------------------------------------------------- */
-    report: {
-      // The notice near the top. The link's words sit between the two
-      // halves of the line. Emptying notice_link ("") hides the notice.
-      // The form stays open after the deadline — only the notice names it.
-      notice_before: "Already listened to The Gray Man?",
-      notice_link: "Report a Sighting",
-      notice_after: "by Friday, October 23.",
-
-      // The same notice, for somebody who has already filed.
-      notice_filed_before: "Your sighting is on file.",
-      notice_filed_link: "Revise it",
-      notice_filed_after: "any time.",
-
-      // The form's heading and the lines under it.
-      label: "Report a Sighting",
-      intro: "Spoilers welcome. We never publish them.",
-      intro_more: "About three minutes. One answer is required; everything else is optional.",
-      required: "Required",
-      required_publish: "Required to publish",
-
-      // The groups of questions.
-      group_taps: "Quick taps",
-      group_words: "In your own words",
-      group_private: "Just between us",
-      private_note: "Never published. For Eric's eyes only.",
-      group_context: "Your bearings (optional)",
-      group_credit: "Credit and consent",
-
-      // The questions, in order.
-      song: "Favorite song",
-      song_choose: "Choose a song",
-      character: "Favorite character",
-      storm: "Which storm resonates the most?",
-      heard: "How did you first hear about *The Gray Man*?",
-      heard_other: "Where?",
-      sentence: "Describe the album in one sentence to a friend who hasn't heard it.",
-      moment: "What moment stuck with you? Name the track and roughly where.",
-      line: "A line that gets stuck in your head.",
-      send_to: "Who's the first person you'd send this to, and which song would you send them?",
-      love: "Finish this sentence: If you love ___, you'll love *The Gray Man*.",
-      where: "Where were you when you listened?",
-      change: "Anything you'd change?",
-      work: "Do you work in theatre or music?",
-      work_title: "Your title and company",
-      pawleys: "Have you been to Pawleys Island?",
-      hurricane: "Have you lived through a hurricane?",
-      tickets: "Tell me first when tickets go on sale for Knoxville in January and the NYC concert in the spring.",
-      credit: "How should we credit you?",
-      kickstarter: "Kickstarter backer",
-      may_quote: "You may quote me on the website, social media, and in press, and trim my words for length without changing their meaning.",
-      may_quote_note: "Leave this unticked and your report stays private feedback. It sends either way.",
-      video: "I'd record a 15-second video about the album.",
-
-      yes: "Yes",
-      no: "No",
-
-      characters: {
-        charli: "Charli",
-        theo: "Theo",
-        gray_man: "The Gray Man",
-      },
-      storms: {
-        "1989": "1989 (Hugo)",
-        "2004": "2004 (Charley)",
-        "2022": "2022 (Ian)",
-      },
-      heard_from: {
-        kickstarter: "Kickstarter",
-        instagram: "Instagram",
-        tiktok: "TikTok",
-        friend: "A friend",
-        colleague: "A theatre colleague",
-        pawleys: "A Pawleys Island connection",
-        other: "Other",
-      },
-      credits: {
-        full: "My full name",
-        initial: "First name, last initial, and city",
-        anonymous: "Anonymous — “A listener from [state]”",
-      },
-      full_name: "Full name",
-      first_name: "First name",
-      last_initial: "Last initial",
-      city: "City",
-      state: "State",
-
-      // The button, and what it says while it works.
-      submit: "File the Report",
-      sending: "Filing…",
-
-      // After it has gone in, and for somebody coming back to it.
-      filed: "Report filed. Your sighting is on record — thank you.",
-      revise: "Revise your report",
-
-      // When something goes wrong.
-      error_missing: "The one-sentence description is the answer we need. Add it, then file again.",
-      error_credit: "Add the name your credit needs, or choose another way to be credited.",
-      error_long: "One answer is longer than the space allows. Please trim it and file again.",
-      error_signed_out: "Your session has blown over. Reload the page and sign in again — your answers here will need retyping.",
-      error_slow: "That's several reports in a row. Wait a few minutes, then file again.",
-      error_offline: "The report couldn't reach us just now. Your answers are still here — try again in a moment.",
-    },
+      "Thank you for supporting *The Gray Man*!|Be sure to [save the album](https://distrokid.com/hyperfollow/ericsorrels/the-gray-man?ref=release)|And spread the word…|A HURRICANE IS COMING!",
 
     /* ---- The album tracks ------------------------------------------------ */
     // The album is ONE recording — see the block just below — and the

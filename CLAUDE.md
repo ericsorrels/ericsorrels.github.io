@@ -30,8 +30,7 @@ assets/js/
                     head, and the lock screen's (access only)
   sleeve.js         the album sleeve that turns over (access only)
   storm-intro.js    the storm between the gate and the vault (access only)
-  report.js         Report a Sighting, the listeners' feedback form
-                    (access only) — see The vault → Report a Sighting
+  (report.js         removed 7 Nov 2026 — see Report a Sighting)
 assets/audio/album.m4a the whole album as ONE recording — GITIGNORED,
                        on Eric's disk only. See The album player.
 assets/lyrics/NN.lrc   timed words — GITIGNORED; NN.txt likewise
@@ -2011,6 +2010,15 @@ proves nothing about whether D1 will accept an upsert with a `WHERE`.
 
 ### Report a Sighting — the listeners' feedback form
 
+**Taken off the album page on 7 November 2026 (`?v=95`), at Eric's
+word.** The notice, the form, `assets/js/report.js`, `access.report`
+in content.js and the form's styles are all gone from the site; git
+history holds them if it ever comes back. **The worker was left as
+it is** — the `reports` table, `/vault-api/report` and the admin
+page's Sightings view and CSV still work, so the reports already
+filed stay readable. Nothing on the page calls that route now. What
+follows describes it as it was built.
+
 Built 15 October 2026 from Eric's written brief, `?v=90`, to gather
 testimonials for the public release on **Monday 26 October**. Eric ran
 the schema and deployed the worker the same day, in that order, before
@@ -3396,6 +3404,14 @@ of Weather Chatter (2004)** with its clip and waveform file
 still asks people to pre-save; flagged to Eric and left alone.
 
 ## Where things stand (7 November 2026)
+
+**`?v=95` is the album page renamed, at Eric's word**: the tab title,
+the gate's label and the label over the heading read **The Deluxe
+Album**; the heading reads **The Gray Man** (was The Concept Album);
+the thank-you says "save the album", still linked to the DistroKid
+page, which now points to the released album; and Report a Sighting
+is off the page — see that section. The gate's buy button still says
+"Purchase Full Digital Access"; not asked about.
 
 **`?v=94` renames early access on the main page, at Eric's word**: the
 menu's fifth item reads **Deluxe Access**, the buy button **Purchase
