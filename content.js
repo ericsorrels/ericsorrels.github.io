@@ -137,7 +137,7 @@ window.SITE_CONTENT = {
       // The part after a ? can stay; the page works out the rest.
       // Visitors signed in to Spotify hear whole songs; everybody else
       // hears 30 seconds of each.
-      spotify_album: "",
+      spotify_album: "https://open.spotify.com/album/0AlEkgZ0PuT7LUDhWIhT4l",
 
       // What screen readers call the player. Never seen.
       spotify_player_label: "The Gray Man on Spotify",
@@ -148,19 +148,19 @@ window.SITE_CONTENT = {
       spotify: {
         label: "Spotify",
         // In Spotify: ••• → Share → Copy Album Link.
-        url: "",
+        url: "https://open.spotify.com/album/0AlEkgZ0PuT7LUDhWIhT4l",
       },
       apple_music: {
         label: "Apple Music",
         // In Apple Music: ••• → Share → Copy Link. Looks like
         // https://music.apple.com/us/album/the-gray-man/…
-        url: "",
+        url: "https://music.apple.com/us/album/the-gray-man/6819918513",
       },
       youtube_music: {
         label: "YouTube Music",
         // In YouTube Music: ⋮ → Share → Copy. Looks like
         // https://music.youtube.com/playlist?list=…
-        url: "",
+        url: "https://music.youtube.com/playlist?list=OLAK5uy_lkkk0DbbUaHnlIm70DoHb1jyKnYKvh3iE",
       },
     },
 

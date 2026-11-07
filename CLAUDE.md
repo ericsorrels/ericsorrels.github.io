@@ -3326,12 +3326,21 @@ Spotify's look in the preview before it was committed.**
 `content.js → music.streaming`: `spotify_album` (the Spotify player),
 and `spotify`, `apple_music`, `youtube_music`, each a `label` and a
 `url`. A button with no link is hidden; with all three empty the row
-is hidden; with no album link there is no player. **Eric pastes the
-links himself.** DistroKid's hyperfollow page listed the Spotify
-album (`open.spotify.com/album/0AlEkgZ0PuT7LUDhWIhT4l`) and Apple Music
-(`music.apple.com/us/album/the-gray-man/6819918513`); he was told, and
-they were used only to test in the preview. No YouTube Music link was
-there.
+is hidden; with no album link there is no player.
+
+**The links went in on 7 November 2026 (`?v=93`), at Eric's asking**
+("put the links in for me"), each checked to answer and to name the
+right album before it went in:
+
+| | Link | Found on |
+|---|---|---|
+| Spotify (player and button) | `open.spotify.com/album/0AlEkgZ0PuT7LUDhWIhT4l` | DistroKid's hyperfollow page |
+| Apple Music | `music.apple.com/us/album/the-gray-man/6819918513` | the same |
+| YouTube Music | `music.youtube.com/playlist?list=OLAK5uy_lkkk0DbbUaHnlIm70DoHb1jyKnYKvh3iE` | YouTube Music's own search: "The Gray Man", Album, Eric Sorrels, 2026 |
+
+**The streaming album is 18 songs, 54 minutes** — the two bonus tracks
+on the vault's twenty are not on it. Not a fault; worth knowing before
+anyone counts tracks.
 
 **The buttons** (`.stream`, `.stream__link`) are words, outlined like
 the old pre-save button, duotone: no logos, because each service's
@@ -3383,10 +3392,11 @@ still asks people to pre-save; flagged to Eric and left alone.
 
 ## Where things stand (7 November 2026)
 
-**`?v=92` is the Music section after the release** — three streaming
-buttons and Spotify's player, the preview player and pre-save button
-gone, "NOW STREAMING". See the section above. The links in
-`music.streaming` are empty until Eric fills them in.
+**`?v=93` puts the album's links in** — Spotify, Apple Music and
+YouTube Music — so the buttons and Spotify's player show. **`?v=92`**
+was the Music section after the release: those buttons and the player,
+the preview player and pre-save button gone, "NOW STREAMING". See the
+section above.
 
 **`?v=91` is Eric's edits to Report a Sighting's words**, and `?v=90`
 the form itself — see that section under The vault. The schema and the
