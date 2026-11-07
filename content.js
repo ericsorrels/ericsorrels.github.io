@@ -30,7 +30,7 @@ window.SITE_CONTENT = {
     music: "Music",
     news: "Journey",
     contact: "Contact",
-    access: "Early Access",
+    access: "Deluxe Access",
   },
 
   /* ---- Opening screen (the "poster") ----------------------------------- */
@@ -183,8 +183,8 @@ window.SITE_CONTENT = {
     // so the page never shows a link that goes nowhere.
     early_access: {
       url: "https://buy.stripe.com/7sYfZibiQ685bZ78bi5J600",
-      label: "Purchase Early Digital Access",
-      note: "Hear the concept album before release.",
+      label: "Purchase Deluxe Album",
+      note: "Take a deeper dive inside the world of *The Gray Man*.",
 
       // The terms, under the button. Shown in BOTH places the button
       // appears — here and on the access page's gate — from this one

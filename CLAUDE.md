@@ -3397,6 +3397,17 @@ still asks people to pre-save; flagged to Eric and left alone.
 
 ## Where things stand (7 November 2026)
 
+**`?v=94` renames early access on the main page, at Eric's word**: the
+menu's fifth item reads **Deluxe Access**, the buy button **Purchase
+Deluxe Album**, and the line under it "Take a deeper dive inside the
+world of *The Gray Man*." The content.js keys keep their old names
+(`nav.access`, `music.early_access`). "Deluxe Access" is one letter
+longer than "Early Access" and the phone menu still holds one row:
+6px between words at 320, 16px at 375. **The access page still says
+Early Digital Access** — its tab title, `gate_label`, `label`, and
+`gate_buy` ("Purchase Full Digital Access") — because only the main
+page was asked for; raised with Eric.
+
 **`?v=93` puts the album's links in** — Spotify, Apple Music and
 YouTube Music — so the buttons and Spotify's player show. **`?v=92`**
 was the Music section after the release: those buttons and the player,
