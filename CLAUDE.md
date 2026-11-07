@@ -3314,54 +3314,79 @@ granted path works in Chrome and Safari; don't chase it.
 
 ---
 
-## The Music section's album, preview and pre-save (15 October 2026)
+## The Music section: the album and where to listen (7 November 2026)
 
-At Eric's asking, on the main page, `?v=89`. Top to bottom inside
-`.album` and above it:
+`?v=92`, from Eric's written brief after the release on 26 October.
+Top to bottom inside `.album`: the cover, the title, **"NOW STREAMING"**
+(Eric's words, replacing "Coming October 26, 2026"), three streaming
+buttons, and Spotify's own player. **Eric approved the layout and
+Spotify's look in the preview before it was committed.**
 
-- **The preview player, `#teaser` (`.listen`)**, above the cover: a
-  waveform on the left that moves with the sound and is also the
-  play/pause control, a scrubber (`<input type="range">`), a mute
-  button, and the track's title beneath. Words and labels in
-  `content.js → music.teaser`.
-- **The cover** — the album page's own `album-cover.jpg`, 360px, with
-  the album page's `access.cover_alt` so the two never disagree.
-- **The title and date** — `album_box_note` reads "Coming October 26,
-  2026", the official release date. The old bordered "coming soon" box
-  is gone.
-- **Pre-Save on Spotify** (`#presave`, `music.presave`) — the same
-  DistroKid hyperfollow page `access.thanks` links to, written a second
-  time because that one sits inside a sentence. Change both together.
+**Every link starts empty and hides what it controls** —
+`content.js → music.streaming`: `spotify_album` (the Spotify player),
+and `spotify`, `apple_music`, `youtube_music`, each a `label` and a
+`url`. A button with no link is hidden; with all three empty the row
+is hidden; with no album link there is no player. **Eric pastes the
+links himself.** DistroKid's hyperfollow page listed the Spotify
+album (`open.spotify.com/album/0AlEkgZ0PuT7LUDhWIhT4l`) and Apple Music
+(`music.apple.com/us/album/the-gray-man/6819918513`); he was told, and
+they were used only to test in the preview. No YouTube Music link was
+there.
 
-**The clip is PUBLIC, in `assets/teaser/`, a new folder deliberately
-NOT in the deny-list** — unlike everything else of the album. It is the
-first 15 seconds of `assets/audio/02.mp3` (Weather Chatter (2004)), as
-Eric asked, with a 1.5-second raised-cosine fade at the end, AAC 256
-kbps, `ftyp → moov`, 490 KB. **That mp3 is the same recording as the
-album's own track 2 but about 4 dB louder** — an earlier master. Told
-to Eric; he kept the mp3. Replacing it means a new file name (the image
-rule) and a new waveform file.
+**The buttons** (`.stream`, `.stream__link`) are words, outlined like
+the old pre-save button, duotone: no logos, because each service's
+mark comes in its own colours and under its own brand rules. Equal
+columns via `grid-auto-flow: column; grid-auto-columns: 1fr`, so two or
+one still centre. Three across on a computer (165px each at 1280),
+stacked one per row below 520px. Measured at 320, 375, 430 and 1280:
+one line per label, nothing past the edge.
 
-**The waveform is not listened to, it is read.** The `.json` beside the
-clip holds its loudness 25 times a second (RMS over the max, to the
-power 1.25 — square-rooted it looked like a solid block), and the
-canvas draws the last 38 readings up to `currentTime`. Real analysis
-would mean routing the sound through Web Audio, which an iPhone
-silences until it is tapped — the trap the album player fell into.
-Under reduced motion the whole clip is drawn still and lights up as it
-plays.
+**The Spotify player** (`#spotifyEmbed`) is built by `main.js` through
+**Spotify's iFrame API** (`open.spotify.com/embed/iframe-api/v1`), which
+hands back a controller that can pause it and reports when it plays.
 
-**It starts by itself, and browsers mostly make that silent.** When the
-row is three-quarters on screen, once a visit, it tries to play with
-sound; refused — which is what happens unless the visitor has already
-clicked or tapped the page, since scrolling does not count — it plays
-**muted**, moving, with the mute button showing muted. Eric was told
-this before it was built. It does not start if a film is already
-playing, and it does not loop. **The built-in browser pane allows sound
-without a click, so it is no test of the muted start** — a real phone
-is.
+- **The album link is read as Eric pastes it** from Share → Copy Album
+  Link — with `?si=…`, with an `intl-xx/` country, or as
+  `spotify:album:…` — and turned into the player's address. Anything
+  else hides the player.
+- **Dark theme** by passing `?theme=0` on the `url` option, which the
+  API carries into the player. It is a charcoal card, white text, a
+  white Spotify mark and play button, and a grey "Preview" tag for
+  visitors not signed in (30 seconds a song; signed in, whole songs).
+  Eric was shown it and accepted it. **No filter or overlay on it.**
+- **Held at 352px** before it arrives, so the page does not jump.
+- **Lazy by not asking at all**: Spotify's script does not take
+  `loading="lazy"`, so nothing is fetched from Spotify until the box is
+  within 600px of the screen. Checked: a page loaded at the top
+  fetches nothing from Spotify.
+- **If Spotify's script is blocked** (some ad blockers) or never
+  answers in 10 seconds, the plain player goes in instead
+  (`loading="lazy"`, same address). It plays; it cannot be paused by
+  the rest of the page.
 
-## Where things stand (15 October 2026)
+**Nothing talks over anything else, now with Spotify in it.**
+`spotify.playing` comes from the controller's `playback_update`; when
+it turns true, every `<audio>` and every film is paused. `hushSpotify()`
+is called from the films' `play` listener and from the capturing
+`<audio>` listener, so anything starting pauses Spotify. **Spotify will
+not play inside the built-in browser pane**, so these were tested
+against a stand-in controller behaving as Spotify's own reference
+describes: Spotify starting stops a film; a film starting asks Spotify
+to pause; Spotify already paused is not asked. **The real check is
+Eric's**, on a phone or browser once the links are in.
+
+**Gone, at Eric's word:** the Pre-Save on Spotify button and
+`music.presave` (the album is out), and **the 15-second preview player
+of Weather Chatter (2004)** with its clip and waveform file
+(`assets/teaser/`, removed from the repo). The album page's thank-you
+still asks people to pre-save; flagged to Eric and left alone.
+
+## Where things stand (7 November 2026)
+
+**`?v=92` is the Music section after the release** — three streaming
+buttons and Spotify's player, the preview player and pre-save button
+gone, "NOW STREAMING". See the section above. The links in
+`music.streaming` are empty until Eric fills them in.
 
 **`?v=91` is Eric's edits to Report a Sighting's words**, and `?v=90`
 the form itself — see that section under The vault. The schema and the

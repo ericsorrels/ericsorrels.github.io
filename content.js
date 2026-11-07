@@ -112,47 +112,56 @@ window.SITE_CONTENT = {
       },
     ],
 
-    // The album in this section: the preview player first, then the
-    // cover, then these two lines, then the pre-save button. The
+    // The album in this section, top to bottom: the cover, these two
+    // lines, the three streaming buttons, and the Spotify player — see
+    // "streaming" below. The
     // cover's description for screen readers is not repeated here — it
     // is the album page's, at  access.cover_alt , so the two pages can
     // never describe the same picture two different ways.
     album_box_title: "The Gray Man — Original Concept Album",
-    album_box_note: "Coming October 26, 2026",
+    album_box_note: "NOW STREAMING",
 
-    // ---- The preview player, above the album cover ----
-    // The first fifteen seconds of track 2, cut from 02.mp3 with a short
-    // fade at the end. It starts by itself when it scrolls into view.
-    // Browsers will not let a page make SOUND before the visitor has
-    // clicked or tapped something, so for most people it starts muted,
-    // with the waveform moving, and the mute button is theirs to press.
+    // ---- Where to listen: three buttons and a Spotify player ----
+    // Under the album's date. These replaced the Pre-Save on Spotify
+    // button on the release, 26 October 2026.
     //
-    // Unlike the album, this one IS public — anybody can play it, and
-    // anybody can save it — which is the point.
-    //
-    // REPLACING IT MEANS A NEW FILE NAME, the same rule as a picture,
-    // and a new waveform file to go with it. Ask Claude to cut both.
-    //
-    // "caption" is the track's title, under the player. The labels are
-    // never seen — they are what screen readers say for each control.
-    // Emptying "file" ("") removes the player altogether.
-    teaser: {
-      file: "assets/teaser/weather-chatter-preview.m4a",
-      waveform: "assets/teaser/weather-chatter-preview.json",
-      caption: "Weather Chatter (2004)",
-      play_label: "Play the preview",
-      pause_label: "Pause the preview",
-      seek_label: "Where the preview is",
-      mute_label: "Mute the preview",
-      unmute_label: "Turn the sound on",
-    },
+    // EVERY LINK HERE STARTS EMPTY ("") AND HIDES WHAT IT CONTROLS until
+    // you paste one in. A button with no link does not appear; with all
+    // three empty the whole row is gone; with no album link there is no
+    // Spotify player.
+    streaming: {
+      // The Spotify player on the page. Paste the album's ordinary link:
+      // in Spotify, open the album, press the three dots (•••), then
+      // Share → Copy Album Link. It looks like
+      //     https://open.spotify.com/album/0AbCdEfGhIjKlMnOpQrStU?si=…
+      // The part after a ? can stay; the page works out the rest.
+      // Visitors signed in to Spotify hear whole songs; everybody else
+      // hears 30 seconds of each.
+      spotify_album: "",
 
-    // ---- The pre-save button, under the album's date ----
-    // The same DistroKid page the thank-you at the foot of the album
-    // page links to. Emptying "url" ("") removes the button.
-    presave: {
-      label: "Pre-Save on Spotify",
-      url: "https://distrokid.com/hyperfollow/ericsorrels/the-gray-man?ref=release",
+      // What screen readers call the player. Never seen.
+      spotify_player_label: "The Gray Man on Spotify",
+
+      // The three buttons, left to right. Paste each service's link to
+      // the album between the quotes after url:. Keep the labels short —
+      // three across have to fit on one line on a computer.
+      spotify: {
+        label: "Spotify",
+        // In Spotify: ••• → Share → Copy Album Link.
+        url: "",
+      },
+      apple_music: {
+        label: "Apple Music",
+        // In Apple Music: ••• → Share → Copy Link. Looks like
+        // https://music.apple.com/us/album/the-gray-man/…
+        url: "",
+      },
+      youtube_music: {
+        label: "YouTube Music",
+        // In YouTube Music: ⋮ → Share → Copy. Looks like
+        // https://music.youtube.com/playlist?list=…
+        url: "",
+      },
     },
 
     // ---- The "buy early access" button ----

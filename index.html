@@ -51,7 +51,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/css/style.css?v=91" />
+  <link rel="stylesheet" href="assets/css/style.css?v=92" />
 </head>
 <body>
 
@@ -155,49 +155,36 @@
     <div class="section__inner reveal">
       <p class="section-label" data-content="music.label">Music</p>
 
-      <!-- The preview, above the album: a waveform that moves with the
-           sound on the left (press it to play or pause), the scrubber
-           across the middle, mute on the right, and the track's name
-           beneath. Hidden until main.js has a file for it from
-           content.js → music.teaser, and hidden again if that file
-           cannot be played. It is an ordinary <audio> on the page, which
-           is all it takes for a film starting to stop it, and for it
-           starting to stop a film. -->
-      <div class="listen" id="teaser" hidden>
-        <audio class="listen__audio" preload="metadata"></audio>
-        <div class="listen__row">
-          <button class="listen__wave" type="button">
-            <canvas class="listen__canvas" aria-hidden="true"></canvas>
-          </button>
-          <input class="listen__seek" type="range" min="0" max="1000" step="1" value="0" />
-          <button class="listen__mute" type="button" aria-pressed="false">
-            <svg class="listen__icon listen__icon--on" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 9h4l5-4v14l-5-4H4z" />
-              <path class="listen__waves" d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" />
-            </svg>
-            <svg class="listen__icon listen__icon--off" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 9h4l5-4v14l-5-4H4z" />
-              <path class="listen__waves" d="M16.5 9.5l5 5M21.5 9.5l-5 5" />
-            </svg>
-          </button>
-        </div>
-        <p class="listen__title" data-content="music.teaser.caption"></p>
-      </div>
-
-      <!-- The album: its cover, its name and its release date, and the
-           pre-save button. The cover is the same file the album page
-           heads its own section with. The description read aloud is the
-           album page's own too — content.js → access.cover_alt. -->
+      <!-- The album: its cover, its name and its release date, then where
+           to listen. The cover is the same file the album page heads its
+           own section with. The description read aloud is the album
+           page's own too — content.js → access.cover_alt. -->
       <div class="album">
         <img class="album__cover" src="assets/img/album-cover.jpg" width="900" height="900"
              alt="The album cover" data-content-alt="access.cover_alt"
              loading="lazy" decoding="async" />
         <p class="album__title" data-content="music.album_box_title">The Gray Man — Original Concept Album</p>
         <p class="album__note" data-content="music.album_box_note">Coming October 26, 2026</p>
-        <!-- From content.js → music.presave. Hidden until it has an
-             address, so it never leads nowhere. -->
-        <a class="presave" id="presave" href="#" target="_blank" rel="noopener noreferrer"
-           data-content="music.presave.label" hidden>Pre-Save on Spotify</a>
+
+        <!-- Where to listen: one button per service, from content.js →
+             music.streaming. Each is hidden until it has a link, and the
+             row with them, so nothing here ever leads nowhere. -->
+        <div class="stream" id="streaming" hidden>
+          <a class="stream__link" id="streamSpotify" href="#" target="_blank" rel="noopener"
+             data-content="music.streaming.spotify.label" hidden>Spotify</a>
+          <a class="stream__link" id="streamApple" href="#" target="_blank" rel="noopener"
+             data-content="music.streaming.apple_music.label" hidden>Apple Music</a>
+          <a class="stream__link" id="streamYouTube" href="#" target="_blank" rel="noopener"
+             data-content="music.streaming.youtube_music.label" hidden>YouTube Music</a>
+        </div>
+
+        <!-- The album on Spotify, played in the page. Built by main.js
+             from content.js → music.streaming.spotify_album, and only
+             once the visitor scrolls near it. Spotify's own player, in
+             Spotify's own colours; nothing here dresses it. -->
+        <div class="spotify" id="spotifyEmbed" hidden>
+          <div class="spotify__slot" id="spotifySlot"></div>
+        </div>
       </div>
 
       <!-- The videos. One player per entry in content.js → music.videos,
@@ -371,9 +358,9 @@
     </footer>
   </section>
 
-  <script src="content.js?v=91"></script>
-  <script src="assets/js/main.js?v=91"></script>
-  <script src="assets/js/weather.js?v=91"></script>
-  <script src="assets/js/storm-track.js?v=91"></script>
+  <script src="content.js?v=92"></script>
+  <script src="assets/js/main.js?v=92"></script>
+  <script src="assets/js/weather.js?v=92"></script>
+  <script src="assets/js/storm-track.js?v=92"></script>
 </body>
 </html>

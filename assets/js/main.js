@@ -179,6 +179,20 @@
       box.appendChild(buildVideo(film));
     });
 
+    // The Spotify player on the main page, when there is one (see
+    // "Where to listen" below). Kept up here because the rules that
+    // follow have to be able to quiet it. `playing` is Spotify's own
+    // word for it, from the iFrame API; there is no other way to know,
+    // since the player lives in a frame of Spotify's that this page
+    // cannot look inside.
+    var spotify = { controller: null, playing: false };
+
+    function hushSpotify() {
+      if (spotify.controller && spotify.playing) {
+        try { spotify.controller.pause(); } catch (e) { /* nothing to do */ }
+      }
+    }
+
     // Nothing on a page may talk over anything else on it, and this is
     // the one place that is arranged — for the main page's list and the
     // album page's two films alike, once every player exists.
@@ -186,9 +200,8 @@
     // Pausing sounding <audio> is the album half of it. access.js owns
     // those track players and is deliberately not reached into: every
     // one of them is an <audio> element on the page, so this needs to
-    // know nothing about how the album works. On the main page the only
-    // <audio> is the preview under the album cover, and it is caught the
-    // same way.
+    // know nothing about how the album works. On the main page there is
+    // no <audio> now, only the films and the Spotify player.
     players.forEach(function (player) {
       player.addEventListener('play', function () {
         var sounding = document.getElementsByTagName('audio');
@@ -198,6 +211,7 @@
         players.forEach(function (other) {
           if (other !== player && !other.paused) other.pause();
         });
+        hushSpotify();
       });
     });
 
@@ -216,191 +230,135 @@
       players.forEach(function (film) {
         if (!film.paused) film.pause();
       });
+      hushSpotify();
     }, true);
 
-    // The pre-save button under the album's date. Hidden until it has an
-    // address, so it never leads nowhere.
-    var presave = document.getElementById('presave');
-    var presaveTo = C.music && C.music.presave;
-    if (presave && presaveTo && presaveTo.url && presaveTo.label) {
-      presave.href = presaveTo.url;
-      presave.hidden = false;
+    // ---- Where to listen: three buttons and a Spotify player ----------
+    // Everything from content.js → music.streaming. A button appears only
+    // with a link; the row only with at least one button; the player only
+    // with an album link. So until the links are pasted in, nothing here
+    // shows at all.
+    var streaming = (C.music && C.music.streaming) || {};
+    var webAddress = function (text) {
+      return typeof text === 'string' && /^https?:\/\/[^\s"'<>]+$/.test(text.trim());
+    };
+
+    var streamRow = document.getElementById('streaming');
+    if (streamRow) {
+      var anyLink = false;
+      [['spotify', 'streamSpotify'], ['apple_music', 'streamApple'], ['youtube_music', 'streamYouTube']]
+        .forEach(function (pair) {
+          var link = document.getElementById(pair[1]);
+          var item = streaming[pair[0]];
+          if (!link || !item || !item.label || !webAddress(item.url)) return;
+          link.href = item.url.trim();
+          link.hidden = false;
+          anyLink = true;
+        });
+      streamRow.hidden = !anyLink;
     }
 
-    // The preview player above the album cover on the main page — the
-    // first seconds of a track, free to anybody. Hidden until there is a
-    // file for it, and hidden again if the file will not play, so the
-    // page never offers a control that does nothing. The two rules above
-    // already cover it: it is an <audio> on the page.
-    var teaserBox = document.getElementById('teaser');
-    var teaser = C.music && C.music.teaser;
-    if (teaserBox && teaser && teaser.file) {
-      var clip = teaserBox.querySelector('.listen__audio');
-      var row = teaserBox.querySelector('.listen__row');
-      var wave = teaserBox.querySelector('.listen__wave');
-      var canvas = teaserBox.querySelector('.listen__canvas');
-      var seek = teaserBox.querySelector('.listen__seek');
-      var mute = teaserBox.querySelector('.listen__mute');
-      var pen = canvas.getContext && canvas.getContext('2d');
-      var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var levels = [];
-      var perSecond = 20;
-      var frame = 0;
-      var dragging = false;
+    // The album link as pasted from Spotify's Share menu — with or
+    // without a country in it, with or without ?si=… on the end — or a
+    // spotify:album:… address. Answers the kind and the id, or null.
+    var spotifyItem = function (text) {
+      var found = String(text || '').trim()
+        .match(/^(?:https?:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?|spotify:)(album|playlist|track)[/:]([A-Za-z0-9]{10,40})/);
+      return found ? { kind: found[1], id: found[2] } : null;
+    };
 
-      // The loudness of the clip, measured twenty times a second when it
-      // was cut. Drawing from that rather than listening to the sound as
-      // it plays keeps the sound out of Web Audio, which an iPhone
-      // silences until it has been tapped. The picture is the same.
-      if (teaser.waveform && window.fetch) {
-        fetch(teaser.waveform).then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (data) {
-            if (data && Array.isArray(data.levels)) {
-              levels = data.levels;
-              perSecond = data.per_second || perSecond;
-              draw();
-            }
-          }).catch(function () { /* the row still works, with a quiet line */ });
-      }
+    var embedBox = document.getElementById('spotifyEmbed');
+    var slot = document.getElementById('spotifySlot');
+    var album = spotifyItem(streaming.spotify_album);
 
-      // Bars scroll in from the right as the sound arrives — the last two
-      // seconds of it, with the newest at the right-hand end. With reduced
-      // motion asked for, the whole clip is drawn still instead, the part
-      // already heard in full paper.
-      var BARS = 38;
-      var draw = function () {
-        if (!pen) return;
-        var ratio = window.devicePixelRatio || 1;
-        var w = canvas.clientWidth || 76;
-        var h = canvas.clientHeight || 32;
-        if (canvas.width !== Math.round(w * ratio)) {
-          canvas.width = Math.round(w * ratio);
-          canvas.height = Math.round(h * ratio);
-        }
-        pen.setTransform(ratio, 0, 0, ratio, 0, 0);
-        pen.clearRect(0, 0, w, h);
+    if (embedBox && slot && album) {
+      embedBox.hidden = false;
+      var label = streaming.spotify_player_label || '';
+      var started = false;
 
-        var gap = w / BARS;
-        var now = Math.floor((clip.currentTime || 0) * perSecond);
-        var started = (clip.currentTime || 0) > 0 || !clip.paused;
-
-        for (var i = 0; i < BARS; i++) {
-          var level, lit;
-          if (calm) {
-            var at = Math.floor(i * levels.length / BARS);
-            level = levels[at] || 0.04;
-            lit = at <= now && started;
-          } else {
-            var k = now - (BARS - 1 - i);
-            level = started ? (k >= 0 ? (levels[k] || 0.04) : 0.04) : (levels[i * 4] || 0.04);
-            lit = started && k >= 0;
-          }
-          var bar = Math.max(1, level * (h - 2));
-          pen.fillStyle = lit ? 'rgba(237, 232, 221, 0.95)' : 'rgba(237, 232, 221, 0.35)';
-          pen.fillRect(i * gap, (h - bar) / 2, Math.max(1, gap - 1), bar);
-        }
+      var named = function () {
+        var frame = embedBox.querySelector('iframe');
+        if (frame && label) frame.setAttribute('title', label);
+        return frame;
       };
 
-      var paint = function () {
-        var length = clip.duration;
-        var known = isFinite(length) && length > 0;
-        var share = known ? Math.min(1, (clip.currentTime || 0) / length) : 0;
-        var playing = !clip.paused && !clip.ended;
-
-        if (!dragging) seek.value = Math.round(share * 1000);
-        seek.style.setProperty('--played', (seek.value / 10) + '%');
-        teaserBox.classList.toggle('listen--playing', playing);
-        teaserBox.classList.toggle('listen--muted', clip.muted);
-        wave.setAttribute('aria-label', playing ? teaser.pause_label : teaser.play_label);
-        mute.setAttribute('aria-pressed', clip.muted ? 'true' : 'false');
-        mute.setAttribute('aria-label', clip.muted ? teaser.unmute_label : teaser.mute_label);
-        draw();
+      // If Spotify's controls never arrive — a blocker, a network that
+      // will not have them — the album is still shown, as Spotify's
+      // plain player. It plays perfectly well; it simply cannot be told
+      // to stop when something else on the page starts.
+      var plain = function () {
+        if (named()) return;
+        var frame = document.createElement('iframe');
+        frame.src = 'https://open.spotify.com/embed/' + album.kind + '/' + album.id +
+          '?utm_source=generator&theme=0';
+        frame.setAttribute('loading', 'lazy');
+        frame.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+        frame.setAttribute('title', label);
+        slot.parentNode.replaceChild(frame, slot);
       };
 
-      var follow = function () {
-        paint();
-        frame = clip.paused ? 0 : window.requestAnimationFrame(follow);
-      };
+      // Spotify's iFrame API: its own script builds the player and hands
+      // back a controller that can pause it and says when it plays. That
+      // is what lets the page keep it from talking over a film, in both
+      // directions.
+      var build = function () {
+        if (started) return;
+        started = true;
 
-      var start = function () {
-        var playing = clip.play();
-        return playing && playing.then ? playing : Promise.resolve();
-      };
+        var fallback = setTimeout(plain, 10000);
 
-      clip.src = teaser.file;
-      seek.setAttribute('aria-label', teaser.seek_label || '');
-      teaserBox.hidden = false;
+        window.onSpotifyIframeApiReady = function (IFrameAPI) {
+          IFrameAPI.createController(slot, {
+            url: 'https://open.spotify.com/' + album.kind + '/' + album.id + '?theme=0',
+            width: '100%',
+            height: 352
+          }, function (controller) {
+            clearTimeout(fallback);
+            spotify.controller = controller;
+            named();
 
-      wave.addEventListener('click', function () {
-        if (clip.paused) start().catch(paint);
-        else clip.pause();
-      });
+            controller.addListener('playback_update', function (event) {
+              var data = (event && event.data) || {};
+              var playing = data.isPaused === false;
+              var began = playing && !spotify.playing;
+              spotify.playing = playing;
+              if (!began) return;
 
-      mute.addEventListener('click', function () {
-        clip.muted = !clip.muted;
-        // Turning the sound on for a preview that has finished, or never
-        // started, is a request to hear it.
-        if (!clip.muted && clip.paused) start().catch(paint);
-        paint();
-      });
-
-      seek.addEventListener('input', function () {
-        dragging = true;
-        var length = clip.duration;
-        if (isFinite(length) && length > 0) clip.currentTime = (seek.value / 1000) * length;
-        seek.style.setProperty('--played', (seek.value / 10) + '%');
-        draw();
-      });
-      seek.addEventListener('change', function () { dragging = false; paint(); });
-
-      clip.addEventListener('play', function () {
-        if (!frame) frame = window.requestAnimationFrame(follow);
-      });
-      ['pause', 'loadedmetadata', 'timeupdate', 'seeked', 'volumechange'].forEach(function (name) {
-        clip.addEventListener(name, paint);
-      });
-      clip.addEventListener('ended', function () {
-        clip.currentTime = 0;
-        paint();
-      });
-      clip.addEventListener('error', function () {
-        teaserBox.hidden = true;
-      });
-
-      // It starts by itself the first time it comes into view — once a
-      // visit, never again on scrolling back. With sound if the browser
-      // allows it; browsers do not let a page make sound until the
-      // visitor has clicked or tapped something, so failing that it
-      // starts MUTED, moving, with the mute button there to undo it. It
-      // stands down if a film is already playing: somebody watching one
-      // has chosen what to listen to.
-      var filmPlaying = function () {
-        return players.some(function (film) { return !film.paused && !film.ended; });
-      };
-      var autoStart = function () {
-        if (filmPlaying() || !clip.paused) return;
-        start().catch(function () {
-          clip.muted = true;
-          paint();
-          start().catch(function () {
-            clip.muted = false;
-            paint();
+              // Spotify has started: any film, and any <audio>, goes quiet.
+              var sounding = document.getElementsByTagName('audio');
+              for (var i = 0; i < sounding.length; i++) {
+                if (!sounding[i].paused) sounding[i].pause();
+              }
+              players.forEach(function (film) {
+                if (!film.paused) film.pause();
+              });
+            });
           });
-        });
+        };
+
+        var script = document.createElement('script');
+        script.src = 'https://open.spotify.com/embed/iframe-api/v1';
+        script.async = true;
+        script.onerror = function () {
+          clearTimeout(fallback);
+          plain();
+        };
+        document.head.appendChild(script);
       };
 
+      // Spotify is not asked for anything until the visitor is nearly
+      // there — the same saving loading="lazy" makes on a plain frame,
+      // which Spotify's own script does not offer.
       if ('IntersectionObserver' in window) {
-        var watcher = new IntersectionObserver(function (entries) {
-          var seen = entries.some(function (entry) { return entry.isIntersecting; });
-          if (!seen) return;
-          watcher.disconnect();
-          autoStart();
-        }, { threshold: 0.75 });
-        watcher.observe(row);
+        var nearby = new IntersectionObserver(function (entries) {
+          if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
+          nearby.disconnect();
+          build();
+        }, { rootMargin: '600px 0px' });
+        nearby.observe(embedBox);
+      } else {
+        build();
       }
-
-      window.addEventListener('resize', draw);
-      paint();
     }
 
     function buildVideo(video) {

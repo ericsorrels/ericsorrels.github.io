@@ -688,171 +688,80 @@ img {
   opacity: 0.5;
 }
 
-/* The pre-save button. Outlined, not filled: the filled button further
-   down — the one that sells the album — stays the only thing on the
-   page asking to be pressed first. */
+/* Where to listen: three outlined buttons under the album's date.
+   Outlined, not filled: the filled button further down — the one that
+   sells early access — stays the only thing on the page asking to be
+   pressed first. Words, not logos: the site is duotone, and each
+   service's mark comes in its own colours.
 
-.presave {
-  display: inline-block;
+   Three across on a computer, all the same width so none looks like
+   the favourite. Below 520px they stack, one full-width button each —
+   "YouTube Music" in tracked capitals will not share a phone's width
+   with two others. Hidden buttons take no room, so two or one centre
+   themselves. */
+
+.stream {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.8em;
+  width: min(100%, 520px);
   margin-top: 2.2em;
-  padding: 1em 1.9em;
+}
+
+.stream__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 1em 0.8em;
   border: 1px solid rgba(237, 232, 221, 0.35);
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
   transition: border-color 0.35s ease, background 0.35s ease;
 }
 
-.presave:hover,
-.presave:focus-visible {
+.stream__link:hover,
+.stream__link:focus-visible {
   border-color: var(--paper);
   background: rgba(237, 232, 221, 0.06);
 }
 
-/* The preview player, above the album: waveform, scrubber, mute, in one
-   quiet row the width of the cover beneath it, and the track's name
-   under that. */
-
-.listen {
-  width: min(100%, 360px);
-  margin: 0 auto 2.6em;
+@media (max-width: 520px) {
+  .stream {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: 1fr;
+    width: min(100%, 300px);
+  }
 }
 
-.listen__row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+/* The album on Spotify. Spotify's player is 352px tall when it shows a
+   track list; the box is held at that height before it arrives, so the
+   page below does not jump when it does. Nothing is laid over it and
+   nothing filters it — it is Spotify's, in Spotify's colours. */
+
+.spotify {
+  width: min(100%, 520px);
+  height: 352px;
+  margin-top: 2.6em;
 }
 
-.listen__wave,
-.listen__mute {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: var(--paper);
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-/* The waveform is also the play and pause control — pressing the
-   picture of the sound is the natural thing to try. */
-.listen__wave {
-  width: 76px;
-  height: 32px;
-}
-
-.listen__canvas {
+.spotify iframe,
+.spotify__slot {
   display: block;
-  width: 76px;
-  height: 32px;
-}
-
-.listen__mute {
-  width: 32px;
-  height: 32px;
-  opacity: 0.75;
-  transition: opacity 0.3s ease;
-}
-
-.listen__mute:hover,
-.listen__mute:focus-visible {
-  opacity: 1;
-}
-
-.listen__icon {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.listen__icon path:first-child {
-  fill: currentColor;
-}
-
-.listen__icon--off,
-.listen--muted .listen__icon--on {
-  display: none;
-}
-
-.listen--muted .listen__icon--off {
-  display: block;
-}
-
-/* The scrubber: a hairline that fills with paper as it plays. The fill
-   is painted from --played, which main.js keeps up to date. */
-.listen__seek {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 18px;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  --played: 0%;
-}
-
-.listen__seek::-webkit-slider-runnable-track {
-  height: 1px;
-  background: linear-gradient(to right, var(--paper) var(--played), rgba(237, 232, 221, 0.25) var(--played));
-}
-
-.listen__seek::-moz-range-track {
-  height: 1px;
-  background: linear-gradient(to right, var(--paper) var(--played), rgba(237, 232, 221, 0.25) var(--played));
-}
-
-.listen__seek::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 9px;
-  height: 9px;
-  margin-top: -4px;
-  border-radius: 50%;
-  background: var(--paper);
+  width: 100%;
+  height: 352px;
   border: 0;
-}
-
-.listen__seek::-moz-range-thumb {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 0;
-}
-
-.listen__seek:focus-visible {
-  outline: 1px dotted rgba(237, 232, 221, 0.6);
-  outline-offset: 4px;
-}
-
-.listen__wave:focus-visible,
-.listen__mute:focus-visible {
-  outline: 1px dotted rgba(237, 232, 221, 0.6);
-  outline-offset: 3px;
-}
-
-.listen__title {
-  margin: 0.9em 0 0;
-  font-family: var(--font-body);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--paper);
-  opacity: 0.5;
+  border-radius: 12px;
 }
 
 /* The one place on the site asking for an action, so it is filled
