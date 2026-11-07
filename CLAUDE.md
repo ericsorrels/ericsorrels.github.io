@@ -28,6 +28,10 @@ assets/js/
   lyrics.js         the panel following the album, and every transport
                     that is not a track row: the stage's, the panel's
                     head, and the lock screen's (access only)
+  sleeve.js         the album sleeve that turns over (access only)
+  storm-intro.js    the storm between the gate and the vault (access only)
+  report.js         Report a Sighting, the listeners' feedback form
+                    (access only) — see The vault → Report a Sighting
 assets/audio/album.m4a the whole album as ONE recording — GITIGNORED,
                        on Eric's disk only. See The album player.
 assets/lyrics/NN.lrc   timed words — GITIGNORED; NN.txt likewise
@@ -46,7 +50,8 @@ tools/              Claude's working tools, not part of the site:
                     grab-frame.swift, make-icon.swift, find-letter.swift,
                     shrink-pdf.swift, join-album.py
 tools/worker-tests/ the vault worker run against stand-ins — see Stripe →
-                    The tests. Open through the preview server.
+                    The tests. Open through the preview server. Stripe,
+                    Report a Sighting and the 5 October Gumroad cases.
 CNAME               the custom domain, required by GitHub Pages
 ```
 
@@ -2017,8 +2022,8 @@ usual check held, and the three new admin routes 404 without his
 session.
 
 - **On the page:** `#reportNotice` under the vault's heading, pointing
-  down with its deadline (Thursday 22 October; the form stays open after
-  it), and `#report` at the foot after the closing film and the
+  down with its deadline (Friday 23 October since Eric's edit — see
+  below; the form stays open after it), and `#report` at the foot after the closing film and the
   thank-you. Both built by **`assets/js/report.js`**, its own file,
   touching nothing of the album's. It waits for `#vault` to lose
   `hidden` (a `MutationObserver`), then asks `GET /vault-api/report`;
